@@ -141,10 +141,7 @@ const MARKETPLACES: MarketplaceConfig[] = [
       { key: 'refreshToken', label: 'Refresh Token', type: 'password', required: true },
       { key: 'clientId', label: 'LWA Client ID', type: 'text', required: true },
       { key: 'clientSecret', label: 'LWA Client Secret', type: 'password', required: true },
-      { key: 'awsAccessKeyId', label: 'AWS Access Key ID', type: 'text', required: true },
-      { key: 'awsSecretAccessKey', label: 'AWS Secret Access Key', type: 'password', required: true },
-      { key: 'roleArn', label: 'IAM Role ARN', type: 'text', required: true },
-    ],
+                      ],
     minimumPlan: 'STARTER', status: 'ACTIVE', popularity: 90, commissionRange: '%8 - %15',
     brandColor: '#FF9900', monthlyVisitors: '50M+', sellerCount: '20K+',
   },
@@ -170,6 +167,7 @@ const MARKETPLACES: MarketplaceConfig[] = [
     requiredFields: [
       { key: 'clientId', label: 'Client ID', type: 'text', required: true },
       { key: 'clientSecret', label: 'Client Secret', type: 'password', required: true },
+      { key: 'authToken', label: 'Kullanıcı OAuth Token', type: 'password', required: true },
     ],
     minimumPlan: 'STARTER', status: 'ACTIVE', popularity: 92, commissionRange: '%10 - %15',
     brandColor: '#E53238', monthlyVisitors: '800M+', sellerCount: '1M+',
@@ -183,6 +181,8 @@ const MARKETPLACES: MarketplaceConfig[] = [
     requiredFields: [
       { key: 'keystring', label: 'Keystring', type: 'text', required: true },
       { key: 'sharedSecret', label: 'Shared Secret', type: 'password', required: true },
+      { key: 'shopId', label: 'Shop ID', type: 'text', required: true },
+      { key: 'accessToken', label: 'Kullanıcı OAuth Access Token', type: 'password', required: true },
     ],
     minimumPlan: 'STARTER', status: 'ACTIVE', popularity: 85, commissionRange: '%6.5',
     brandColor: '#F1641E', monthlyVisitors: '400M+', sellerCount: '5M+',
@@ -465,6 +465,8 @@ const MARKETPLACES: MarketplaceConfig[] = [
   },
 ];
 
+function iStatus(integration: { apiExtra?: unknown }) { return (integration.apiExtra as { connectionStatus?: string } | undefined)?.connectionStatus === 'verified'; }
+
 type ViewType = 'grid' | 'list' | 'status';
 
 const OAUTH_MARKETPLACE_IDS = new Set([
@@ -582,8 +584,8 @@ export default function IntegrationsPage() {
           userIntegration: {
             id: integration.id,
             isActive: integration.isActive,
-            status: 'connected' as 'connected' | 'disconnected' | 'error' | 'syncing' | 'pending',
-            lastSync: integration.updatedAt,
+            status: (iStatus(integration) ? 'connected' : 'pending') as 'connected' | 'disconnected' | 'error' | 'syncing' | 'pending',
+            lastSync: (integration.apiExtra as { lastSuccessfulSyncAt?: string } | undefined)?.lastSuccessfulSyncAt,
           }
         };
       }
@@ -627,17 +629,18 @@ export default function IntegrationsPage() {
     setShowWizard(true);
   };
 
-  const handleOAuth = (marketplace: MarketplaceConfig) => {
+  const handleOAuth = async (marketplace: MarketplaceConfig) => {
     if (!tenantId) {
       alert('Oturum bilgisi bulunamadı. Lütfen tekrar giriş yapın.');
       return;
     }
 
-    const apiUrl =
-      process.env.NEXT_PUBLIC_API_URL?.replace(/\/$/, '') ||
-      'http://localhost:3001';
-    const platform = marketplace.id.startsWith('amazon') ? 'amazon' : 'hepsiburada';
-    window.location.href = `${apiUrl}/oauth/init/${platform}?tenantId=${encodeURIComponent(tenantId)}`;
+    try {
+      const response = await fetch('/api/marketplace/oauth/'+encodeURIComponent(marketplace.id), { method: 'POST' });
+      const data = await response.json();
+      if (!response.ok || !data.authorizationUrl) throw new Error(data.message || data.error || 'Yetkilendirme başlatılamadı');
+      window.location.assign(data.authorizationUrl);
+    } catch (error) { alert(error instanceof Error ? error.message : 'Yetkilendirme başlatılamadı'); }
   };
 
   return (
@@ -795,7 +798,7 @@ export default function IntegrationsPage() {
             onClose={() => { setShowWizard(false); setSelectedMarketplace(null); }}
             onConnect={async (credentials) => {
               try {
-                if (!tenantId || !selectedMarketplace) return false;
+                if (!tenantId || !selectedMarketplace) throw new Error('Mağaza oturumu bulunamadı');
                 if (accessToken) apiClient.setAccessToken(accessToken);
                 apiClient.setTenantId(tenantId);
 
@@ -805,7 +808,7 @@ export default function IntegrationsPage() {
                   credentials,
                   selectedMarketplace.id,
                 ) as {
-                  initialSyncStarted?: boolean;
+                  initialSyncStarted?: boolean; connectionStatus?: string;
                   message?: string;
                 };
                 await fetchActiveIntegrations();
@@ -815,10 +818,10 @@ export default function IntegrationsPage() {
                       'Mağaza bağlandı. İlk senkronizasyon arka planda başlatıldı.',
                   );
                 }
-                return true;
+                return { success: true, verified: res.connectionStatus === 'verified', message: res.message };
               } catch (e) {
                 console.error(e);
-                return false;
+                throw e;
               }
             }}
             onTest={async (credentials) => {
@@ -832,7 +835,7 @@ export default function IntegrationsPage() {
                   })
                 });
                 const data = await res.json();
-                return { success: data.success, message: data.message || data.error };
+                return { success: res.ok && data.success === true, message: data.message || data.error, supported: data.supported };
               } catch (e) {
                 console.error(e);
                 return { success: false, message: 'Bağlantı hatası' };

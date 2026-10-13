@@ -42,6 +42,9 @@ export class TenantInterceptor implements NestInterceptor {
 
       // JWT'deki tenantId'yi her zaman enjekte et
       request.headers['x-tenant-id'] = user.tenantId;
+      // Controllers accepting tenantId in query/body must use the authenticated tenant too.
+      if (request.body && typeof request.body === 'object') request.body.tenantId = user.tenantId;
+      Object.defineProperty(request, 'query', { value: { ...request.query, tenantId: user.tenantId }, configurable: true });
     }
 
     return next.handle();

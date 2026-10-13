@@ -40,7 +40,7 @@ const PAYMENT_PROVIDERS = [
 
 export default function OnboardingPage() {
   const router = useRouter();
-  const { data: session } = useSession();
+  const { data: session, update } = useSession();
   const [currentStep, setCurrentStep] = useState(0);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -98,7 +98,8 @@ export default function OnboardingPage() {
         throw new Error(data.error || 'Kurulum tamamlanamadı.');
       }
 
-      router.push('/dashboard');
+      if (update) { await update(); }
+      window.location.href = '/dashboard';
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Bir hata oluştu.');
       setIsSubmitting(false);

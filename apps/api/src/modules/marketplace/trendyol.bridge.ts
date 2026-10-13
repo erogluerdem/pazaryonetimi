@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { providerJson, trendyolBase, trendyolHeaders } from './provider-http';
 import { MarketplaceBridge, MarketplaceReview } from './marketplace.service';
 import { ScrapingService } from '../scraping/scraping.service';
 import {
@@ -27,6 +28,11 @@ interface TrendyolStoreData {
 
 interface TrendyolProduct {
   productId: string;
+  barcode?: string;
+  sku?: string;
+  stockCode?: string;
+  description?: string;
+  brand?: string;
   title: string;
   salePrice: number;
   currencyCode: string;
@@ -43,8 +49,8 @@ interface TrendyolProduct {
 @Injectable()
 export class TrendyolBridge implements MarketplaceBridge {
   private readonly logger = new Logger(TrendyolBridge.name);
-  private readonly productionUrl = 'https://api.trendyol.com/sapigw';
-  private readonly stageUrl = 'https://stageapi.trendyol.com/sapigw';
+  private readonly productionUrl = trendyolBase(false);
+  private readonly stageUrl = trendyolBase(true);
   private readonly baseUrl: string;
   private readonly requestDelayMs = 250;
   private readonly maxApiPages = SYNC_MAX_API_PAGES;
@@ -112,7 +118,7 @@ export class TrendyolBridge implements MarketplaceBridge {
         resolvedStoreId,
         limit,
       );
-      if (apiProducts.length > 0) {
+      if (this.apiKey && this.apiSecret && this.apiKey !== 'public' && this.apiSecret !== 'public') {
         return apiProducts;
       }
 
@@ -165,78 +171,40 @@ export class TrendyolBridge implements MarketplaceBridge {
     const unlimited = isUnlimitedSync(limit);
     const size = resolveSyncPageSize(limit);
 
-    for (
-      let page = 0;
-      page < this.maxApiPages && (unlimited || results.length < limit);
-      page++
-    ) {
-      const endpoint = `/suppliers/${encodeURIComponent(storeId)}/products?page=${page}&size=${size}`;
-      const response = await this.requestTrendyol(endpoint);
-      if (!response) break;
-
-      const items = this.extractProductArray(response);
-      if (!items.length) break;
-
-      for (const item of items) {
-        if (!unlimited && results.length >= limit) break;
+    let cursor = ''; const cursors = new Set<string>();
+    for (let page = 0; page < 2000; page++) {
+      const query = new URLSearchParams({ size: String(size) });
+      if (cursor) query.set('nextPageToken', cursor); else query.set('page', String(page));
+      const response = await this.requestTrendyol('/product/sellers/' + encodeURIComponent(storeId) + '/products/approved?' + query.toString());
+      if (!response || !Array.isArray(response.content)) throw new Error('Trendyol ürün yanıtı beklenen biçimde değil');
+      for (const item of this.extractProductArray(response)) {
+        if (!unlimited && results.length >= limit) return results;
         results.push(this.mapApiProduct(item, storeId));
       }
-
-      if (items.length < size) {
-        break;
+      if (!unlimited && results.length >= limit) return results;
+      if (response.content.length < size || response.last === true || (!cursor && page + 1 >= Number(response.totalPages))) return results;
+      if ((page + 1) * size >= 10_000 || cursor) {
+        const next = String(response.nextPageToken || '');
+        if (!next || cursors.has(next)) throw new Error('Trendyol devam tokenı alınamadı; katalog aktarımı tamamlanmadı');
+        cursors.add(next); cursor = next;
       }
-
       await this.delay(this.requestDelayMs);
     }
+    throw new Error('Trendyol sayfalaması sınırı aşıldı; aktarım tamamlanmadı');
 
-    return results;
   }
 
   private async requestTrendyol(
     endpoint: string,
   ): Promise<Record<string, unknown> | null> {
-    const url = `${this.baseUrl}${endpoint}`;
-    const auth = Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString(
-      'base64',
-    );
-
-    try {
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          'Content-Type': 'application/json',
-          Accept: 'application/json',
-          'User-Agent': 'PazarYonetimi/1.0',
-        },
-      });
-
-      if (response.status === 429) {
-        this.logger.warn(`Trendyol rate limit: ${endpoint}`);
-        await this.delay(1000);
-        return null;
-      }
-
-      if (!response.ok) {
-        this.logger.warn(
-          `Trendyol API request failed (${response.status}) ${endpoint}`,
-        );
-        return null;
-      }
-
-      return (await response.json()) as Record<string, unknown>;
-    } catch (error) {
-      this.logger.warn(
-        `Trendyol API request error: ${(error as Error).message}`,
-      );
-      return null;
-    }
+    return providerJson(this.baseUrl + endpoint, { headers: trendyolHeaders(this.supplierId, this.apiKey, this.apiSecret) });
   }
 
   private extractProductArray(
     payload: Record<string, unknown>,
   ): Record<string, unknown>[] {
     const content = payload.content;
-    if (Array.isArray(content)) return content as Record<string, unknown>[];
+    if (Array.isArray(content)) return content.flatMap((item: any) => Array.isArray(item.variants) ? item.variants.map((variant: any) => ({ ...item, ...variant, id: variant.variantId || variant.barcode, quantity: variant.stock?.quantity ?? 0, salePrice: variant.price?.salePrice ?? 0, categoryId: item.category?.id, categoryName: item.category?.name, brand: item.brand?.name, approved: true })) : [item]);
 
     const items = payload.items;
     if (Array.isArray(items)) return items as Record<string, unknown>[];
@@ -269,9 +237,9 @@ export class TrendyolBridge implements MarketplaceBridge {
     const price = Number(item.salePrice ?? item.listPrice ?? item.price ?? 0);
 
     return {
-      productId: String(
-        item.id ?? item.productMainId ?? `TR-${storeId}-${Date.now()}`,
-      ),
+      productId: String(item.id ?? item.barcode ?? item.productMainId ?? ''),
+      barcode: String(item.barcode || ''), sku: String(item.barcode || item.stockCode || item.id || ''), stockCode: String(item.stockCode || ''),
+      description: String(item.description || ''), brand: String(item.brand || ''),
       title: String(item.title ?? item.name ?? 'İsimsiz Ürün'),
       salePrice: Number.isFinite(price) ? price : 0,
       currencyCode: String(item.currencyType ?? item.currencyCode ?? 'TRY'),
@@ -534,11 +502,16 @@ export class TrendyolBridge implements MarketplaceBridge {
       );
     }
 
-    const response = await this.requestTrendyol(
-      `/suppliers/${encodeURIComponent(supplierId)}/orders?page=0&size=50`,
-    );
-    const orders = this.extractOrdersArray(response);
-    return { success: true, platform: 'TRENDYOL', orders, source: 'api' };
+    const orders: Record<string, unknown>[] = [];
+    const end = Date.now(); const start = end - 13 * 86400000;
+    for (let page = 0; page < 100; page++) {
+      const response = await this.requestTrendyol('/order/sellers/' + encodeURIComponent(supplierId) + '/v2/orders?page=' + page + '&size=100&startDate=' + start + '&endDate=' + end);
+      if (!response || !Array.isArray(response.content)) throw new Error('Trendyol sipariş yanıtı beklenen biçimde değil');
+      const items = this.extractOrdersArray(response); orders.push(...items);
+      if (items.length < 100 || page + 1 >= Number(response.totalPages)) return { success: true, platform: 'TRENDYOL', orders, source: 'api' };
+      await this.delay(this.requestDelayMs);
+    }
+    throw new Error('Trendyol sipariş sorgusu 10.000 kayıt sınırını aşıyor; tarih aralığını daraltın');
   }
 
   async updateStock(sku: string, stock: number): Promise<any> {
@@ -601,14 +574,14 @@ export class TrendyolBridge implements MarketplaceBridge {
     operation: 'stock' | 'price',
   ): Promise<any> {
     const response = await fetch(
-      `${this.baseUrl}/suppliers/${encodeURIComponent(this.supplierId)}/products/price-and-inventory`,
+      `${this.baseUrl}/inventory/sellers/${encodeURIComponent(this.supplierId)}/products/price-and-inventory`,
       {
         method: 'POST',
         headers: {
           Authorization: `Basic ${Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString('base64')}`,
           'Content-Type': 'application/json',
           Accept: 'application/json',
-          'User-Agent': 'PazarYonetimi/1.0',
+          'User-Agent': `${this.supplierId} - ${process.env.TRENDYOL_INTEGRATOR_NAME || 'PazarYonetimi'}`,
         },
         body: JSON.stringify({ items }),
       },
@@ -661,7 +634,7 @@ export class TrendyolBridge implements MarketplaceBridge {
    * SEND invoice link for claim/order
    */
   async uploadInvoiceLink(invoiceNumber: string, invoiceUrl: string, shipmentPackageId: number): Promise<Record<string, unknown>> {
-    const url = `${this.baseUrl}/suppliers/${encodeURIComponent(this.supplierId)}/supplier-invoice-links`;
+    const url = `${this.baseUrl}/order/sellers/${encodeURIComponent(this.supplierId)}/supplier-invoice-links`;
     const auth = Buffer.from(`${this.apiKey}:${this.apiSecret}`).toString('base64');
 
     try {

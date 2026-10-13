@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { providerPages } from './provider-http';
 import { MarketplaceBridge, MarketplaceReview } from './marketplace.service';
 import { ScrapingService } from '../scraping/scraping.service';
 import {
@@ -32,107 +33,17 @@ export class N11Bridge implements MarketplaceBridge {
   ) {}
 
   async syncProducts(): Promise<any> {
-    this.logger.log('Syncing products from N11');
-    try {
-      const url = `${this.baseUrl}/ProductService/`;
-      const soapBody = this.buildSoapEnvelope(
-        'GetProductList',
-        `
-                <pagingData>
-                    <currentPage>0</currentPage>
-                    <pageSize>100</pageSize>
-                </pagingData>
-            `,
-      );
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '' },
-        body: soapBody,
-      });
-
-      if (!response.ok) {
-        this.logger.warn(`N11 syncProducts failed: ${response.status}`);
-        return {
-          success: false,
-          platform: 'N11',
-          error: `HTTP ${response.status}`,
-        };
-      }
-
-      const text = await response.text();
-      const products = this.parseProductListResponse(text);
-      return {
-        success: true,
-        platform: 'N11',
-        count: products.length,
-        products,
-      };
-    } catch (error) {
-      this.logger.warn(`N11 syncProducts error: ${(error as Error).message}`);
-      return {
-        success: false,
-        platform: 'N11',
-        error: (error as Error).message,
-      };
-    }
+    const raw = await providerPages('https://api.n11.com/ms/product-query', { appKey: this.apiKey, appSecret: this.apiSecret });
+    const products = raw.map((p: any) => ({ ...p, productId: String(p.n11ProductId), stockCount: p.quantity, price: p.salePrice, images: p.imageUrls || [], sku: p.stockCode }));
+    return { success: true, platform: 'N11', products, count: products.length };
   }
 
   async syncOrders(): Promise<any> {
-    try {
-      const url = `${this.baseUrl}/OrderService/`;
-      const soapBody = this.buildSoapEnvelope(
-        'OrderList',
-        `
-                <searchData>
-                    <buyerName />
-                    <orderNumber />
-                    <productSellerCode />
-                    <recipient />
-                    <period>
-                        <startDate>${this.daysAgo(7)}</startDate>
-                        <endDate>${this.now()}</endDate>
-                    </period>
-                    <sortForUpdateDate>true</sortForUpdateDate>
-                </searchData>
-                <pagingData>
-                    <currentPage>0</currentPage>
-                    <pageSize>50</pageSize>
-                </pagingData>
-            `,
-      );
-
-      const response = await fetch(url, {
-        method: 'POST',
-        headers: { 'Content-Type': 'text/xml; charset=utf-8' },
-        body: soapBody,
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const text = await response.text();
-      const apiError = this.parseSoapResultError(text);
-      if (apiError) {
-        throw new Error(apiError);
-      }
-
-      const orders = this.parseOrderListResponse(text);
-      return {
-        success: true,
-        platform: 'N11',
-        count: orders.length,
-        orders,
-      };
-    } catch (error) {
-      this.logger.warn(`N11 syncOrders error: ${(error as Error).message}`);
-      return {
-        success: false,
-        platform: 'N11',
-        error: (error as Error).message,
-      };
-    }
+    const endDate = Date.now();
+    const url = 'https://api.n11.com/rest/delivery/v1/shipmentPackages?startDate=' + (endDate - 14 * 86400000) + '&endDate=' + endDate;
+    const raw = await providerPages(url, { appKey: this.apiKey, appSecret: this.apiSecret });
+    const orders = raw.map((row: any) => ({ ...row, orderId: String(row.id), status: this.mapN11OrderStatus(String(row.shipmentPackageStatus || '')), totalPrice: row.totalAmount, customerName: row.customerfullName, orderDate: row.orderDate }));
+    return { success: true, platform: 'N11', orders, count: orders.length };
   }
 
   async updateStock(sku: string, stock: number): Promise<any> {

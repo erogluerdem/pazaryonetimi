@@ -3,8 +3,9 @@
 import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
 
 // ─── Types ────────────────────────────────────────────
+export type ThemeStyle = 'default' | 'nexora';
 export type ThemeMode = 'dark' | 'light' | 'system';
-export type ThemeColor = 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'pink' | 'teal' | 'indigo';
+export type ThemeColor = 'blue' | 'purple' | 'green' | 'orange' | 'red' | 'pink' | 'teal' | 'indigo' | 'violet' | 'rose' | 'slate';
 export type ThemeFont = 'inter' | 'poppins' | 'roboto' | 'open-sans' | 'montserrat' | 'lato';
 export type ThemeRadius = 'none' | 'sm' | 'md' | 'lg' | 'xl' | 'full';
 
@@ -16,6 +17,7 @@ export interface ThemeSettings {
     compactMode: boolean;
     sidebarPosition: 'left' | 'right';
     animations: boolean;
+    themeStyle: ThemeStyle;
 }
 
 export const defaultThemeSettings: ThemeSettings = {
@@ -26,6 +28,7 @@ export const defaultThemeSettings: ThemeSettings = {
     compactMode: false,
     sidebarPosition: 'left',
     animations: true,
+    themeStyle: 'default',
 };
 
 // ─── Color Palette Map ────────────────────────────────
@@ -38,6 +41,9 @@ export const colorPalettes: Record<ThemeColor, { primary: string; primaryRgb: st
     pink:   { primary: '#ec4899', primaryRgb: '236,72,153',  hover: '#db2777', gradient: 'from-pink-500 to-fuchsia-500' },
     teal:   { primary: '#14b8a6', primaryRgb: '20,184,166',  hover: '#0d9488', gradient: 'from-teal-500 to-cyan-500' },
     indigo: { primary: '#6366f1', primaryRgb: '99,102,241',  hover: '#4f46e5', gradient: 'from-indigo-500 to-violet-500' },
+    violet: { primary: '#7c3aed', primaryRgb: '124,58,237',  hover: '#6d28d9', gradient: 'from-violet-500 to-purple-500' },
+    rose:   { primary: '#e11d48', primaryRgb: '225,29,72',   hover: '#be123c', gradient: 'from-rose-500 to-pink-500' },
+    slate:  { primary: '#475569', primaryRgb: '71,85,105',   hover: '#334155', gradient: 'from-slate-500 to-gray-600' },
 };
 
 export const radiusMap: Record<ThemeRadius, string> = {
@@ -117,9 +123,14 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
         // Mode
         if (resolvedMode === 'light') {
             root.setAttribute('data-theme', 'light');
+            root.classList.remove('dark');
         } else {
             root.setAttribute('data-theme', 'dark');
+            root.classList.add('dark');
         }
+
+        // Theme style (default vs nexora)
+        root.setAttribute('data-theme-style', theme.themeStyle || 'default');
 
         // Color variables
         const palette = colorPalettes[theme.color];

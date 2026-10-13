@@ -68,6 +68,7 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-pazaryonetimi_secret_session_key_32_characters_long_2026}
       - AUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
+      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
       - AUTH_SECRET=${NEXTAUTH_SECRET:-${AUTH_SECRET:-pazaryonetimi_secret_session_key_32_characters_long_2026}}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-${GEMINI_API_KEY}}

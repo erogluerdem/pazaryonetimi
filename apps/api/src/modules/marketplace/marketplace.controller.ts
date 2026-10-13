@@ -2,6 +2,7 @@ import {
   Controller,
   Post,
   Get,
+  Delete,
   Param,
   Headers,
   Query,
@@ -9,10 +10,16 @@ import {
 } from '@nestjs/common';
 import { MarketplaceService, Platform } from './marketplace.service';
 import { Public } from '../auth/public.decorator';
+import { MarketplaceConnectionService } from './marketplace-connection.service';
 
 @Controller('marketplace')
 export class MarketplaceController {
-  constructor(private readonly marketplaceService: MarketplaceService) {}
+  constructor(private readonly marketplaceService: MarketplaceService, private readonly connections: MarketplaceConnectionService) {}
+
+  @Post('test-credentials')
+  testCredentials(@Body() body: { platform: string; credentials: Record<string, unknown> }) {
+    return this.connections.test(body.platform, body.credentials);
+  }
 
   private resolveTenantId(
     headerTenantId?: string,
@@ -240,7 +247,11 @@ export class MarketplaceController {
    * GET /marketplace/stores
    */
   @Get('stores')
-  async getStores(@Query('tenantId') tenantId: string) {
+  async getStores(
+    @Headers('x-tenant-id') headerTenantId: string,
+    @Query('tenantId') queryTenantId?: string,
+  ) {
+    const tenantId = this.resolveTenantId(headerTenantId, queryTenantId);
     return this.marketplaceService.getStores(tenantId);
   }
 
@@ -249,7 +260,11 @@ export class MarketplaceController {
    * GET /marketplace/integrations
    */
   @Get('integrations')
-  async getIntegrations(@Query('tenantId') tenantId: string) {
+  async getIntegrations(
+    @Headers('x-tenant-id') headerTenantId: string,
+    @Query('tenantId') queryTenantId?: string,
+  ) {
+    const tenantId = this.resolveTenantId(headerTenantId, queryTenantId);
     return this.marketplaceService.getIntegrations(tenantId);
   }
 
@@ -259,16 +274,22 @@ export class MarketplaceController {
    */
   @Post('connect')
   async connectStore(
+    @Headers('x-tenant-id') headerTenantId: string,
     @Body()
     data: {
-      tenantId: string;
+      tenantId?: string;
       platform: string;
       credentials: Record<string, unknown>;
       marketplaceId?: string;
     },
   ) {
-    return this.marketplaceService.connectStore(
+    const tenantId = this.resolveTenantId(
+      headerTenantId,
+      undefined,
       data.tenantId,
+    );
+    return this.marketplaceService.connectStore(
+      tenantId,
       data.platform,
       data.credentials,
       data.marketplaceId,
@@ -277,14 +298,36 @@ export class MarketplaceController {
 
   /**
    * Mağaza bağlantısını kes
-   * POST /marketplace/disconnect/:storeId
+   * POST & DELETE /marketplace/disconnect/:storeId
    */
   @Post('disconnect/:storeId')
   async disconnectStore(
+    @Headers('x-tenant-id') headerTenantId: string,
     @Param('storeId') storeId: string,
-    @Body() data: { tenantId: string },
+    @Body() data?: { tenantId?: string },
+    @Query('tenantId') queryTenantId?: string,
   ) {
-    return this.marketplaceService.disconnectStore(data.tenantId, storeId);
+    const tenantId = this.resolveTenantId(
+      headerTenantId,
+      queryTenantId,
+      data?.tenantId,
+    );
+    return this.marketplaceService.disconnectStore(tenantId, storeId);
+  }
+
+  @Delete('disconnect/:storeId')
+  async deleteStoreDisconnect(
+    @Headers('x-tenant-id') headerTenantId: string,
+    @Param('storeId') storeId: string,
+    @Body() data?: { tenantId?: string },
+    @Query('tenantId') queryTenantId?: string,
+  ) {
+    const tenantId = this.resolveTenantId(
+      headerTenantId,
+      queryTenantId,
+      data?.tenantId,
+    );
+    return this.marketplaceService.disconnectStore(tenantId, storeId);
   }
 
   private extractStoreIdFromUrl(url: string, platform: Platform): string {

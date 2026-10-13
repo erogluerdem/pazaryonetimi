@@ -154,7 +154,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     };
 
     return (
-        <div className="dashboard-pro dashboard-mobile-shell flex min-h-[100dvh] bg-background text-foreground font-sans selection:bg-indigo-500/20 overflow-x-hidden" data-dashboard>
+        <div className="dashboard-pro dashboard-mobile-shell flex min-h-[100dvh] bg-background text-foreground font-sans selection:bg-indigo-500/20 overflow-x-hidden relative" data-dashboard data-theme-style={theme.themeStyle || 'default'}>
             {/* Sidebar - sadece desktop'ta görünür */}
             <aside
                 role="navigation"
@@ -290,7 +290,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
             </aside>
 
             {/* Main Content Area */}
-            <div className="flex-1 min-w-0 max-w-full lg:ml-[17.5rem] flex flex-col min-h-[100dvh] overflow-x-hidden">
+            <div className="flex-1 min-w-0 max-w-full lg:ml-[17.5rem] flex flex-col min-h-[100dvh] overflow-x-hidden relative">
+                {theme.themeStyle === 'nexora' && (
+                    <div className="nexora-dot-pattern fixed inset-0 pointer-events-none z-0" />
+                )}
                 <DashboardHeaderBar
                     currentPageTitle={currentPageTitle}
                     isCompactHeader={isCompactHeader}

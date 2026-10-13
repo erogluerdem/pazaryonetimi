@@ -1,334 +1,77 @@
-import {
-  Controller,
-  Get,
-  Post,
-  Query,
-  Res,
-  Body,
-  Headers,
-  Param,
-} from '@nestjs/common';
+import { Controller, Get, Post, Query, Res, Param, Req, BadRequestException, ServiceUnavailableException } from '@nestjs/common';
 import type { Response } from 'express';
+import { createHmac, randomBytes, timingSafeEqual } from 'node:crypto';
 import { PrismaService } from '../../database/prisma.service';
-import { EncryptionService } from '../../common/encryption.service';
 import { Public } from '../auth/public.decorator';
 import { MarketplaceService } from '../marketplace/marketplace.service';
+import { AMAZON_MARKETPLACE_PROFILES } from '../marketplace/amazon-sp-api.config';
+import { providerJson } from '../marketplace/provider-http';
 
-/**
- * OAuth Callback Handler
- * Amazon SP-API, Hepsiburada ve diğer OAuth gerektiren platformlar için callback endpoint'leri
- */
 @Controller('oauth')
 export class OAuthController {
-  constructor(
-    private prisma: PrismaService,
-    private encryption: EncryptionService,
-    private marketplaceService: MarketplaceService,
-  ) {}
-
-  /**
-   * Amazon Selling Partner API OAuth Callback
-   * GET /oauth/amazon/callback?state={tenantId}&selling_partner_id={sellerId}&spapi_oauth_code={code}
-   */
-  @Public()
-  @Get('amazon/callback')
-  async amazonCallback(
-    @Query('state') tenantId: string,
-    @Query('selling_partner_id') sellerId: string,
-    @Query('spapi_oauth_code') authCode: string,
-    @Query('error') error: string,
-    @Query('error_description') errorDescription: string,
-    @Res() res: Response,
-  ) {
-    try {
-      if (error) {
-        console.error(`Amazon OAuth Error: ${error} - ${errorDescription}`);
-        return res.redirect(
-          `/dashboard/stores?error=amazon_auth_failed&message=${encodeURIComponent(errorDescription)}`,
-        );
-      }
-
-      if (!tenantId || !sellerId || !authCode) {
-        return res.redirect('/dashboard/stores?error=missing_params');
-      }
-
-      // Amazon'dan refresh token al
-      const tokenResponse = await this.exchangeAmazonCodeForToken(
-        authCode,
-        sellerId,
-      );
-
-      if (!tokenResponse.refresh_token) {
-        throw new Error('Refresh token alınamadı');
-      }
-
-      // Integration'ı güncelle veya oluştur
-      const existing = await this.prisma.integration.findFirst({
-        where: {
-          tenantId,
-          platform: 'AMAZON',
-        },
-      });
-
-      if (existing) {
-        await this.prisma.integration.update({
-          where: {
-            id: existing.id,
-          },
-          data: {
-            apiSecret: this.encryption.encrypt(tokenResponse.refresh_token),
-            isActive: true,
-            apiExtra: {
-              ...(existing.apiExtra as object),
-              sellerId,
-              accessToken: tokenResponse.access_token,
-              expiresAt: Date.now() + tokenResponse.expires_in * 1000,
-            },
-          },
-        });
-      } else {
-        await this.prisma.integration.create({
-          data: {
-            tenantId,
-            platform: 'AMAZON',
-            apiKey: this.encryption.encrypt(sellerId),
-            apiSecret: this.encryption.encrypt(tokenResponse.refresh_token),
-            isActive: true,
-            apiExtra: {
-              sellerId,
-              accessToken: tokenResponse.access_token,
-              expiresAt: Date.now() + tokenResponse.expires_in * 1000,
-              marketplaceId: 'amazon-tr',
-            },
-          },
-        });
-      }
-
-      void this.triggerInitialSync(tenantId, 'AMAZON').catch((err) =>
-        console.error('Amazon initial sync failed:', err),
-      );
-
-      return res.redirect('/dashboard/stores?success=amazon_connected');
-    } catch (err) {
-      console.error('Amazon OAuth callback error:', err);
-      return res.redirect(
-        `/dashboard/stores?error=amazon_callback_failed&message=${encodeURIComponent(err.message)}`,
-      );
-    }
+  constructor(private readonly prisma: PrismaService, private readonly marketplaceService: MarketplaceService) {}
+  private secret() {
+    const secret = process.env.JWT_SECRET;
+    if (!secret) throw new ServiceUnavailableException('OAuth için JWT_SECRET yapılandırılmalıdır');
+    return secret;
   }
-
-  /**
-   * Hepsiburada OAuth Callback
-   * GET /oauth/hepsiburada/callback?code={code}&state={tenantId}
-   */
-  @Public()
-  @Get('hepsiburada/callback')
-  async hepsiburadaCallback(
-    @Query('code') code: string,
-    @Query('state') tenantId: string,
-    @Query('error') error: string,
-    @Res() res: Response,
-  ) {
-    try {
-      if (error) {
-        return res.redirect(`/dashboard/stores?error=hepsiburada_auth_failed`);
-      }
-
-      if (!code || !tenantId) {
-        return res.redirect('/dashboard/stores?error=missing_params');
-      }
-
-      // Hepsiburada'dan token al
-      const tokenResponse = await this.exchangeHepsiburadaCodeForToken(code);
-
-      // Merchant ID bilgisini çek
-      const merchantInfo = await this.getHepsiburadaMerchantInfo(
-        tokenResponse.access_token,
-      );
-
-      const existing = await this.prisma.integration.findFirst({
-        where: { tenantId, platform: 'HEPSIBURADA' },
-      });
-
-      if (existing) {
-        await this.prisma.integration.update({
-          where: { id: existing.id },
-          data: {
-            apiKey: this.encryption.encrypt(tokenResponse.access_token),
-            apiSecret: this.encryption.encrypt(tokenResponse.refresh_token),
-            isActive: true,
-            apiExtra: {
-              merchantId: merchantInfo.merchantId,
-              expiresAt: Date.now() + tokenResponse.expires_in * 1000,
-            },
-          },
-        });
-      } else {
-        await this.prisma.integration.create({
-          data: {
-            tenantId,
-            platform: 'HEPSIBURADA',
-            apiKey: this.encryption.encrypt(tokenResponse.access_token),
-            apiSecret: this.encryption.encrypt(tokenResponse.refresh_token),
-            isActive: true,
-            apiExtra: {
-              merchantId: merchantInfo.merchantId,
-              expiresAt: Date.now() + tokenResponse.expires_in * 1000,
-              marketplaceId: 'hepsiburada',
-            },
-          },
-        });
-      }
-
-      void this.triggerInitialSync(tenantId, 'HEPSIBURADA').catch((err) =>
-        console.error('Hepsiburada initial sync failed:', err),
-      );
-
-      return res.redirect('/dashboard/stores?success=hepsiburada_connected');
-    } catch (err) {
-      console.error('Hepsiburada OAuth callback error:', err);
-      return res.redirect(
-        `/dashboard/stores?error=hepsiburada_callback_failed`,
-      );
-    }
-  }
-
-  /**
-   * OAuth başlatma endpoint'i
-   * Kullanıcıyı platformun OAuth sayfasına yönlendirir
-   */
-  @Public()
-  @Get('init/:platform')
-  async initiateOAuth(
-    @Param('platform') platform: string,
-    @Query('tenantId') tenantId: string,
-    @Query('redirectUri') redirectUri: string,
-    @Res() res: Response,
-  ) {
-    if (!tenantId) {
-      return res.status(400).json({ error: 'tenantId required' });
-    }
-
-    let authUrl: string;
-
-    switch (platform.toLowerCase()) {
-      case 'amazon':
-      case 'amazon-tr':
-        authUrl = this.buildAmazonAuthUrl(tenantId, redirectUri);
-        break;
-      case 'hepsiburada':
-        authUrl = this.buildHepsiburadaAuthUrl(tenantId, redirectUri);
-        break;
-      default:
-        return res.status(400).json({ error: 'Unsupported platform' });
-    }
-
-    return res.redirect(authUrl);
-  }
-
-  private async triggerInitialSync(tenantId: string, platform: string) {
-    const integration = await this.prisma.integration.findFirst({
-      where: { tenantId, platform: platform as 'AMAZON' | 'HEPSIBURADA', isActive: true },
-      select: { id: true },
-    });
-    if (!integration) return;
-
-    await this.marketplaceService.syncIntegrationByStoreId(
-      tenantId,
-      integration.id,
-      'all',
-    );
-  }
-
-  // Private helper methods
-  private async exchangeAmazonCodeForToken(code: string, sellerId: string) {
+  private config() {
+    const applicationId = process.env.AMAZON_SP_API_APPLICATION_ID;
     const clientId = process.env.AMAZON_CLIENT_ID;
     const clientSecret = process.env.AMAZON_CLIENT_SECRET;
-
-    const response = await fetch('https://api.amazon.com/auth/o2/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        client_id: clientId!,
-        client_secret: clientSecret!,
-        redirect_uri: `${process.env.API_URL}/oauth/amazon/callback`,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Token exchange failed: ${response.status}`);
+    const redirectUri = process.env.AMAZON_REDIRECT_URI;
+    const webUrl = process.env.WEB_URL || process.env.NEXTAUTH_URL || process.env.AUTH_URL;
+    if (!applicationId || !clientId || !clientSecret || !redirectUri || !webUrl) throw new ServiceUnavailableException('Amazon uygulama ID, LWA bilgileri, kayıtlı callback URL ve WEB_URL yapılandırılmalıdır');
+    new URL(redirectUri); new URL(webUrl);
+    return { applicationId, clientId, clientSecret, redirectUri, webUrl };
+  }
+  @Post('init/:platform')
+  async initiateOAuth(@Param('platform') platform: string, @Req() req: any) {
+    const tenantId = req.user?.tenantId;
+    if (!tenantId) throw new BadRequestException('Mağaza oturumu gerekli');
+    const provider = platform === 'amazon' ? 'amazon-tr' : platform;
+    if (!AMAZON_MARKETPLACE_PROFILES[provider]) throw new BadRequestException('Bu sağlayıcı için API bilgileriyle bağlantı kurun');
+    const config = this.config();
+    const nonce = randomBytes(32).toString('hex');
+    const expiresAt = Date.now() + 10 * 60_000;
+    const payload = Buffer.from(JSON.stringify({ tenantId, provider, nonce, expiresAt })).toString('base64url');
+    const signature = createHmac('sha256', this.secret()).update(payload).digest('base64url');
+    await this.prisma.activityLog.create({ data: { tenantId, resource: 'oauth_state', resourceId: nonce, action: 'oauth.amazon.pending', details: { provider, expiresAt } } });
+    const domain = provider === 'amazon-us' ? 'sellercentral.amazon.com' : provider === 'amazon-tr' ? 'sellercentral.amazon.com.tr' : provider === 'amazon-uk' ? 'sellercentral.amazon.co.uk' : provider === 'amazon-fr' ? 'sellercentral.amazon.fr' : 'sellercentral.amazon.de';
+    const params = new URLSearchParams({ application_id: config.applicationId, state: payload + '.' + signature, redirect_uri: config.redirectUri });
+    return { authorizationUrl: 'https://' + domain + '/apps/authorize/consent?' + params.toString() };
+  }
+  private async consumeState(state: string) {
+    if (!state || state.length > 2048) throw new BadRequestException('Yetkilendirme durumu geçersiz');
+    const [payload, signature, rest] = state.split('.');
+    if (!payload || !signature || rest) throw new BadRequestException('Yetkilendirme durumu geçersiz');
+    const expected = createHmac('sha256', this.secret()).update(payload).digest();
+    const supplied = Buffer.from(signature, 'base64url');
+    if (expected.length !== supplied.length || !timingSafeEqual(expected, supplied)) throw new BadRequestException('Yetkilendirme imzası geçersiz');
+    let parsed: { tenantId: string; provider: string; nonce: string; expiresAt: number };
+    try { parsed = JSON.parse(Buffer.from(payload, 'base64url').toString('utf8')); } catch { throw new BadRequestException('Yetkilendirme durumu geçersiz'); }
+    if (!parsed.tenantId || !AMAZON_MARKETPLACE_PROFILES[parsed.provider] || !Number.isFinite(parsed.expiresAt) || parsed.expiresAt < Date.now()) throw new BadRequestException('Yetkilendirme süresi doldu; tekrar başlatın');
+    const consumed = await this.prisma.activityLog.deleteMany({ where: { tenantId: parsed.tenantId, resource: 'oauth_state', resourceId: parsed.nonce, action: 'oauth.amazon.pending', createdAt: { gte: new Date(Date.now() - 10 * 60_000) } } });
+    if (consumed.count !== 1) throw new BadRequestException('Yetkilendirme daha önce kullanıldı; tekrar başlatın');
+    return parsed;
+  }
+  @Public()
+  @Get('amazon/callback')
+  async amazonCallback(@Query('state') state: string, @Query('selling_partner_id') sellerId: string, @Query('spapi_oauth_code') code: string, @Query('error') error: string, @Res() res: Response) {
+    let destination: URL;
+    try { destination = new URL('/dashboard/settings/integrations', this.config().webUrl); } catch { return res.status(503).json({ message: 'Amazon OAuth sunucu yapılandırması eksik' }); }
+    try {
+      const verified = await this.consumeState(state);
+      if (error || !sellerId || !code) throw new BadRequestException('Amazon yetkilendirmesi tamamlanmadı');
+      const config = this.config();
+      const token = await providerJson('https://api.amazon.com/auth/o2/token', { method: 'POST', headers: { 'Content-Type': 'application/x-www-form-urlencoded' }, body: new URLSearchParams({ grant_type: 'authorization_code', code, client_id: config.clientId, client_secret: config.clientSecret, redirect_uri: config.redirectUri }) });
+      if (!token.refresh_token) throw new BadRequestException('Amazon yenileme tokenı alınamadı');
+      await this.marketplaceService.connectStore(verified.tenantId, '', { sellerId, refreshToken: token.refresh_token, clientId: config.clientId, clientSecret: config.clientSecret }, verified.provider);
+      destination.searchParams.set('success', 'amazon_connected');
+    } catch (failure) {
+      destination.searchParams.set('error', 'amazon_auth_failed');
+      destination.searchParams.set('message', failure instanceof Error ? failure.message : 'Amazon bağlantısı kurulamadı');
     }
-
-    return response.json();
-  }
-
-  private async exchangeHepsiburadaCodeForToken(code: string) {
-    const clientId = process.env.HEPSIBURADA_CLIENT_ID;
-    const clientSecret = process.env.HEPSIBURADA_CLIENT_SECRET;
-
-    const response = await fetch('https://api.hepsiburada.com/oauth/token', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: new URLSearchParams({
-        grant_type: 'authorization_code',
-        code,
-        client_id: clientId!,
-        client_secret: clientSecret!,
-        redirect_uri: `${process.env.API_URL}/oauth/hepsiburada/callback`,
-      }),
-    });
-
-    if (!response.ok) {
-      throw new Error(`Hepsiburada token exchange failed: ${response.status}`);
-    }
-
-    return response.json();
-  }
-
-  private async getHepsiburadaMerchantInfo(accessToken: string) {
-    const response = await fetch('https://api.hepsiburada.com/user/merchant', {
-      headers: { Authorization: `Bearer ${accessToken}` },
-    });
-
-    if (!response.ok) {
-      throw new Error('Failed to get merchant info');
-    }
-
-    return response.json();
-  }
-
-  private buildAmazonAuthUrl(tenantId: string, redirectUri?: string): string {
-    const clientId = process.env.AMAZON_CLIENT_ID;
-    const redirect =
-      redirectUri || `${process.env.API_URL}/oauth/amazon/callback`;
-
-    const params = new URLSearchParams({
-      application_id: clientId!,
-      state: tenantId,
-      redirect_uri: redirect,
-    });
-
-    return `https://sellercentral.amazon.com/apps/authorize/consent?${params.toString()}`;
-  }
-
-  private buildHepsiburadaAuthUrl(
-    tenantId: string,
-    redirectUri?: string,
-  ): string {
-    const clientId = process.env.HEPSIBURADA_CLIENT_ID;
-    const redirect =
-      redirectUri || `${process.env.API_URL}/oauth/hepsiburada/callback`;
-
-    const params = new URLSearchParams({
-      client_id: clientId!,
-      response_type: 'code',
-      state: tenantId,
-      redirect_uri: redirect,
-      scope: 'read write',
-    });
-
-    return `https://api.hepsiburada.com/oauth/authorize?${params.toString()}`;
+    return res.redirect(destination.toString());
   }
 }

@@ -111,7 +111,8 @@ export default function DemoPage() {
         setIsSubmitting(true);
 
         try {
-            const response = await fetch(`${process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'}/demo/request`, {
+            const apiBase = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
+            const response = await fetch(`${apiBase}/api/demo/request`, {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',

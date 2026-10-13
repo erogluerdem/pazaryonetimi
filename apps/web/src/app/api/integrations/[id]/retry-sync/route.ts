@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 import { prisma } from '@/lib/prisma';
 
 function getApiBaseUrl() {
-  const raw = process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3001';
+  const raw = process.env.API_INTERNAL_URL || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const normalized = raw.trim();
   if (!normalized) return 'http://localhost:3001';
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {

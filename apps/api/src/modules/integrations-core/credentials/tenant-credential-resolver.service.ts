@@ -35,7 +35,7 @@ export class TenantCredentialResolverService {
     return {
       apiKey: this.encryption.decrypt(integration.apiKey),
       apiSecret: this.encryption.decrypt(integration.apiSecret),
-      extra: (integration.apiExtra as Record<string, unknown>) ?? {},
+      extra: this.encryption.openExtra(integration.apiExtra),
     };
   }
 
@@ -58,7 +58,7 @@ export class TenantCredentialResolverService {
       throw new NotFoundException(`${providerKey} kimlik bilgisi bulunamadı`);
     }
 
-    const extra = (row.apiExtra as Record<string, unknown>) ?? {};
+    const extra = this.encryption.openExtra(row.apiExtra);
     return {
       apiKey: row.apiKey ? this.encryption.decrypt(row.apiKey) : '',
       apiSecret: row.apiSecret ? this.encryption.decrypt(row.apiSecret) : '',
@@ -87,7 +87,7 @@ export class TenantCredentialResolverService {
       throw new NotFoundException(`${providerId} kimlik bilgisi bulunamadı`);
     }
 
-    const extra = (row.apiExtra as Record<string, unknown>) ?? {};
+    const extra = this.encryption.openExtra(row.apiExtra);
     return {
       apiKey: row.apiKey ? this.encryption.decrypt(row.apiKey) : '',
       apiSecret: row.apiSecret ? this.encryption.decrypt(row.apiSecret) : '',
@@ -106,14 +106,8 @@ export class TenantCredentialResolverService {
     providerId: string,
     integrationId?: string,
   ): Promise<DecryptedCredentials> {
-    if (integrationId) {
-      try {
-        return await this.resolveIntegrationCredentials(tenantId, integrationId);
-      } catch {
-        return this.resolveServiceCredentialByProvider(tenantId, providerId);
-      }
-    }
-
+    if (integrationId) return this.resolveIntegrationCredentials(tenantId, integrationId);
+
     const integration = await this.prisma.integration.findFirst({
       where: injectTenantId(tenantId, {
         isActive: true,

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { providerJson } from './provider-http';
 import { MarketplaceBridge, MarketplaceReview } from './marketplace.service';
 import { ScrapingService } from '../scraping/scraping.service';
 import {
@@ -22,53 +23,24 @@ interface CicekSepetiProduct {
 @Injectable()
 export class CicekSepetiBridge implements MarketplaceBridge {
   private readonly logger = new Logger(CicekSepetiBridge.name);
-  private readonly baseUrl = 'https://apis.ciceksepeti.com/api/v1';
+  private readonly baseUrl: string;
 
   constructor(
     private readonly apiKey: string,
     private readonly apiSecret: string,
     private readonly scrapingService: ScrapingService,
-  ) {}
+    isTestMode = false,
+  ) { this.baseUrl = 'https://' + (isTestMode ? 'sandbox-' : '') + 'apis.ciceksepeti.com/api/v1'; }
 
   async syncProducts(): Promise<any> {
-    this.logger.log('Syncing products from ÇiçekSepeti');
-    try {
-      const response = await fetch(`${this.baseUrl}/Products`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-        },
-        body: JSON.stringify({ pageSize: 100, page: 1 }),
-      });
-
-      if (!response.ok) {
-        this.logger.warn(`CicekSepeti syncProducts failed: ${response.status}`);
-        return {
-          success: false,
-          platform: 'CICEKSEPETI',
-          error: `HTTP ${response.status}`,
-        };
-      }
-
-      const data = await response.json();
-      const products = data?.products ?? [];
-      return {
-        success: true,
-        platform: 'CICEKSEPETI',
-        count: products.length,
-        products,
-      };
-    } catch (error) {
-      this.logger.warn(
-        `CicekSepeti syncProducts error: ${(error as Error).message}`,
-      );
-      return {
-        success: false,
-        platform: 'CICEKSEPETI',
-        error: (error as Error).message,
-      };
+    const products: any[] = [];
+    for (let page = 1; page <= 2000; page++) {
+      const data = await providerJson(this.baseUrl + '/Products?PageSize=60&Page=' + page, { headers: { 'x-api-key': this.apiKey } });
+      if (!Array.isArray(data.products)) throw new Error('Çiçeksepeti ürün yanıtı beklenen biçimde değil');
+      products.push(...data.products);
+      if (data.products.length < 60 || products.length >= data.totalCount) return { success: true, platform: 'CICEKSEPETI', products, count: products.length };
     }
+    throw new Error('Çiçeksepeti sayfalaması tamamlanamadı');
   }
 
   async syncOrders(): Promise<any> {

@@ -47,50 +47,10 @@ export class AmazonBridge implements MarketplaceBridge {
   }
 
   async syncProducts(): Promise<any> {
-    const spClient = this.getSpApiClient();
-    if (spClient) {
-      try {
-        const products = await spClient.searchListingProducts(50);
-        return {
-          success: true,
-          platform: 'AMAZON',
-          count: products.length,
-          products,
-          source: 'sp-api',
-        };
-      } catch (error) {
-        this.logger.warn(
-          `Amazon SP-API product sync failed, falling back to scraping: ${(error as Error).message}`,
-        );
-      }
-    }
-
-    const sellerId = this.sellerId?.trim();
-    if (!sellerId || sellerId === 'public') {
-      throw new Error('Amazon syncProducts için sellerId zorunludur');
-    }
-
-    this.logger.log(`Syncing products for Amazon Seller: ${sellerId}`);
-    const storeUrl = sellerId.startsWith('http')
-      ? sellerId
-      : `https://www.amazon.com.tr/s?me=${encodeURIComponent(sellerId)}`;
-
-    const products = await this.scrapingService.scrapeStoreProducts(
-      storeUrl,
-      'AMAZON',
-      100,
-    );
-    if (!Array.isArray(products)) {
-      throw new Error('Amazon ürün verisi alınamadı');
-    }
-
-    return {
-      success: true,
-      platform: 'AMAZON',
-      count: products.length,
-      products,
-      source: 'scraping',
-    };
+    const client = this.getSpApiClient();
+    if (!client) throw new Error('Amazon ürün aktarımı için SP-API yetkilendirmesi gerekli');
+    const products = await client.searchListingProducts(0);
+    return { success: true, platform: 'AMAZON', count: products.length, products, source: 'sp-api' };
   }
 
   async getStoreInfo(storeId?: string): Promise<any> {

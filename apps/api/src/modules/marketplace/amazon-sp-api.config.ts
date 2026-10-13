@@ -106,8 +106,8 @@ export function parseAmazonSpApiCredentials(input: {
   const refreshToken = String(
     extra.refreshToken || input.apiSecret || extra.apiSecret || '',
   ).trim();
-  const clientId = String(extra.clientId || '').trim();
-  const clientSecret = String(extra.clientSecret || '').trim();
+  const clientId = String(extra.clientId || process.env.AMAZON_CLIENT_ID || '').trim();
+  const clientSecret = String(extra.clientSecret || process.env.AMAZON_CLIENT_SECRET || '').trim();
   const awsAccessKeyId = String(extra.awsAccessKeyId || '').trim();
   const awsSecretAccessKey = String(extra.awsSecretAccessKey || '').trim();
   const roleArn = String(extra.roleArn || extra.awsSellingPartnerRole || '').trim();
@@ -116,10 +116,7 @@ export function parseAmazonSpApiCredentials(input: {
     !sellerId ||
     !refreshToken ||
     !clientId ||
-    !clientSecret ||
-    !awsAccessKeyId ||
-    !awsSecretAccessKey ||
-    !roleArn
+    !clientSecret
   ) {
     return null;
   }

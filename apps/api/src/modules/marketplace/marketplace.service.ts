@@ -21,6 +21,8 @@ import { N11Bridge } from './n11.bridge';
 import { CicekSepetiBridge } from './ciceksepeti.bridge';
 import { Platform as PrismaPlatform, Prisma } from '@pazaryonetimi/database';
 import { EncryptionService } from '../../common/encryption.service';
+import { publicCredentialMetadata } from './credential-metadata';
+import { MarketplaceConnectionService } from './marketplace-connection.service';
 import { EbayBridge } from './ebay.bridge';
 import { AlibabaBridge } from './alibaba.bridge';
 import { AliexpressBridge } from './aliexpress.bridge';
@@ -119,6 +121,7 @@ export class MarketplaceService {
     private encryption: EncryptionService,
     @Inject(forwardRef(() => OrdersService))
     private ordersService: OrdersService,
+    private readonly connections: MarketplaceConnectionService,
     @Optional()
     @Inject(forwardRef(() => IntegrationSyncQueueService))
     private readonly integrationSyncQueue?: IntegrationSyncQueueService,
@@ -147,6 +150,7 @@ export class MarketplaceService {
   }
 
   private getBridgeForIntegration(integration: Integration): MarketplaceBridge {
+    integration = { ...integration, apiExtra: this.encryption.openExtra(integration.apiExtra) };
     const platform = integration.platform as unknown as Platform;
     const apiKey = this.encryption.decrypt(integration.apiKey);
     const apiSecret = this.encryption.decrypt(integration.apiSecret);
@@ -159,7 +163,7 @@ export class MarketplaceService {
           apiSecret,
           extra?.supplierId || '',
           this.scrapingService,
-          !!extra?.isTestMode,
+          extra?.isTestMode === true || extra?.isTestMode === 'true',
         );
       case Platform.AMAZON:
         return new AmazonBridge(
@@ -173,11 +177,13 @@ export class MarketplaceService {
           apiKey,
           (integration.apiExtra as any)?.merchantId || '',
           this.scrapingService,
+          apiSecret,
+          integration.apiExtra as any,
         );
       case Platform.N11:
         return new N11Bridge(apiKey, apiSecret, this.scrapingService);
       case Platform.CICEKSEPETI:
-        return new CicekSepetiBridge(apiKey, apiSecret, this.scrapingService);
+        return new CicekSepetiBridge(apiKey, apiSecret, this.scrapingService, (integration.apiExtra as any)?.isTestMode === true);
       case Platform.EBAY:
         const ebayExtra = integration.apiExtra as any;
         return new EbayBridge(
@@ -393,7 +399,7 @@ export class MarketplaceService {
           ? hasAmazonSpApiCredentials({
               apiKey,
               apiSecret,
-              apiExtra: (integration.apiExtra as Record<string, unknown>) ?? {},
+              apiExtra: this.encryption.openExtra(integration.apiExtra),
             })
           : undefined;
 
@@ -553,7 +559,7 @@ export class MarketplaceService {
           ? hasAmazonSpApiCredentials({
               apiKey,
               apiSecret,
-              apiExtra: (integration.apiExtra as Record<string, unknown>) ?? {},
+              apiExtra: this.encryption.openExtra(integration.apiExtra),
             })
           : undefined;
 
@@ -842,7 +848,7 @@ export class MarketplaceService {
         ? hasAmazonSpApiCredentials({
             apiKey,
             apiSecret,
-            apiExtra: (integration.apiExtra as Record<string, unknown>) ?? {},
+            apiExtra: this.encryption.openExtra(integration.apiExtra),
           })
         : undefined;
 
@@ -1436,7 +1442,8 @@ export class MarketplaceService {
 
       return integrations.map((integration) => {
         const orderStats = orderStatsByPlatform.get(integration.platform);
-        const lastSync = integration.updatedAt?.toISOString() || null;
+        const meta = publicCredentialMetadata(integration.apiExtra);
+        const lastSync = typeof meta.lastSuccessfulSyncAt === 'string' ? meta.lastSuccessfulSyncAt : null;
         const hoursSinceUpdate = integration.updatedAt
           ? (Date.now() - integration.updatedAt.getTime()) / (1000 * 60 * 60)
           : Number.POSITIVE_INFINITY;
@@ -1453,7 +1460,7 @@ export class MarketplaceService {
           id: integration.id,
           platform: integration.platform,
           name: `${integration.platform} Mağazası`,
-          status: integration.isActive ? 'connected' : 'disconnected',
+          status: !integration.isActive ? 'disconnected' : meta.connectionStatus === 'verified' ? 'connected' : 'pending',
           lastSync,
           productCount: productCountByPlatform.get(integration.platform) ?? 0,
           orderCount: orderStats?.orderCount ?? 0,
@@ -1488,8 +1495,8 @@ export class MarketplaceService {
         id: integration.id,
         platform: integration.platform,
         isActive: integration.isActive,
-        lastSyncAt: integration.updatedAt?.toISOString(),
-        settings: integration.apiExtra,
+        lastSyncAt: publicCredentialMetadata(integration.apiExtra).lastSuccessfulSyncAt || null,
+        settings: publicCredentialMetadata(integration.apiExtra),
         createdAt: integration.createdAt.toISOString(),
         status: integration.isActive ? 'active' : 'inactive',
       }));
@@ -1542,49 +1549,36 @@ export class MarketplaceService {
       credentials,
       resolvedMarketplaceId,
     );
+    const providerId = sanitizedCredentials.apiExtra && (sanitizedCredentials.apiExtra as any).marketplaceId || resolvedMarketplaceId || normalizedPlatform.toLowerCase();
+    const verification = await this.connections.test(providerId, credentials);
+    if (!verification.success && verification.supported) {
+      throw new UnprocessableEntityException(verification.message);
+    }
+    const extra = sanitizedCredentials.apiExtra as Record<string, any>;
+    const accountField = ['supplierId', 'merchantId', 'sellerId', 'shopDomain', 'siteUrl', 'shopId', 'vendorId'].find(key => extra[key]);
+    const accountId = accountField ? String(extra[accountField]) : sanitizedCredentials.apiKey;
+    extra.marketplaceId = providerId;
+    extra.connectionStatus = verification.success ? 'verified' : 'verification_pending';
+    if (verification.success) extra.lastVerifiedAt = verification.verifiedAt;
 
     try {
-      const existingWhere: {
-        tenantId: string;
-        platform: PrismaPlatform;
-        isActive: boolean;
-        apiExtra?: { path: string[]; equals: string };
-      } = {
-        tenantId,
-        platform: normalizedPlatform,
-        isActive: true,
-      };
-
-      if (resolvedMarketplaceId) {
-        existingWhere.apiExtra = {
-          path: ['marketplaceId'],
-          equals: resolvedMarketplaceId,
-        };
-      }
-
-      const existing = await this.prisma.integration.findFirst({
-        where: existingWhere,
-        select: { id: true },
+      extra.externalAccountId = accountId;
+      let existing: { id: string } | undefined;
+      const integration = await this.prisma.$transaction(async tx => {
+        await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', 'marketplace-connect:' + tenantId + ':' + normalizedPlatform);
+        const candidates = await tx.integration.findMany({ where: { tenantId, platform: normalizedPlatform }, orderBy: { updatedAt: 'desc' } });
+        existing = candidates.find(candidate => {
+          const stored = this.encryption.openExtra(candidate.apiExtra);
+          const storedProvider = stored.marketplaceId || (normalizedPlatform === 'AMAZON' ? 'amazon-tr' : normalizedPlatform.toLowerCase().replace(/_/g, '-'));
+          const storedField = ['supplierId', 'merchantId', 'sellerId', 'shopDomain', 'siteUrl', 'shopId', 'vendorId'].find(key => stored[key]);
+          const storedAccount = stored.externalAccountId || (storedField ? String(stored[storedField]) : this.encryption.decrypt(candidate.apiKey));
+          return storedProvider === providerId && (stored.isTestMode === true || stored.isTestMode === 'true') === extra.isTestMode && storedAccount === accountId;
+        });
+        const data = { isActive: true, apiKey: this.encryption.encrypt(sanitizedCredentials.apiKey), apiSecret: this.encryption.encrypt(sanitizedCredentials.apiSecret), apiExtra: this.encryption.sealExtra(extra) };
+        return existing ? tx.integration.update({ where: { id: existing.id }, data }) : tx.integration.create({ data: { ...data, tenantId, platform: normalizedPlatform } });
       });
 
-      if (existing) {
-        throw new ConflictException(
-          `${normalizedPlatform} mağazası zaten bağlı`,
-        );
-      }
-
-      const integration = await this.prisma.integration.create({
-        data: {
-          tenantId,
-          platform: normalizedPlatform,
-          isActive: true,
-          apiKey: this.encryption.encrypt(sanitizedCredentials.apiKey),
-          apiSecret: this.encryption.encrypt(sanitizedCredentials.apiSecret),
-          apiExtra: sanitizedCredentials.apiExtra,
-        },
-      });
-
-      void this.runInitialSyncAfterConnect(tenantId, integration.id).catch(
+      if (verification.success) void this.runInitialSyncAfterConnect(tenantId, integration.id).catch(
         (err) => {
           this.logger.error(
             `Initial sync failed for integration ${integration.id}`,
@@ -1601,12 +1595,16 @@ export class MarketplaceService {
           isActive: integration.isActive,
           createdAt: integration.createdAt,
         },
-        initialSyncStarted: true,
-        message: `${normalizedPlatform} mağazası bağlandı. İlk senkronizasyon arka planda başlatıldı.`,
+        connectionStatus: extra.connectionStatus,
+        initialSyncStarted: verification.success,
+        message: !verification.success ? 'Bilgiler kaydedildi; mağaza erişimi henüz doğrulanmadı.' : existing
+          ? `${normalizedPlatform} mağaza bilgileri güncellendi. Senkronizasyon arka planda başlatıldı.`
+          : `${normalizedPlatform} mağazası bağlandı. İlk senkronizasyon arka planda başlatıldı.`,
       };
     } catch (error) {
       if (
         error instanceof BadRequestException ||
+        error instanceof UnprocessableEntityException ||
         error instanceof ConflictException
       ) {
         throw error;
@@ -1687,6 +1685,7 @@ export class MarketplaceService {
       source.stockCode ??
         source.sku ??
         source.sellerStockCode ??
+        source.merchantSku ??
         source.barcode ??
         marketplaceListingId,
     );

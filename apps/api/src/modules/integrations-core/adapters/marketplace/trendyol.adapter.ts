@@ -118,6 +118,7 @@ export class TrendyolAdapter
 
     try {
       const raw = await bridge.syncOrders();
+      if (raw?.success === false) throw new Error(String(raw.error || raw.message || 'Pazaryeri aktarımı başarısız')); 
       const orders = (raw?.orders ?? raw?.content ?? []) as Record<string, unknown>[];
       const items = orders.map((o) => normalizeTrendyolOrder(o));
 

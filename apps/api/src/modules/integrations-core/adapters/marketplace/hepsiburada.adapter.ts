@@ -44,6 +44,8 @@ export class HepsiburadaAdapter
       credentials.apiKey,
       merchantId,
       this.scrapingService,
+      credentials.apiSecret,
+      credentials.extra,
     );
   }
 
@@ -118,6 +120,7 @@ export class HepsiburadaAdapter
 
     try {
       const raw = await bridge.syncOrders();
+      if (raw?.success === false) throw new Error(String(raw.error || raw.message || 'Pazaryeri aktarımı başarısız')); 
       const orders = (raw?.orders ?? raw?.content ?? raw?.data ?? []) as Record<
         string,
         unknown

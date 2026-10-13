@@ -72,6 +72,7 @@ export class AmazonTrAdapter
     try {
       const bridge = this.buildBridge(credentials);
       const raw = await bridge.syncProducts();
+      if (raw?.success === false) throw new Error(String(raw.error || raw.message || 'Pazaryeri aktarımı başarısız')); 
       const raws = (raw?.products ?? []) as Record<string, unknown>[];
       const items = raws.map((p) => normalizeGenericProduct(p, 'AMAZON'));
 
@@ -113,6 +114,7 @@ export class AmazonTrAdapter
     try {
       const bridge = this.buildBridge(credentials);
       const raw = await bridge.syncOrders();
+      if (raw?.success === false) throw new Error(String(raw.error || raw.message || 'Pazaryeri aktarımı başarısız')); 
       const orders = (raw?.orders ?? []) as Record<string, unknown>[];
 
       return {

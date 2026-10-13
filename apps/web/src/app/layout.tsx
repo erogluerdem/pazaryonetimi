@@ -155,7 +155,7 @@ export default function RootLayout({
       <head>
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){try{var s=JSON.parse(localStorage.getItem('pazar-theme-settings'));var m=s&&s.mode||'light';if(m==='system'){m=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',m);if(m==='dark')document.documentElement.classList.add('dark')}catch(e){document.documentElement.setAttribute('data-theme','light')}})()`,
+            __html: `(function(){try{var s=JSON.parse(localStorage.getItem('pazar-theme-settings'));var m=s&&s.mode||'light';if(m==='system'){m=window.matchMedia('(prefers-color-scheme:dark)').matches?'dark':'light'}document.documentElement.setAttribute('data-theme',m);if(m==='dark'){document.documentElement.classList.add('dark')}else{document.documentElement.classList.remove('dark')}if(s&&s.themeStyle){document.documentElement.setAttribute('data-theme-style',s.themeStyle)}}catch(e){document.documentElement.setAttribute('data-theme','light')}})()`,
           }}
         />
         {/* PWA: beforeinstallprompt event'ini React hydration'dan önce yakala */}

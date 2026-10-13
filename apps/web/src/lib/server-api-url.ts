@@ -57,11 +57,12 @@ export async function fetchFromApi<T = unknown>(
       }
 
       lastStatus = res.status;
-      if (res.status >= 400 && res.status < 500 && res.status !== 404) {
+      if (res.status !== 404) {
         return { ok: false, status: res.status, data, url };
       }
     } catch {
-      // Sonraki adayı dene
+      // A mutation may have committed before the network failed; do not replay it.
+      return { ok: false, status: 502, data: null };
     }
   }
 

@@ -53,8 +53,8 @@ interface ConnectionWizardProps {
   marketplace: MarketplaceConfig;
   isOpen: boolean;
   onClose: () => void;
-  onConnect: (credentials: Record<string, string>) => Promise<boolean>;
-  onTest: (credentials: Record<string, string>) => Promise<{ success: boolean; message: string }>;
+  onConnect: (credentials: Record<string, string | boolean>) => Promise<{ success: boolean; verified: boolean; message?: string }>;
+  onTest: (credentials: Record<string, string | boolean>) => Promise<{ success: boolean; message: string; supported?: boolean }>;
 }
 
 // Steps
@@ -242,14 +242,15 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
   onTest,
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
-  const [credentials, setCredentials] = useState<Record<string, string>>({});
-  const [errors, setErrors] = useState<Record<string, string>>({});
+  const [credentials, setCredentials] = useState<Record<string, string | boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string | boolean>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
   } | null>(null);
   const [isTestMode, setIsTestMode] = useState(false);
+  const [connectionResult, setConnectionResult] = useState<{ verified: boolean; message?: string } | null>(null);
 
   // Reset state when marketplace changes
   useEffect(() => {
@@ -263,12 +264,12 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
   }, [isOpen, marketplace.id]);
 
   const validateStep = (): boolean => {
-    const newErrors: Record<string, string> = {};
+    const newErrors: Record<string, string | boolean> = {};
 
     if (currentStep === 1) {
       // Validate credentials
       marketplace.requiredFields.forEach((field) => {
-        if (field.required && !credentials[field.key]?.trim()) {
+        if (field.required && !String(credentials[field.key] ?? '').trim()) {
           newErrors[field.key] = 'Bu alan zorunludur';
         }
       });
@@ -286,9 +287,9 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
       setCurrentStep(2);
       setIsLoading(true);
       try {
-        const result = await onTest({ ...credentials, isTestMode: isTestMode.toString() });
+        const result = await onTest({ ...credentials, isTestMode });
         setTestResult(result);
-      } catch (_error) {
+      } catch (error) {
         setTestResult({
           success: false,
           message: 'Bağlantı testi sırasında bir hata oluştu',
@@ -300,19 +301,20 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
       // Complete connection
       setIsLoading(true);
       try {
-        const success = await onConnect({ ...credentials, isTestMode: isTestMode.toString() });
-        if (success) {
+        const result = await onConnect({ ...credentials, isTestMode });
+        if (result.success) {
+          setConnectionResult(result);
           setCurrentStep(3);
         } else {
           setTestResult({
             success: false,
-            message: 'Bağlantı kurulurken bir hata oluştu',
+            message: result.message || 'Bağlantı kurulamadı',
           });
         }
-      } catch (_error) {
+      } catch (error) {
         setTestResult({
           success: false,
-          message: 'Bağlantı kurulurken bir hata oluştu',
+          message: error instanceof Error ? error.message : 'Bağlantı kurulamadı',
         });
       } finally {
         setIsLoading(false);
@@ -331,12 +333,35 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
     setIsLoading(true);
     setTestResult(null);
     try {
-      const result = await onTest({ ...credentials, isTestMode: isTestMode.toString() });
+      const result = await onTest({ ...credentials, isTestMode });
       setTestResult(result);
-    } catch (_error) {
+    } catch (error) {
       setTestResult({
         success: false,
         message: 'Bağlantı testi sırasında bir hata oluştu',
+      });
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleForceConnect = async () => {
+    setIsLoading(true);
+    try {
+      const result = await onConnect({ ...credentials, isTestMode });
+      if (result.success) {
+          setConnectionResult(result);
+        setCurrentStep(3);
+      } else {
+        setTestResult({
+          success: false,
+          message: result.message || 'Bağlantı kurulamadı',
+        });
+      }
+    } catch (error) {
+      setTestResult({
+        success: false,
+        message: error instanceof Error ? error.message : 'Bağlantı kurulamadı',
       });
     } finally {
       setIsLoading(false);
@@ -445,7 +470,7 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
                 <WizardInput
                   key={field.key}
                   field={field}
-                  value={credentials[field.key] || ''}
+                  value={String(credentials[field.key] || '')}
                   onChange={(value) =>
                     setCredentials((prev) => ({ ...prev, [field.key]: value }))
                   }
@@ -549,6 +574,15 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
                       Tekrar Dene
                     </button>
 
+                    <button
+                      onClick={handleForceConnect}
+                      disabled={isLoading}
+                      className="w-full px-6 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 rounded-xl font-medium hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
+                    >
+                      <CheckCircle2 className="w-4 h-4" />
+                      Bilgileri kaydet (doğrulanmadı)
+                    </button>
+
                     <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-xl border border-amber-200 dark:border-amber-800 text-left">
                       <p className="font-medium text-amber-800 dark:text-amber-200 mb-2">
                         Kontrol Edilecekler:
@@ -624,7 +658,7 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
               transition={{ delay: 0.5 }}
               className="text-2xl font-bold text-gray-900 dark:text-white mb-2"
             >
-              Tebrikler! 🎉
+              {connectionResult?.verified ? 'Mağaza erişimi doğrulandı' : 'Bilgiler kaydedildi'}
             </motion.h3>
             <motion.p
               initial={{ opacity: 0, y: 10 }}

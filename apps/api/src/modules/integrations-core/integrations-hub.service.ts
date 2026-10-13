@@ -6,6 +6,8 @@ import {
 } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { EncryptionService } from '../../common/encryption.service';
+import { MarketplaceService } from '../marketplace/marketplace.service';
+import { MarketplaceConnectionService } from '../marketplace/marketplace-connection.service';
 import { IntegrationCategory } from './enums/integration-category.enum';
 import { IntegrationSyncType } from './enums/integration-category.enum';
 import {
@@ -57,6 +59,8 @@ export class IntegrationsHubService {
     private readonly syncQueue: IntegrationSyncQueueService,
     private readonly credentialResolver: TenantCredentialResolverService,
     private readonly jobExecutor: IntegrationJobExecutor,
+    private readonly marketplace: MarketplaceService,
+    private readonly connections: MarketplaceConnectionService,
   ) {}
 
   /** Birleşik katalog — omnichannel + bağlantı detayları */
@@ -196,59 +200,8 @@ export class IntegrationsHubService {
       throw new BadRequestException(`${providerId} platform eşlemesi yok`);
     }
 
-    const normalized = normalizeMarketplaceCredentials(
-      platform,
-      credentials,
-      providerId,
-    );
-
-    const existing = await this.prisma.integration.findFirst({
-      where: {
-        tenantId,
-        platform,
-        isActive: true,
-        apiExtra: { path: ['marketplaceId'], equals: providerId },
-      },
-    });
-
-    const integration = existing
-      ? await this.prisma.integration.update({
-          where: { id: existing.id },
-          data: {
-            apiKey: this.encryption.encrypt(normalized.apiKey),
-            apiSecret: this.encryption.encrypt(normalized.apiSecret),
-            apiExtra: normalized.apiExtra,
-            isActive: true,
-          },
-        })
-      : await this.prisma.integration.create({
-          data: {
-            tenantId,
-            platform,
-            apiKey: this.encryption.encrypt(normalized.apiKey),
-            apiSecret: this.encryption.encrypt(normalized.apiSecret),
-            apiExtra: normalized.apiExtra,
-            isActive: true,
-          },
-        });
-
-    const queueResult = await this.syncQueue.enqueueSync({
-      tenantId,
-      integrationId: integration.id,
-      providerId,
-      category: catalog.category,
-      syncType: IntegrationSyncType.ALL,
-      platform: catalog.platform,
-      manual: true,
-    });
-
-    return {
-      success: true,
-      integrationId: integration.id,
-      providerId,
-      message: `${catalog.name} bağlandı`,
-      initialSync: queueResult,
-    };
+    const result = await this.marketplace.connectStore(tenantId, platform, credentials, providerId);
+    return { ...result, integrationId: result.integration.id, providerId };
   }
 
   private async connectServiceCredential(
@@ -287,7 +240,7 @@ export class IntegrationsHubService {
           data: {
             apiKey: apiKey ? this.encryption.encrypt(apiKey) : null,
             apiSecret: apiSecret ? this.encryption.encrypt(apiSecret) : null,
-            apiExtra,
+            apiExtra: this.encryption.sealExtra(apiExtra),
             isActive: true,
           },
         })
@@ -298,7 +251,7 @@ export class IntegrationsHubService {
             label: catalog.name,
             apiKey: apiKey ? this.encryption.encrypt(apiKey) : null,
             apiSecret: apiSecret ? this.encryption.encrypt(apiSecret) : null,
-            apiExtra,
+            apiExtra: this.encryption.sealExtra(apiExtra),
             isActive: true,
           },
         });
@@ -332,6 +285,10 @@ export class IntegrationsHubService {
       integrationId,
     );
 
+    const category = getProviderById(providerId)?.category;
+    if (category && INTEGRATION_CATEGORIES.has(category)) {
+      return this.connections.test(providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    }
     if (!this.adapterRegistry.has(providerId)) {
       return {
         success: true,

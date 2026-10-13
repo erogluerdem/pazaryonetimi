@@ -274,7 +274,7 @@ export default function StoresPage() {
                         <RefreshCw size={16} className={syncingStoreId ? 'animate-spin' : ''} /> Tümünü Senkronize Et
                     </button>
                     <button
-                        onClick={() => setConfirmDialog({ type: 'connect', storeId: '', platform: 'trendyol' })}
+                        onClick={() => router.push('/dashboard/settings/integrations')}
                         className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
                     >
                         <Plus size={16} /> Pazaryeri Bağla

@@ -69,6 +69,46 @@ const nextConfig = {
         source: '/api/scraping/:path*',
         destination: `${apiBase}/api/scraping/:path*`,
       },
+      {
+        source: '/api/marketplace/:path*',
+        destination: `${apiBase}/api/v1/marketplace/:path*`,
+      },
+      {
+        source: '/api/integrations-hub/:path*',
+        destination: `${apiBase}/api/v1/integrations-hub/:path*`,
+      },
+      {
+        source: '/api/v1/:path*',
+        destination: `${apiBase}/api/v1/:path*`,
+      },
+      {
+        source: '/tenant-credentials/:path*',
+        destination: `${apiBase}/api/v1/tenant-credentials/:path*`,
+      },
+      {
+        source: '/api/tenant-credentials/:path*',
+        destination: `${apiBase}/api/v1/tenant-credentials/:path*`,
+      },
+      {
+        source: '/api/demo/:path*',
+        destination: `${apiBase}/api/v1/demo/:path*`,
+      },
+      {
+        source: '/oauth/:path*',
+        destination: `${apiBase}/api/v1/oauth/:path*`,
+      },
+      {
+        source: '/api/oauth/:path*',
+        destination: `${apiBase}/api/v1/oauth/:path*`,
+      },
+      {
+        source: '/marketplace/:path*',
+        destination: `${apiBase}/api/v1/marketplace/:path*`,
+      },
+      {
+        source: '/integrations-hub/:path*',
+        destination: `${apiBase}/api/v1/integrations-hub/:path*`,
+      },
     ];
   },
 

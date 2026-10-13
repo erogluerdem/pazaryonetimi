@@ -5,7 +5,7 @@ import { auth } from '@/auth';
 
 function getApiBaseUrl() {
   const raw =
-    process.env.NEXT_PUBLIC_API_URL || process.env.API_URL || 'http://localhost:3001';
+    process.env.API_INTERNAL_URL || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
   const normalized = raw.trim();
   if (!normalized) return 'http://localhost:3001';
   if (normalized.startsWith('http://') || normalized.startsWith('https://')) {

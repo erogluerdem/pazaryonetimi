@@ -5,6 +5,7 @@ import Google from "next-auth/providers/google"
 import Facebook from "next-auth/providers/facebook"
 import Credentials from "next-auth/providers/credentials"
 import { verifyCredentials } from "@/lib/auth-credentials"
+import { createBackendSessionToken } from "@/lib/backend-session-token"
 
 type AuthProviderSettings = {
     google_id: string;
@@ -182,6 +183,20 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
                     }
                 }
 
+                if (session.user?.id) {
+                    const currentUser = await prisma.user.findUnique({
+                        where: { id: session.user.id },
+                        select: { id: true, email: true, tenantId: true, type: true },
+                    });
+                    if (currentUser?.tenantId) {
+                        session.user.tenantId = currentUser.tenantId;
+                        session.user.type = currentUser.type;
+                        session.user.accessToken = createBackendSessionToken({ ...currentUser, tenantId: currentUser.tenantId }) || session.user.accessToken;
+                    } else {
+                        session.user.tenantId = undefined;
+                        session.user.accessToken = undefined;
+                    }
+                }
                 return session;
             },
             async jwt({ token, user, account }: { token: any; user: any; account: any }) {
@@ -191,6 +206,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
                     token.tenantId = (user as any).tenantId;
                     token.isOnboarded = (user as any).isOnboarded;
                     token.accessToken = (user as any).accessToken;
+                }
+                if (token.tenantId && token.isOnboarded !== true) {
+                    try {
+                        const tenant = await prisma.tenant.findUnique({
+                            where: { id: token.tenantId },
+                            select: { isOnboarded: true }
+                        });
+                        if (tenant?.isOnboarded) {
+                            token.isOnboarded = true;
+                        }
+                    } catch {}
                 }
                 if (!token.tenantId && token.sub) {
                     try {

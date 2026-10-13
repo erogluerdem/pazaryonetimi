@@ -468,7 +468,7 @@ function ServiceGroupSection({ group, credentials, onRefresh }: {
   ).length;
 
   const handleSave = async (serviceType: string, data: Record<string, string>) => {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost:3001'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
     const serviceDef = group.services.find((s) => s.type === serviceType);
     const apiExtra: Record<string, string> = {};
 
@@ -497,7 +497,7 @@ function ServiceGroupSection({ group, credentials, onRefresh }: {
   };
 
   const handleDelete = async (id: string) => {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost:3001'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
     await fetch(`${API}/tenant-credentials/${id}`, {
       method: 'DELETE',
       credentials: 'include',
@@ -506,7 +506,7 @@ function ServiceGroupSection({ group, credentials, onRefresh }: {
   };
 
   const handleTest = async (id: string) => {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost:3001'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
     await fetch(`${API}/tenant-credentials/${id}/test`, {
       method: 'POST',
       credentials: 'include',
@@ -515,7 +515,7 @@ function ServiceGroupSection({ group, credentials, onRefresh }: {
   };
 
   const handleRotate = async (id: string) => {
-    const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+    const API = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost:3001'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
     await fetch(`${API}/tenant-credentials/${id}/rotate`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
@@ -675,7 +675,7 @@ function WebhookSecretPanel() {
   const [copied, setCopied] = useState(false);
   const [visible, setVisible] = useState(false);
 
-  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost:3001'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
   const fetchSecret = async () => {
     setLoading(true);
@@ -768,7 +768,7 @@ export default function ServiceIntegrationsPage() {
   const [credentials, setCredentials] = useState<SavedCredential[]>([]);
   const [loading, setLoading] = useState(true);
 
-  const API = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
+  const API = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost:3001'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
 
   const fetchCredentials = useCallback(async () => {
     setLoading(true);

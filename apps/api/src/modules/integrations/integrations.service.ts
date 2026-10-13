@@ -23,6 +23,7 @@ import {
   PLAN_NAMES,
 } from './marketplace-registry';
 import { EncryptionService } from '../../common/encryption.service';
+import { MarketplaceConnectionService } from '../marketplace/marketplace-connection.service';
 import {
   hasAmazonSpApiCredentials,
   parseAmazonSpApiCredentials,
@@ -141,6 +142,7 @@ export class IntegrationsService {
     private prisma: PrismaService,
     private encryption: EncryptionService,
     private marketplaceService: MarketplaceService,
+    private connections: MarketplaceConnectionService,
     @Optional() @InjectQueue('sync') private readonly syncQueue?: Queue,
   ) {}
 
@@ -167,9 +169,11 @@ export class IntegrationsService {
     categories: typeof CATEGORY_NAMES;
   }> {
     // Kullanıcının mevcut entegrasyonlarını al
-    const userIntegrations = await this.prisma.integration.findMany({
-      where: { tenantId },
-    });
+    const userIntegrations = tenantId
+      ? await this.prisma.integration.findMany({
+          where: { tenantId },
+        })
+      : [];
 
     let marketplaces = getActiveMarketplaces();
 
@@ -238,6 +242,7 @@ export class IntegrationsService {
 
   // Kullanıcının entegrasyonlarını listele
   async getUserIntegrations(tenantId: string): Promise<UserIntegration[]> {
+    if (!tenantId) return [];
     const integrations = await this.prisma.integration.findMany({
       where: { tenantId },
       orderBy: { createdAt: 'desc' },
@@ -352,83 +357,9 @@ export class IntegrationsService {
       );
     }
 
-    // apiKey ve apiSecret'ı ayarla
-    const apiKey =
-      credentials['apiKey'] ||
-      credentials['supplierId'] ||
-      credentials['sellerId'] ||
-      '';
-    const apiSecret =
-      credentials['apiSecret'] ||
-      credentials['refreshToken'] ||
-      credentials['secretKey'] ||
-      credentials['apiToken'] ||
-      '';
-
-    // Diğer credentials'ı apiExtra'ya kaydet
-    const apiExtra = {
-      ...credentials,
-      marketplaceId, // Hangi marketplace olduğunu kaydet
-    };
-
-    // Mevcut entegrasyonu kontrol et
-    const existing = await this.prisma.integration.findFirst({
-      where: {
-        tenantId,
-        platform: platformEnum,
-        apiExtra: { path: ['marketplaceId'], equals: marketplaceId } as any,
-      },
-    });
-
-    let integration: Integration;
-    if (existing) {
-      // Güncelle
-      integration = await this.prisma.integration.update({
-        where: { id: existing.id },
-        data: {
-          apiKey: this.encrypt(apiKey),
-          apiSecret: this.encrypt(apiSecret),
-          apiExtra,
-          isActive: true,
-        },
-      });
-    } else {
-      // Yeni oluştur
-      integration = await this.prisma.integration.create({
-        data: {
-          tenantId,
-          platform: platformEnum,
-          apiKey: this.encrypt(apiKey),
-          apiSecret: this.encrypt(apiSecret),
-          apiExtra,
-          isActive: true,
-        },
-      });
-    }
-
-    void this.marketplaceService
-      .syncIntegrationByStoreId(tenantId, integration.id, 'all')
-      .catch(() => undefined);
-
-    // Bağlantıyı test et
-    const testResult = await this.testConnection(integration.id, tenantId);
-
-    return {
-      success: testResult.success,
-      integration: {
-        id: integration.id,
-        tenantId: integration.tenantId,
-        marketplaceId,
-        marketplace,
-        credentials: {},
-        isActive: testResult.success,
-        status: testResult.success ? 'connected' : 'error',
-        errorMessage: testResult.success ? undefined : testResult.message,
-        createdAt: integration.createdAt,
-        updatedAt: integration.updatedAt,
-      } as UserIntegration,
-      message: testResult.message,
-    };
+    const result = await this.marketplaceService.connectStore(tenantId, platformEnum, credentials, marketplaceId);
+    const row = await this.prisma.integration.findFirst({ where: { id: result.integration.id, tenantId } });
+    return { success: true, message: result.message, integration: { id: row!.id, tenantId, marketplaceId, marketplace, credentials: {}, isActive: row!.isActive, status: result.connectionStatus === 'verified' ? 'connected' : 'pending', createdAt: row!.createdAt, updatedAt: row!.updatedAt } as UserIntegration };
   }
 
   // Bağlantıyı test et
@@ -453,315 +384,8 @@ export class IntegrationsService {
       return { success: false, message: 'Pazaryeri yapılandırması bulunamadı' };
     }
 
-    // Credentials'ı çöz
-    const credentials: Record<string, string> = {};
-    // apiKey ve apiSecret'ı çöz
-    if (integration.apiKey) {
-      credentials['apiKey'] = this.decrypt(integration.apiKey);
-    }
-    if (integration.apiSecret) {
-      credentials['apiSecret'] = this.decrypt(integration.apiSecret);
-    }
-    // apiExtra'dan diğer bilgileri al
-    if (integration.apiExtra && typeof integration.apiExtra === 'object') {
-      const extra = integration.apiExtra as Record<string, unknown>;
-      for (const [key, value] of Object.entries(extra)) {
-        if (typeof value === 'string' && key !== 'marketplaceId') {
-          credentials[key] = value;
-        }
-      }
-    }
-
-    // Gerçek API bağlantısı burada yapılacak
-    // Şimdilik simüle ediyoruz
-    try {
-      // Her marketplace için farklı test mantığı olabilir
-      switch (marketplace.id) {
-        case 'trendyol':
-          return await this.testTrendyolConnection(credentials);
-        case 'hepsiburada':
-          return await this.testHepsiburadaConnection(credentials);
-        case 'n11':
-          return await this.testN11Connection(credentials);
-        case 'ciceksepeti':
-          return await this.testCiceksepetiConnection(credentials);
-        case 'amazon-tr':
-        case 'amazon-us':
-        case 'amazon-uk':
-        case 'amazon-de':
-          return await this.testAmazonConnection(credentials);
-        default: {
-          const hasAllRequired = marketplace.requiredFields
-            .filter((f) => f.required)
-            .every((f) => credentials[f.key]);
-
-          if (!hasAllRequired) {
-            return { success: false, message: 'Eksik kimlik bilgileri' };
-          }
-
-          return {
-            success: true,
-            message:
-              'Kimlik bilgileri format kontrolu tamamlandi. Gercek API testi desteklenmiyor.',
-          };
-        }
-      }
-    } catch (error: any) {
-      return { success: false, message: error.message || 'Bağlantı hatası' };
-    }
-  }
-
-  private async testTrendyolConnection(
-    credentials: Record<string, string>,
-  ): Promise<ConnectionTestResult> {
-    const { supplierId, apiKey, apiSecret } = credentials;
-    if (!supplierId || !apiKey || !apiSecret) {
-      return {
-        success: false,
-        message: 'Trendyol kimlik bilgileri eksik veya hatalı',
-      };
-    }
-
-    const auth = Buffer.from(`${apiKey}:${apiSecret}`).toString('base64');
-    const response = await fetch(
-      `https://api.trendyol.com/sapigw/suppliers/${encodeURIComponent(supplierId)}/products?page=0&size=1`,
-      {
-        headers: {
-          Authorization: `Basic ${auth}`,
-          Accept: 'application/json',
-          'User-Agent': 'PazarYonetimi/1.0',
-        },
-      },
-    );
-
-    if (response.ok) {
-      return {
-        success: true,
-        message: 'Trendyol API bağlantısı doğrulandı',
-      };
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      return {
-        success: false,
-        message: 'Trendyol API kimlik bilgileri geçersiz',
-      };
-    }
-
-    return {
-      success: false,
-      message: `Trendyol API testi başarısız (HTTP ${response.status})`,
-    };
-  }
-
-  private async testHepsiburadaConnection(
-    credentials: Record<string, string>,
-  ): Promise<ConnectionTestResult> {
-    const { merchantId, apiKey } = credentials;
-    if (!merchantId || !apiKey) {
-      return {
-        success: false,
-        message: 'Hepsiburada kimlik bilgileri eksik veya hatalı',
-      };
-    }
-
-    const hbBase = getHepsiburadaListingApiBase();
-    const endpoints = [
-      `${hbBase}/ListingExternalService/v1/Listings/merchantid/${encodeURIComponent(merchantId)}?page=1&size=1`,
-      `${hbBase}/ListingExternalService/v1/Listings?merchantId=${encodeURIComponent(merchantId)}&page=1&size=1`,
-    ];
-
-    for (const url of endpoints) {
-      const response = await fetch(url, {
-        headers: {
-          Authorization: `Basic ${apiKey}`,
-          Accept: 'application/json',
-          'User-Agent': 'PazarYonetimi/1.0',
-        },
-      });
-
-      if (response.ok) {
-        return {
-          success: true,
-          message: 'Hepsiburada API bağlantısı doğrulandı',
-        };
-      }
-
-      if (response.status === 401 || response.status === 403) {
-        return {
-          success: false,
-          message: 'Hepsiburada API kimlik bilgileri geçersiz',
-        };
-      }
-    }
-
-    return {
-      success: false,
-      message: 'Hepsiburada API testi başarısız',
-    };
-  }
-
-  private async testN11Connection(
-    credentials: Record<string, string>,
-  ): Promise<ConnectionTestResult> {
-    const { apiKey, apiSecret } = credentials;
-    if (!apiKey || !apiSecret) {
-      return {
-        success: false,
-        message: 'N11 kimlik bilgileri eksik veya hatalı',
-      };
-    }
-
-    const soapBody = `<?xml version="1.0" encoding="utf-8"?>
-<soapenv:Envelope xmlns:soapenv="http://schemas.xmlsoap.org/soap/envelope/" xmlns:sch="http://www.n11.com/ws/schemas">
-  <soapenv:Header>
-    <sch:Authentication>
-      <appKey>${this.escapeXml(apiKey)}</appKey>
-      <appSecret>${this.escapeXml(apiSecret)}</appSecret>
-    </sch:Authentication>
-  </soapenv:Header>
-  <soapenv:Body>
-    <sch:GetProductListRequest>
-      <pagingData>
-        <currentPage>0</currentPage>
-        <pageSize>1</pageSize>
-      </pagingData>
-    </sch:GetProductListRequest>
-  </soapenv:Body>
-</soapenv:Envelope>`;
-
-    const response = await fetch('https://api.n11.com/ws/ProductService/', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/xml; charset=utf-8', SOAPAction: '' },
-      body: soapBody,
-    });
-
-    if (!response.ok) {
-      return {
-        success: false,
-        message: `N11 API testi başarısız (HTTP ${response.status})`,
-      };
-    }
-
-    const text = await response.text();
-    const status = text.match(/<status>([^<]*)<\/status>/i)?.[1]?.toLowerCase();
-    if (status && status !== 'success') {
-      const errorMessage = text.match(/<errorMessage>([^<]*)<\/errorMessage>/i)?.[1];
-      return {
-        success: false,
-        message: errorMessage || 'N11 API kimlik bilgileri geçersiz',
-      };
-    }
-
-    return {
-      success: true,
-      message: 'N11 API bağlantısı doğrulandı',
-    };
-  }
-
-  private async testCiceksepetiConnection(
-    credentials: Record<string, string>,
-  ): Promise<ConnectionTestResult> {
-    const { apiKey } = credentials;
-    if (!apiKey) {
-      return {
-        success: false,
-        message: 'Çiçeksepeti API anahtarı eksik',
-      };
-    }
-
-    const response = await fetch('https://apis.ciceksepeti.com/api/v1/Products', {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': apiKey,
-      },
-      body: JSON.stringify({ pageSize: 1, page: 1 }),
-    });
-
-    if (response.ok) {
-      return {
-        success: true,
-        message: 'Çiçeksepeti API bağlantısı doğrulandı',
-      };
-    }
-
-    if (response.status === 401 || response.status === 403) {
-      return {
-        success: false,
-        message: 'Çiçeksepeti API anahtarı geçersiz',
-      };
-    }
-
-    return {
-      success: false,
-      message: `Çiçeksepeti API testi başarısız (HTTP ${response.status})`,
-    };
-  }
-
-  private async testAmazonConnection(
-    credentials: Record<string, string>,
-  ): Promise<ConnectionTestResult> {
-    const spApiReady = hasAmazonSpApiCredentials({
-      apiKey: credentials.apiKey || credentials.sellerId,
-      apiSecret: credentials.apiSecret || credentials.refreshToken,
-      apiExtra: credentials,
-    });
-
-    if (!spApiReady) {
-      const missing = [
-        !credentials.clientId && 'Client ID',
-        !credentials.clientSecret && 'Client Secret',
-        !(credentials.refreshToken || credentials.apiSecret) && 'Refresh Token',
-        !credentials.awsAccessKeyId && 'AWS Access Key',
-        !credentials.awsSecretAccessKey && 'AWS Secret Key',
-        !credentials.roleArn && 'IAM Role ARN',
-        !(credentials.sellerId || credentials.apiKey) && 'Seller ID',
-      ].filter(Boolean);
-
-      return {
-        success: false,
-        message:
-          missing.length > 0
-            ? `Amazon SP-API için eksik alanlar: ${missing.join(', ')}`
-            : 'Amazon SP-API kimlik bilgileri eksik',
-      };
-    }
-
-    const parsed = parseAmazonSpApiCredentials({
-      apiKey: credentials.apiKey || credentials.sellerId,
-      apiSecret: credentials.apiSecret || credentials.refreshToken,
-      apiExtra: credentials,
-    });
-
-    if (!parsed) {
-      return {
-        success: false,
-        message: 'Amazon SP-API kimlik bilgileri çözümlenemedi',
-      };
-    }
-
-    const lwa = await AmazonSpApiClient.testLwaCredentials({
-      refreshToken: parsed.refreshToken,
-      clientId: parsed.clientId,
-      clientSecret: parsed.clientSecret,
-    });
-
-    return {
-      success: lwa.success,
-      message: lwa.success
-        ? 'Amazon SP-API LWA bağlantısı doğrulandı'
-        : lwa.message,
-    };
-  }
-
-  private escapeXml(str: string): string {
-    return str
-      .replace(/&/g, '&amp;')
-      .replace(/</g, '&lt;')
-      .replace(/>/g, '&gt;')
-      .replace(/"/g, '&quot;')
-      .replace(/'/g, '&apos;');
+    const extra = this.encryption.openExtra(integration.apiExtra);
+    return this.connections.test(marketplaceId, { ...extra, apiKey: this.decrypt(integration.apiKey), apiSecret: this.decrypt(integration.apiSecret) });
   }
 
   // Entegrasyonu devre dışı bırak
@@ -968,6 +592,7 @@ export class IntegrationsService {
     inactive: number;
     byRegion: Record<string, number>;
   }> {
+    if (!tenantId) return { total: 0, active: 0, inactive: 0, byRegion: {} };
     const integrations = await this.prisma.integration.findMany({
       where: { tenantId },
     });

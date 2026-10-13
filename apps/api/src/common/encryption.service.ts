@@ -1,5 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import * as crypto from 'crypto';
+import { publicCredentialMetadata } from '../modules/marketplace/credential-metadata';
 
 const ALGORITHM = 'aes-256-gcm';
 const IV_LENGTH = 12; // GCM standard
@@ -31,6 +32,20 @@ export class EncryptionService {
     const tag = cipher.getAuthTag();
     // Format: iv:tag:ciphertext
     return `${iv.toString('hex')}:${tag.toString('hex')}:${encrypted}`;
+  }
+
+  sealExtra(value: unknown): Record<string, any> {
+    const extra = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+    return { ...publicCredentialMetadata(extra), _encryptedCredentials: this.encrypt(JSON.stringify(extra)) };
+  }
+
+  openExtra(value: unknown): Record<string, any> {
+    const extra = value && typeof value === 'object' ? value as Record<string, unknown> : {};
+    if (typeof extra._encryptedCredentials !== 'string') return { ...extra }; // Legacy records.
+    const plaintext = this.decrypt(extra._encryptedCredentials);
+    if (!plaintext) throw new Error('Entegrasyon kimlik bilgileri çözülemedi. Yeniden yetkilendirin.');
+    const { _encryptedCredentials, ...metadata } = extra;
+    return { ...JSON.parse(plaintext), ...metadata };
   }
 
   decrypt(encryptedText: string): string {

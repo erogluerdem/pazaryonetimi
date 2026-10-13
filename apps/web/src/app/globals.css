@@ -11,6 +11,12 @@
   --color-background: var(--background);
   --color-surface: var(--surface-color);
   --color-border: var(--border-color);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
 
   --font-display: var(--theme-font, 'Inter', system-ui, sans-serif);
 }
@@ -48,7 +54,14 @@ nextjs-portal,
   --background: #ffffff;
   --foreground: #0f172a;
   --border-color: rgba(0, 0, 0, 0.08);
+  --border: rgba(0, 0, 0, 0.08);
   --surface-color: rgba(255, 255, 255, 0.8);
+  --card: #ffffff;
+  --card-foreground: #0f172a;
+  --muted: #f4f4f5;
+  --muted-foreground: #64748b;
+  --input: #e2e8f0;
+  --ring: #94a3b8;
   --spotlight-opacity: 0.08;
   --nav-bg: rgba(255, 255, 255, 0.8);
   --bento-bg-1: rgba(0, 0, 0, 0.02);
@@ -70,7 +83,14 @@ nextjs-portal,
   --background: #020204;
   --foreground: #ffffff;
   --border-color: rgba(255, 255, 255, 0.08);
+  --border: rgba(255, 255, 255, 0.08);
   --surface-color: rgba(10, 10, 15, 0.6);
+  --card: #0f172a;
+  --card-foreground: #ffffff;
+  --muted: #1e293b;
+  --muted-foreground: #94a3b8;
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #64748b;
   --spotlight-opacity: 0.15;
   --nav-bg: rgba(2, 2, 4, 0.8);
   --bento-bg-1: rgba(255, 255, 255, 0.03);
@@ -85,7 +105,14 @@ nextjs-portal,
   --background: #000000;
   --foreground: #ffffff;
   --border-color: rgba(255, 255, 255, 0.06);
+  --border: rgba(255, 255, 255, 0.06);
   --surface-color: rgba(20, 20, 25, 0.4);
+  --card: #0a0a0a;
+  --card-foreground: #ffffff;
+  --muted: #141414;
+  --muted-foreground: #94a3b8;
+  --input: rgba(255, 255, 255, 0.12);
+  --ring: #52525b;
   --spotlight-opacity: 0.1;
   --nav-bg: rgba(0, 0, 0, 0.85);
   --bento-bg-1: rgba(255, 255, 255, 0.02);
@@ -93,6 +120,115 @@ nextjs-portal,
   --bento-border-hover: rgba(255, 255, 255, 0.12);
   --text-primary: #ffffff;
   --text-secondary: #94a3b8;
+}
+
+/* ===== NEXORA THEME STYLE (Clean Monochrome / Modern Shadcn) ===== */
+[data-theme-style="nexora"] {
+  --background: #ffffff;
+  --foreground: #09090b;
+  --card: #ffffff;
+  --card-foreground: #09090b;
+  --muted: #f4f4f5;
+  --muted-foreground: #71717a;
+  --border-color: #e4e4e7;
+  --border: #e4e4e7;
+  --input: #e4e4e7;
+  --ring: #a1a1aa;
+  --surface-color: #ffffff;
+  --dash-sidebar-bg: #fafafa;
+  --dash-radius: 10px;
+  --dash-radius-lg: 12px;
+  --dash-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --dash-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+[data-theme-style="nexora"][data-theme="dark"],
+[data-theme="dark"][data-theme-style="nexora"],
+[data-theme="dark"] [data-theme-style="nexora"] {
+  --background: #09090b;
+  --foreground: #fafafa;
+  --card: #121215;
+  --card-foreground: #fafafa;
+  --muted: #18181b;
+  --muted-foreground: #a1a1aa;
+  --border-color: rgba(255, 255, 255, 0.1);
+  --border: rgba(255, 255, 255, 0.1);
+  --input: rgba(255, 255, 255, 0.15);
+  --ring: #71717a;
+  --surface-color: #121215;
+  --dash-sidebar-bg: #0d0d10;
+  --dash-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.3);
+  --dash-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+/* Nexora Dot Matrix Grid Pattern */
+.nexora-dot-pattern {
+  pointer-events: none;
+  position: absolute;
+  inset: 0;
+  color: rgba(163, 163, 163, 0.55);
+  background-image: radial-gradient(currentColor 1px, transparent 1px);
+  background-size: 16px 16px;
+  mask-image: radial-gradient(700px circle at center, white, transparent);
+  -webkit-mask-image: radial-gradient(700px circle at center, white, transparent);
+}
+
+[data-theme="dark"] .nexora-dot-pattern {
+  color: rgba(163, 163, 163, 0.25);
+}
+
+[data-theme-style="nexora"] .dash-card {
+  background: var(--card) !important;
+  border: 1px solid var(--border) !important;
+  border-radius: var(--dash-radius-lg) !important;
+  box-shadow: var(--dash-shadow-sm) !important;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+[data-theme-style="nexora"] .dash-card:hover {
+  box-shadow: var(--dash-shadow-md) !important;
+  border-color: color-mix(in srgb, var(--theme-primary, #4f46e5) 45%, var(--border)) !important;
+}
+
+/* Nexora Table Aesthetics */
+[data-theme-style="nexora"] table thead th {
+  background-color: var(--muted) !important;
+  color: var(--muted-foreground) !important;
+  font-size: 0.75rem !important;
+  font-weight: 600 !important;
+  text-transform: uppercase !important;
+  letter-spacing: 0.05em !important;
+  border-bottom: 1px solid var(--border) !important;
+  padding: 0.75rem 1rem !important;
+}
+
+[data-theme-style="nexora"] table tbody tr {
+  border-bottom: 1px solid var(--border) !important;
+  transition: background-color 0.15s ease-in-out;
+}
+
+[data-theme-style="nexora"] table tbody tr:hover {
+  background-color: color-mix(in srgb, var(--muted) 45%, transparent) !important;
+}
+
+[data-theme-style="nexora"] table tbody td {
+  padding: 0.75rem 1rem !important;
+  font-size: 0.875rem !important;
+}
+
+/* Nexora Clean Rounded Inputs & Selects */
+[data-theme-style="nexora"] input:not([type="checkbox"]):not([type="radio"]):not([type="range"]),
+[data-theme-style="nexora"] select,
+[data-theme-style="nexora"] textarea {
+  border-radius: 8px !important;
+  border-color: var(--border) !important;
+}
+
+[data-theme-style="nexora"] input:focus,
+[data-theme-style="nexora"] select:focus,
+[data-theme-style="nexora"] textarea:focus {
+  border-color: var(--theme-primary, #6366f1) !important;
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--theme-primary, #6366f1) 20%, transparent) !important;
 }
 
 /* Landing/marketing pages — orange brand (dashboard keeps blue primary) */

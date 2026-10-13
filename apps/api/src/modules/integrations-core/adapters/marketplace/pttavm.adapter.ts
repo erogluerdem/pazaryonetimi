@@ -63,6 +63,7 @@ export class PttAvmAdapter
 
     try {
       const raw = await bridge.syncProducts();
+      if (raw?.success === false) throw new Error(String(raw.error || raw.message || 'Pazaryeri aktarımı başarısız')); 
       const products = (raw?.products ?? []) as Record<string, unknown>[];
       const items = products.map((p) => normalizeGenericProduct(p, 'PTTAVM'));
 
@@ -105,6 +106,7 @@ export class PttAvmAdapter
 
     try {
       const raw = await bridge.syncOrders();
+      if (raw?.success === false) throw new Error(String(raw.error || raw.message || 'Pazaryeri aktarımı başarısız')); 
       const orders = (raw?.orders ?? []) as Record<string, unknown>[];
       const items = orders.map((o) => normalizeGenericOrder(o, 'PTTAVM'));
 

@@ -1,4 +1,5 @@
 import { Injectable, Logger } from '@nestjs/common';
+import { hepsiburadaHost, hepsiburadaHeaders, providerJson } from './provider-http';
 import { MarketplaceBridge, MarketplaceReview } from './marketplace.service';
 import { ScrapingService } from '../scraping/scraping.service';
 import {
@@ -45,7 +46,7 @@ interface HepsiburadaProduct {
 @Injectable()
 export class HepsiburadaBridge implements MarketplaceBridge {
   private readonly logger = new Logger(HepsiburadaBridge.name);
-  private readonly baseUrl = getHepsiburadaListingApiBase();
+  private readonly baseUrl: string;
   private readonly requestDelayMs = 300;
   private readonly maxApiPages = SYNC_MAX_API_PAGES;
 
@@ -53,7 +54,9 @@ export class HepsiburadaBridge implements MarketplaceBridge {
     private readonly apiKey: string,
     private readonly merchantId: string,
     private readonly scrapingService: ScrapingService,
-  ) {}
+    private readonly apiSecret: string = '',
+    private readonly options: { isTestMode?: unknown; username?: string } = {},
+  ) { this.baseUrl = options.isTestMode === undefined ? getHepsiburadaListingApiBase() : hepsiburadaHost('listing', options.isTestMode); }
 
   /**
    * Mağaza bilgilerini Hepsiburada API'sinden çek
@@ -105,7 +108,7 @@ export class HepsiburadaBridge implements MarketplaceBridge {
         resolvedStoreId,
         limit,
       );
-      if (apiProducts.length > 0) {
+      if (this.apiKey && this.apiKey !== 'public') {
         return apiProducts;
       }
 
@@ -155,8 +158,8 @@ export class HepsiburadaBridge implements MarketplaceBridge {
     const results: HepsiburadaProduct[] = [];
 
     for (
-      let page = 1;
-      page <= this.maxApiPages && (unlimited || results.length < limit);
+      let page = 0;
+      page < this.maxApiPages && (unlimited || results.length < limit);
       page++
     ) {
       const payload = await this.requestHepsiburada(storeId, page, pageSize);
@@ -185,46 +188,14 @@ export class HepsiburadaBridge implements MarketplaceBridge {
     page: number,
     size: number,
   ): Promise<Record<string, unknown> | null> {
-    const endpoints = [
-      `${this.baseUrl}/ListingExternalService/v1/Listings/merchantid/${encodeURIComponent(storeId)}?page=${page}&size=${size}`,
-      `${this.baseUrl}/ListingExternalService/v1/Listings?merchantId=${encodeURIComponent(storeId)}&page=${page}&size=${size}`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Basic ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'User-Agent': 'PazarYonetimi/1.0',
-          },
-        });
-
-        if (response.status === 429) {
-          this.logger.warn(`Hepsiburada rate limit: ${url}`);
-          await this.delay(1200);
-          return null;
-        }
-
-        if (!response.ok) {
-          continue;
-        }
-
-        return (await response.json()) as Record<string, unknown>;
-      } catch (error) {
-        this.logger.warn(
-          `Hepsiburada API request error: ${(error as Error).message}`,
-        );
-      }
-    }
-
-    return null;
+    return providerJson(this.baseUrl + '/listings/merchantid/' + encodeURIComponent(storeId) + '?offset=' + page * size + '&limit=' + size, { headers: hepsiburadaHeaders(this.options.username || this.apiKey, this.apiSecret) });
   }
 
   private extractProductArray(
     payload: Record<string, unknown>,
   ): Record<string, unknown>[] {
+    if (Array.isArray(payload)) return payload;
+    if (Array.isArray(payload.listings)) return payload.listings as Record<string, unknown>[];
     const data = payload.data;
     if (Array.isArray(data)) return data as Record<string, unknown>[];
 
@@ -519,40 +490,15 @@ export class HepsiburadaBridge implements MarketplaceBridge {
       );
     }
 
-    const endpoints = [
-      `${this.baseUrl}/OrderService/v1/orders/merchantid/${encodeURIComponent(this.merchantId)}?page=1&size=50`,
-      `${this.baseUrl}/OrderService/v1/orders?merchantId=${encodeURIComponent(this.merchantId)}&page=1&size=50`,
-    ];
-
-    for (const url of endpoints) {
-      try {
-        const response = await fetch(url, {
-          headers: {
-            Authorization: `Basic ${this.apiKey}`,
-            'Content-Type': 'application/json',
-            Accept: 'application/json',
-            'User-Agent': 'PazarYonetimi/1.0',
-          },
-        });
-
-        if (!response.ok) continue;
-        const data = (await response.json()) as Record<string, unknown>;
-        const orders = this.extractOrderArray(data);
-
-        return {
-          success: true,
-          platform: 'HEPSIBURADA',
-          orders,
-          source: 'api',
-        };
-      } catch (error) {
-        this.logger.warn(
-          `Hepsiburada syncOrders request error: ${(error as Error).message}`,
-        );
-      }
+    const orders: any[] = [];
+    for (let offset = 0; offset < 200_000; offset += 50) {
+      const result = await providerJson(hepsiburadaHost('oms', this.options.isTestMode) + '/orders/merchantid/' + encodeURIComponent(this.merchantId) + '?offset=' + offset + '&limit=50', { headers: hepsiburadaHeaders(this.options.username || this.apiKey, this.apiSecret) });
+      const page = Array.isArray(result) ? result : result.items || result.orders;
+      if (!Array.isArray(page)) throw new Error('Hepsiburada sipariş yanıtı beklenen biçimde değil');
+      orders.push(...page);
+      if (page.length < 50) return { success: true, platform: 'HEPSIBURADA', orders };
     }
-
-    throw new Error('Hepsiburada sipariş verisi alınamadı');
+    throw new Error('Hepsiburada sipariş sayfalaması tamamlanamadı');
   }
 
   async updateStock(sku: string, stock: number): Promise<any> {
@@ -615,10 +561,10 @@ export class HepsiburadaBridge implements MarketplaceBridge {
     const response = await fetch(`${this.baseUrl}${endpoint}`, {
       method: 'POST',
       headers: {
-        Authorization: `Basic ${this.apiKey}`,
+        Authorization: hepsiburadaHeaders(this.options.username || this.apiKey, this.apiSecret).Authorization,
         'Content-Type': 'application/json',
         Accept: 'application/json',
-        'User-Agent': 'PazarYonetimi/1.0',
+        'User-Agent': process.env.HEPSIBURADA_INTEGRATOR_NAME || 'PazarYonetimi',
       },
       body: JSON.stringify({
         merchantId: this.merchantId,
@@ -668,7 +614,7 @@ export class HepsiburadaBridge implements MarketplaceBridge {
       const response = await fetch(url, {
         method: 'POST',
         headers: {
-          Authorization: `Basic ${this.apiKey}`,
+          Authorization: hepsiburadaHeaders(this.options.username || this.apiKey, this.apiSecret).Authorization,
           'Content-Type': 'application/json',
           Accept: 'application/json',
           'User-Agent': `${this.merchantId} - SelfIntegration`,
@@ -720,10 +666,10 @@ export class HepsiburadaBridge implements MarketplaceBridge {
       try {
         const response = await fetch(url, {
           headers: {
-            Authorization: `Basic ${this.apiKey}`,
+            Authorization: hepsiburadaHeaders(this.options.username || this.apiKey, this.apiSecret).Authorization,
             'Content-Type': 'application/json',
             Accept: 'application/json',
-            'User-Agent': 'PazarYonetimi/1.0',
+            'User-Agent': process.env.HEPSIBURADA_INTEGRATOR_NAME || 'PazarYonetimi',
           },
         });
         if (!response.ok) continue;

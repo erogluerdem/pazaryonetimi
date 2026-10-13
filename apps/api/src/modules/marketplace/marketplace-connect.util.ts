@@ -1,5 +1,7 @@
 import { UnprocessableEntityException } from '@nestjs/common';
 import { Platform as PrismaPlatform, Prisma } from '@pazaryonetimi/database';
+import { normalizeTestMode } from './credential-metadata';
+import { extractSellerIdFromRef } from './amazon-sp-api.config';
 
 export const MARKETPLACE_ID_TO_PLATFORM: Record<string, PrismaPlatform> = {
   trendyol: 'TRENDYOL',
@@ -107,6 +109,7 @@ export function normalizeMarketplaceCredentials(
 
   const apiExtra: Record<string, unknown> = {
     ...credentials,
+    isTestMode: normalizeTestMode(credentials.isTestMode),
     ...(resolvedMarketplaceId ? { marketplaceId: resolvedMarketplaceId } : {}),
   };
 
@@ -128,8 +131,8 @@ export function normalizeMarketplaceCredentials(
     }
     case 'HEPSIBURADA': {
       const merchantId = pickString(credentials, ['merchantId']);
-      apiKey = pickString(credentials, ['apiKey', 'accessToken']);
-      apiSecret = pickString(credentials, ['apiSecret', 'refreshToken']);
+      apiKey = pickString(credentials, ['username', 'apiKey']) || merchantId;
+      apiSecret = pickString(credentials, ['serviceKey', 'password', 'apiSecret']);
       if (!merchantId) {
         throw new UnprocessableEntityException(
           'Hepsiburada için merchantId zorunludur',
@@ -191,6 +194,7 @@ export function normalizeMarketplaceCredentials(
         'refreshToken',
         'mwsAuthToken',
       ]);
+      apiExtra.sellerId = extractSellerIdFromRef(apiKey);
       if (!apiExtra.marketplaceId) {
         apiExtra.marketplaceId =
           resolvedMarketplaceId ||
@@ -247,6 +251,9 @@ export function normalizeMarketplaceCredentials(
     );
   }
 
+  if (!apiSecret && ['TRENDYOL', 'N11', 'HEPSIBURADA'].includes(platform)) {
+    throw new UnprocessableEntityException('Bu pazaryeri için gizli anahtar/servis anahtarı zorunludur');
+  }
   if (!apiSecret && !OPTIONAL_SECRET_PLATFORMS.has(platform)) {
     apiSecret = apiKey;
   }

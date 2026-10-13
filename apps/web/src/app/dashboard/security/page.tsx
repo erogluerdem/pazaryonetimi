@@ -1,6 +1,7 @@
 "use client";
 
 import React, { useState, useEffect } from 'react';
+import Link from 'next/link';
 import { motion } from 'framer-motion';
 import { useSecurity } from '@/lib/hooks';
 import { PasswordChangeForm } from '@/components/settings/PasswordChangeForm';
@@ -231,6 +232,19 @@ export default function SecurityPage() {
                                     </div>
                                 </div>
                                 <CheckCircle2 className="w-5 h-5 text-green-600 dark:text-green-400" />
+                            </div>
+
+                            <div className="pt-2">
+                                <Link
+                                    href="/two-factor"
+                                    className="flex items-center justify-between w-full py-2.5 px-3.5 text-xs font-semibold rounded-xl border border-border bg-muted/40 hover:bg-muted text-foreground transition-colors group"
+                                >
+                                    <div className="flex items-center gap-2">
+                                        <Shield className="w-3.5 h-3.5 text-primary" />
+                                        <span>2FA Giriş ve Doğrulama Ekranını Test Et</span>
+                                    </div>
+                                    <ChevronRight className="w-3.5 h-3.5 text-muted-foreground group-hover:translate-x-0.5 transition-transform" />
+                                </Link>
                             </div>
                         </div>
                     </motion.div>
