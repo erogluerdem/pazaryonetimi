@@ -34,6 +34,7 @@ export class EtsyAdapter
       credentials.apiSecret,
       String(credentials.extra.accessToken ?? ''),
       this.scrapingService,
+      String(credentials.extra.shopId || ''),
     );
   }
 

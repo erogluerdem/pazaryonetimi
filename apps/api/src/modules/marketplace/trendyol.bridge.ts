@@ -556,14 +556,14 @@ export class TrendyolBridge implements MarketplaceBridge {
 
   private extractOrdersArray(
     payload: Record<string, unknown> | null,
-  ): unknown[] {
+  ): Record<string, unknown>[] {
     if (!payload) return [];
-    if (Array.isArray(payload.content)) return payload.content;
-    if (Array.isArray(payload.items)) return payload.items;
+    if (Array.isArray(payload.content)) return payload.content as Record<string, unknown>[];
+    if (Array.isArray(payload.items)) return payload.items as Record<string, unknown>[];
     if (payload.data && typeof payload.data === 'object') {
       const data = payload.data as { items?: unknown; content?: unknown };
-      if (Array.isArray(data.items)) return data.items;
-      if (Array.isArray(data.content)) return data.content;
+      if (Array.isArray(data.items)) return data.items as Record<string, unknown>[];
+      if (Array.isArray(data.content)) return data.content as Record<string, unknown>[];
     }
     return [];
   }

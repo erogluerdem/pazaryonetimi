@@ -146,30 +146,36 @@ export default function StoresPage() {
         setConfirmDialog(null);
     }, [confirmDialog, disconnectStore]);
 
-    const getStatusBadge = (status: Store['status']) => {
+    const getStatusBadge = (status: Store['status'], verified?: boolean) => {
         switch (status) {
             case 'connected':
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
-                        <CheckCircle size={10} /> Bağlı
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-green-500/10 text-green-500 border border-green-500/20">
+                        <CheckCircle size={11} /> {verified ? 'API Doğrulandı' : 'Bağlı'}
                     </span>
                 );
             case 'syncing':
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse">
-                        <Loader2 size={10} className="animate-spin" /> Senkronize Ediliyor
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-blue-500/10 text-blue-500 border border-blue-500/20 animate-pulse">
+                        <Loader2 size={11} className="animate-spin" /> Senkronize Ediliyor
+                    </span>
+                );
+            case 'pending':
+                return (
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-amber-500/10 text-amber-500 border border-amber-500/20">
+                        <Clock size={11} /> Doğrulama Bekliyor
                     </span>
                 );
             case 'error':
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20">
-                        <AlertTriangle size={10} /> Hata
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-red-500/10 text-red-500 border border-red-500/20">
+                        <AlertTriangle size={11} /> Bağlantı / Aktarım Hatası
                     </span>
                 );
             default:
                 return (
-                    <span className="inline-flex items-center gap-1.5 px-2 py-1 rounded-lg text-[10px] font-bold bg-slate-500/10 text-slate-500 border border-slate-500/20">
-                        <XCircle size={10} /> Bağlı Değil
+                    <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-bold bg-slate-500/10 text-slate-500 border border-slate-500/20">
+                        <XCircle size={11} /> Bağlı Değil
                     </span>
                 );
         }
@@ -390,7 +396,7 @@ export default function StoresPage() {
                                         </div>
                                     </div>
                                     <div className="flex items-center gap-2">
-                                        {getStatusBadge(isSyncing ? 'syncing' : store.status)}
+                                        {getStatusBadge(isSyncing ? 'syncing' : store.status, store.verified)}
                                         {(store.status === 'connected' || store.status === 'syncing') && (
                                             <button
                                                 onClick={() => handleSync(store.id)}
@@ -424,7 +430,7 @@ export default function StoresPage() {
                             {store.status === 'connected' || store.status === 'syncing' ? (
                                 <div className="p-5">
                                     {/* Stats Grid */}
-                                    <div className="grid grid-cols-3 gap-3 mb-4">
+                                    <div className="grid grid-cols-3 gap-3 mb-3">
                                         <div className="bg-background p-3 rounded-xl">
                                             <div className="text-[10px] text-slate-500 mb-1">Ciro</div>
                                             <div className="text-sm font-black text-foreground">
@@ -440,6 +446,39 @@ export default function StoresPage() {
                                             <div className="text-sm font-black text-foreground">{store.totalOrders}</div>
                                         </div>
                                     </div>
+
+                                    {/* Telemetry Breakdown: Eklenen / Güncellenen / Hatalı / Sipariş */}
+                                    <div className="grid grid-cols-4 gap-2 mb-4 bg-background/50 p-2.5 rounded-xl border border-border/60">
+                                        <div className="text-center">
+                                            <div className="text-[10px] text-slate-500 font-medium">Eklenen</div>
+                                            <div className="text-xs font-black text-green-500">+{store.productsAdded ?? 0}</div>
+                                        </div>
+                                        <div className="text-center border-l border-border/40">
+                                            <div className="text-[10px] text-slate-500 font-medium">Güncellenen</div>
+                                            <div className="text-xs font-black text-blue-500">{store.productsUpdated ?? 0}</div>
+                                        </div>
+                                        <div className="text-center border-l border-border/40">
+                                            <div className="text-[10px] text-slate-500 font-medium">Hatalı</div>
+                                            <div className={`text-xs font-black ${(store.productsFailed ?? 0) > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                                {store.productsFailed ?? 0}
+                                            </div>
+                                        </div>
+                                        <div className="text-center border-l border-border/40">
+                                            <div className="text-[10px] text-slate-500 font-medium">Sipariş</div>
+                                            <div className="text-xs font-black text-foreground">{store.ordersSynced ?? store.totalOrders ?? 0}</div>
+                                        </div>
+                                    </div>
+
+                                    {/* Last Sync Error Alert if any */}
+                                    {store.lastSyncError && (
+                                        <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl mb-4 text-xs text-red-400 flex items-start gap-2">
+                                            <AlertTriangle size={14} className="shrink-0 mt-0.5" />
+                                            <div className="flex-1 break-words">
+                                                <span className="font-bold">Son Aktarım Hatası: </span>
+                                                {store.lastSyncError}
+                                            </div>
+                                        </div>
+                                    )}
 
                                     {/* Rating */}
                                     {store.rating > 0 && (
@@ -521,12 +560,14 @@ export default function StoresPage() {
                                 </div>
                             ) : store.status === 'error' ? (
                                 <div className="p-5">
-                                    <div className="bg-red-500/5 border border-red-500/20 rounded-xl p-4 mb-4">
+                                    <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-4 mb-4">
                                         <div className="flex items-start gap-3">
-                                            <AlertTriangle size={16} className="text-red-500 mt-0.5" />
-                                            <div>
-                                                <div className="text-sm font-bold text-red-500">Bağlantı Hatası</div>
-                                                <div className="text-xs text-red-500/70">API yanıt vermiyor. Kimlik bilgilerinizi kontrol edin.</div>
+                                            <AlertTriangle size={16} className="text-red-500 mt-0.5 shrink-0" />
+                                            <div className="flex-1">
+                                                <div className="text-sm font-bold text-red-500">Bağlantı / Aktarım Hatası</div>
+                                                <div className="text-xs text-red-400 mt-1 break-words font-medium">
+                                                    {store.lastSyncError || 'Pazaryeri API erişimi onaylamadı veya kimlik bilgileri geçersiz.'}
+                                                </div>
                                             </div>
                                         </div>
                                     </div>

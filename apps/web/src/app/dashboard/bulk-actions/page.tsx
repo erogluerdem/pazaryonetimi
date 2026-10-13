@@ -45,8 +45,26 @@ const bulkActions = [
 const recentOperations: any[] = [];
 
 export default function BulkActionsPage() {
-    const { executeBulkAction, loading: bulkLoading, history } = useBulkActions();
+    const { executeBulkAction, rollbackBulkAction, loading: bulkLoading, history } = useBulkActions();
     const { data: apiProducts, loading: productsLoading } = useProducts();
+    const [rollingBackId, setRollingBackId] = useState<string | null>(null);
+    const [rollbackMessage, setRollbackMessage] = useState<string | null>(null);
+
+    const handleRollback = async (id: string) => {
+        if (!confirm('Bu toplu işlemi geri alarak ürünlerin fiyat ve stoklarını önceki değerlerine döndürmek istediğinize emin misiniz?')) {
+            return;
+        }
+        setRollingBackId(id);
+        try {
+            const res = (await rollbackBulkAction(id)) as { message?: string } | undefined;
+            setRollbackMessage(res?.message || 'İşlem başarıyla geri alındı');
+            setTimeout(() => setRollbackMessage(null), 5000);
+        } catch (err: any) {
+            alert(err?.message || 'Geri alma sırasında hata oluştu');
+        } finally {
+            setRollingBackId(null);
+        }
+    };
 
     const products = (Array.isArray(apiProducts) && apiProducts.length > 0)
         ? apiProducts.map((p, i) => ({
@@ -422,6 +440,106 @@ export default function BulkActionsPage() {
                         </table>
                     </div>
                 </motion.div>
+            </div>
+
+            {rollbackMessage && (
+                <div className="p-4 bg-green-500/10 border border-green-500/20 text-green-500 rounded-xl text-sm font-bold flex items-center gap-2">
+                    <CheckCircle2 className="w-5 h-5" />
+                    <span>{rollbackMessage}</span>
+                </div>
+            )}
+
+            {/* Bulk Action History & Rollback */}
+            <div className="mt-10">
+                <div className="flex items-center justify-between mb-4">
+                    <div>
+                        <h2 className="text-xl font-bold text-foreground flex items-center gap-2">
+                            <RotateCcw className="w-5 h-5 text-indigo-500" />
+                            İşlem Geçmişi & Geri Alma (Rollback)
+                        </h2>
+                        <p className="text-slate-500 text-xs mt-1">
+                            Yapılan toplu işlemler kaydedilir; fiyat ve stok değişikliklerinden 1 tıkla geri dönülebilir.
+                        </p>
+                    </div>
+                </div>
+
+                <div className="bg-surface rounded-2xl border border-border overflow-hidden">
+                    {history.length === 0 ? (
+                        <div className="p-8 text-center text-slate-500 text-sm">
+                            Henüz kaydedilmiş toplu işlem bulunmuyor.
+                        </div>
+                    ) : (
+                        <div className="overflow-x-auto">
+                            <table className="w-full">
+                                <thead>
+                                    <tr className="border-b border-border bg-background/50 text-left text-xs font-bold text-slate-500">
+                                        <th className="p-4">İşlem</th>
+                                        <th className="p-4">Etkilenen Ürün</th>
+                                        <th className="p-4">Durum</th>
+                                        <th className="p-4">Yedek (Snapshot)</th>
+                                        <th className="p-4">Tarih</th>
+                                        <th className="p-4">Yapan</th>
+                                        <th className="p-4 text-right">İşlem</th>
+                                    </tr>
+                                </thead>
+                                <tbody className="divide-y divide-border text-sm">
+                                    {history.map((item) => (
+                                        <tr key={item.id} className="hover:bg-background/40 transition-colors">
+                                            <td className="p-4 font-medium text-foreground capitalize">
+                                                {item.action.replace(/[-_]/g, ' ')}
+                                            </td>
+                                            <td className="p-4 font-mono text-xs">
+                                                {item.productCount ?? item.affectedCount ?? item.totalCount ?? 0} ürün
+                                            </td>
+                                            <td className="p-4">
+                                                <span className={`px-2 py-1 rounded-full text-xs font-bold border ${
+                                                    item.status === 'completed'
+                                                        ? 'bg-green-500/10 text-green-500 border-green-500/20'
+                                                        : item.status === 'rolled_back'
+                                                        ? 'bg-purple-500/10 text-purple-400 border-purple-500/20'
+                                                        : item.status === 'failed'
+                                                        ? 'bg-red-500/10 text-red-500 border-red-500/20'
+                                                        : 'bg-yellow-500/10 text-yellow-500 border-yellow-500/20'
+                                                }`}>
+                                                    {item.status === 'completed'
+                                                        ? 'Tamamlandı'
+                                                        : item.status === 'rolled_back'
+                                                        ? 'Geri Alındı'
+                                                        : item.status === 'failed'
+                                                        ? 'Hatalı'
+                                                        : item.status}
+                                                </span>
+                                            </td>
+                                            <td className="p-4 text-xs text-slate-400">
+                                                {item.snapshotCount ? `${item.snapshotCount} ürün yedeklendi` : 'Yedek mevcut'}
+                                            </td>
+                                            <td className="p-4 text-xs text-slate-400">
+                                                {item.executedAt ? new Date(item.executedAt).toLocaleString('tr-TR') : item.startedAt ? new Date(item.startedAt).toLocaleString('tr-TR') : '-'}
+                                            </td>
+                                            <td className="p-4 text-xs text-slate-400">
+                                                {item.executedBy ?? item.user ?? 'Yönetici'}
+                                            </td>
+                                            <td className="p-4 text-right">
+                                                {item.status === 'rolled_back' ? (
+                                                    <span className="text-xs text-slate-500 font-medium">Geri Alındı</span>
+                                                ) : (
+                                                    <button
+                                                        onClick={() => handleRollback(item.id)}
+                                                        disabled={rollingBackId === item.id}
+                                                        className="px-3 py-1.5 bg-indigo-500/10 hover:bg-indigo-500/20 border border-indigo-500/30 text-indigo-400 hover:text-indigo-300 rounded-lg text-xs font-bold transition-all disabled:opacity-50 inline-flex items-center gap-1.5"
+                                                    >
+                                                        <RotateCcw className={`w-3.5 h-3.5 ${rollingBackId === item.id ? 'animate-spin' : ''}`} />
+                                                        {rollingBackId === item.id ? 'Geri Alınıyor...' : 'Geri Al'}
+                                                    </button>
+                                                )}
+                                            </td>
+                                        </tr>
+                                    ))}
+                                </tbody>
+                            </table>
+                        </div>
+                    )}
+                </div>
             </div>
 
             {/* Action Modal */}

@@ -57,16 +57,63 @@ export class XmlFeedsService {
     return this.prisma.$transaction(async tx => {
       await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', `xml-import:${tenantId}`);
       let created = 0; let updated = 0;
+      const processedSkus = new Map<string, string>();
+      const processedBarcodes = new Map<string, string>();
+
       for (const product of products) {
+        const cleanSku = (product.sku || '').trim();
+        const cleanBarcode = product.barcode ? String(product.barcode).trim() : null;
+        if (!cleanSku && !cleanBarcode) continue;
+
         const price = markup || fee ? Math.round((product.costPrice * (1 + markup / 100) + fee) * 100) / 100 : product.price;
-        const existing = await tx.product.findFirst({ where: { tenantId, sku: product.sku }, select: { id: true } });
         const { images, ...fields } = product;
-        const data = { ...fields, price, status: product.stock > 0 ? 'active' : 'out-of-stock' };
-        if (existing) {
-          await tx.product.update({ where: { id: existing.id }, data: { ...data, ...(images.length ? { images: { deleteMany: {}, create: images.map((url, index) => ({ url, isMain: index === 0 })) } } : {}) } });
+        const data = { ...fields, sku: cleanSku || undefined, barcode: cleanBarcode, price, status: product.stock > 0 ? 'active' : 'out-of-stock' };
+
+        const targetId = (cleanSku && processedSkus.get(cleanSku)) || (cleanBarcode && processedBarcodes.get(cleanBarcode));
+        let existingId = targetId;
+
+        if (!existingId) {
+          const existing = await tx.product.findFirst({
+            where: {
+              tenantId,
+              OR: [
+                ...(cleanSku ? [{ sku: cleanSku }] : []),
+                ...(cleanBarcode ? [{ barcode: cleanBarcode }] : []),
+              ],
+            },
+            select: { id: true, sku: true, barcode: true },
+          });
+          if (existing) {
+            existingId = existing.id;
+          }
+        }
+
+        if (existingId) {
+          await tx.product.update({
+            where: { id: existingId },
+            data: {
+              ...data,
+              updatedAt: new Date(),
+              ...(images.length ? { images: { deleteMany: {}, create: images.map((url, index) => ({ url, isMain: index === 0 })) } } : {}),
+            },
+          });
+          if (cleanSku) processedSkus.set(cleanSku, existingId);
+          if (cleanBarcode) processedBarcodes.set(cleanBarcode, existingId);
           updated++;
         } else {
-          await tx.product.create({ data: { ...data, tenantId, tags: { source: 'xml', supplierId: options.supplierId || null }, images: { create: images.map((url, index) => ({ url, isMain: index === 0 })) } } });
+          const finalSku = cleanSku || `XML-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+          const createdProduct = await tx.product.create({
+            data: {
+              ...data,
+              sku: finalSku,
+              barcode: cleanBarcode,
+              tenantId,
+              tags: { source: 'xml', supplierId: options.supplierId || null },
+              images: { create: images.map((url, index) => ({ url, isMain: index === 0 })) },
+            },
+          });
+          if (cleanSku) processedSkus.set(cleanSku, createdProduct.id);
+          if (cleanBarcode) processedBarcodes.set(cleanBarcode, createdProduct.id);
           created++;
         }
       }

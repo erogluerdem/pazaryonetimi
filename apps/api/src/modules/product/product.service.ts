@@ -1,8 +1,15 @@
-import { Injectable } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  Logger,
+  NotFoundException,
+} from '@nestjs/common';
+import { Prisma } from '@pazaryonetimi/database';
 import { PrismaService } from '../../database/prisma.service';
 
 @Injectable()
 export class ProductService {
+  private readonly logger = new Logger(ProductService.name);
   constructor(private prisma: PrismaService) {}
 
   async create(tenantId: string, data: any) {
@@ -162,38 +169,151 @@ export class ProductService {
     action: string;
     productIds: string[];
     tenantId: string;
+    userId?: string;
     [key: string]: any;
   }) {
     const { action, productIds, tenantId } = data;
+    if (!tenantId) throw new BadRequestException('tenantId zorunludur');
+    if (!Array.isArray(productIds) || productIds.length === 0) {
+      throw new BadRequestException('En az bir ürün seçilmelidir');
+    }
+
+    // 1. Snapshot previous state for 1-click rollback
+    const targets = await this.prisma.product.findMany({
+      where: { tenantId, id: { in: productIds } },
+      select: {
+        id: true,
+        sku: true,
+        title: true,
+        price: true,
+        stock: true,
+        status: true,
+      },
+    });
+
+    const snapshot = targets.map((p) => ({
+      productId: p.id,
+      sku: p.sku,
+      title: p.title,
+      price: Number(p.price),
+      stock: p.stock,
+      status: p.status,
+    }));
+
+    // 2. Resolve userId for database record
+    let resolvedUserId = data.userId;
+    if (!resolvedUserId) {
+      const user = await this.prisma.user.findFirst({
+        where: { tenantId },
+        select: { id: true },
+      });
+      resolvedUserId = user?.id;
+    }
+
+    let bulkActionId: string | null = null;
+    if (resolvedUserId) {
+      const ba = await this.prisma.bulkAction.create({
+        data: {
+          tenantId,
+          userId: resolvedUserId,
+          action,
+          totalItems: productIds.length,
+          status: 'processing',
+          data: {
+            parameters: data,
+            snapshot,
+            snapshotCount: snapshot.length,
+          } as Prisma.InputJsonValue,
+          startedAt: new Date(),
+        },
+      });
+      bulkActionId = ba.id;
+    }
+
     const results: any[] = [];
 
-    for (const productId of productIds) {
+    // 3. Execute updates
+    for (const target of targets) {
+      const productId = target.id;
       try {
         switch (action) {
           case 'price_update':
+          case 'price-update': {
+            let nextPrice: number;
+            if (data.type === 'percent') {
+              const pct = Number(data.value || 0);
+              nextPrice = Math.max(0, Math.round(Number(target.price) * (1 + pct / 100) * 100) / 100);
+            } else if (data.type === 'fixed') {
+              nextPrice = Math.max(0, Number(data.value || 0));
+            } else {
+              nextPrice = Math.max(0, Number(data.newPrice ?? data.price ?? target.price));
+            }
             await this.prisma.product.update({
               where: { id: productId },
-              data: { price: data.newPrice || data.price },
+              data: { price: nextPrice, updatedAt: new Date() },
             });
-            results.push({ productId, status: 'success' });
+            results.push({ productId, status: 'success', oldPrice: target.price, newPrice: nextPrice });
             break;
+          }
+          case 'discount': {
+            const pct = Number(data.value || 0);
+            const nextPrice = Math.max(0, Math.round(Number(target.price) * (1 - pct / 100) * 100) / 100);
+            await this.prisma.product.update({
+              where: { id: productId },
+              data: { price: nextPrice, updatedAt: new Date() },
+            });
+            results.push({ productId, status: 'success', oldPrice: target.price, newPrice: nextPrice });
+            break;
+          }
           case 'stock_update':
+          case 'stock-update': {
+            const nextStock = Math.max(0, Math.floor(Number(data.quantity ?? data.newStock ?? data.stock ?? 0)));
             await this.prisma.product.update({
               where: { id: productId },
-              data: { stock: data.newStock || data.stock },
+              data: { stock: nextStock, updatedAt: new Date() },
+            });
+            results.push({ productId, status: 'success', oldStock: target.stock, newStock: nextStock });
+            break;
+          }
+          case 'activate': {
+            await this.prisma.product.update({
+              where: { id: productId },
+              data: { status: 'active', updatedAt: new Date() },
             });
             results.push({ productId, status: 'success' });
             break;
-          case 'activate':
+          }
+          case 'pause':
+          case 'deactivate': {
+            await this.prisma.product.update({
+              where: { id: productId },
+              data: { status: 'paused', updatedAt: new Date() },
+            });
             results.push({ productId, status: 'success' });
             break;
-          case 'deactivate':
+          }
+          case 'duplicate': {
+            await this.prisma.product.create({
+              data: {
+                tenantId,
+                title: `${target.title} (Kopya)`,
+                sku: `${target.sku}-COPY-${Date.now().toString(36).slice(-4)}`,
+                price: target.price,
+                stock: target.stock,
+                status: 'draft',
+              },
+            });
             results.push({ productId, status: 'success' });
             break;
-          case 'delete':
-            await this.prisma.product.delete({ where: { id: productId } });
+          }
+          case 'delete': {
+            await this.prisma.product.update({
+              where: { id: productId },
+              data: { status: 'archived', updatedAt: new Date() },
+            });
             results.push({ productId, status: 'success' });
             break;
+          }
           default:
             results.push({ productId, status: 'success' });
         }
@@ -206,13 +326,122 @@ export class ProductService {
       }
     }
 
+    const succeeded = results.filter((r) => r.status === 'success').length;
+    const failed = results.filter((r) => r.status === 'failed').length;
+
+    // 4. Update BulkAction record
+    if (bulkActionId) {
+      await this.prisma.bulkAction.update({
+        where: { id: bulkActionId },
+        data: {
+          processed: productIds.length,
+          succeeded,
+          failed,
+          status: failed === 0 ? 'completed' : succeeded > 0 ? 'partial' : 'failed',
+          results: results as Prisma.InputJsonValue,
+          completedAt: new Date(),
+        },
+      });
+    }
+
     return {
       action,
+      bulkActionId,
       total: productIds.length,
-      success: results.filter((r) => r.status === 'success').length,
-      failed: results.filter((r) => r.status === 'failed').length,
+      success: succeeded,
+      failed,
       results,
+      canRollback: snapshot.length > 0,
       executedAt: new Date().toISOString(),
+    };
+  }
+
+  async rollbackBulkAction(
+    tenantId: string,
+    bulkActionId: string,
+    userId?: string,
+  ) {
+    if (!tenantId || !bulkActionId) {
+      throw new BadRequestException('tenantId ve bulkActionId zorunludur');
+    }
+
+    const bulkAction = await this.prisma.bulkAction.findFirst({
+      where: { id: bulkActionId, tenantId },
+    });
+
+    if (!bulkAction) {
+      throw new NotFoundException('Toplu işlem kaydı bulunamadı');
+    }
+
+    if (bulkAction.status === 'rolled_back') {
+      throw new BadRequestException('Bu toplu işlem zaten geri alınmış');
+    }
+
+    const payload = bulkAction.data as Record<string, any>;
+    const snapshot = payload?.snapshot as Array<{
+      productId: string;
+      sku: string;
+      title: string;
+      price: number;
+      stock: number;
+      status: string;
+    }>;
+
+    if (!Array.isArray(snapshot) || snapshot.length === 0) {
+      throw new BadRequestException(
+        'Bu işlem için geri dönüş yedeği (snapshot) bulunamadı',
+      );
+    }
+
+    let restoredCount = 0;
+    let failedCount = 0;
+
+    for (const item of snapshot) {
+      try {
+        await this.prisma.product.updateMany({
+          where: { id: item.productId, tenantId },
+          data: {
+            price: item.price,
+            stock: item.stock,
+            status: item.status,
+            updatedAt: new Date(),
+          },
+        });
+        restoredCount++;
+      } catch (err) {
+        failedCount++;
+        this.logger.error(`Rollback item failed for productId ${item.productId}: ${(err as Error).message}`);
+      }
+    }
+
+    await this.prisma.bulkAction.update({
+      where: { id: bulkActionId },
+      data: {
+        status: 'rolled_back',
+        completedAt: new Date(),
+      },
+    });
+
+    await this.prisma.activityLog.create({
+      data: {
+        tenantId,
+        action: 'product.bulk_action.rollback',
+        resource: 'bulk_action',
+        resourceId: bulkActionId,
+        details: {
+          originalAction: bulkAction.action,
+          restoredCount,
+          failedCount,
+        } as Prisma.InputJsonValue,
+      },
+    });
+
+    return {
+      success: true,
+      bulkActionId,
+      restoredCount,
+      failedCount,
+      message: `${restoredCount} ürün önceki fiyat ve stok değerlerine başarıyla döndürüldü.`,
     };
   }
 
@@ -225,19 +454,26 @@ export class ProductService {
         user: { select: { firstName: true, lastName: true, email: true } },
       },
     });
-    return bulkActions.map((ba) => ({
-      id: ba.id,
-      action: ba.action,
-      productCount: ba.totalItems,
-      success: ba.succeeded,
-      failed: ba.failed,
-      executedBy: ba.user
-        ? [ba.user.firstName, ba.user.lastName].filter(Boolean).join(' ') ||
-          ba.user.email
-        : 'Bilinmeyen',
-      executedAt: (ba.completedAt || ba.createdAt).toISOString(),
-      status: ba.status,
-    }));
+    return bulkActions.map((ba) => {
+      const data = ba.data as Record<string, any>;
+      const snapshotCount = Array.isArray(data?.snapshot) ? data.snapshot.length : 0;
+      return {
+        id: ba.id,
+        action: ba.action,
+        productCount: ba.totalItems,
+        success: ba.succeeded,
+        failed: ba.failed,
+        executedBy: ba.user
+          ? [ba.user.firstName, ba.user.lastName].filter(Boolean).join(' ') ||
+            ba.user.email
+          : 'Yönetici',
+        executedAt: (ba.completedAt || ba.createdAt).toISOString(),
+        status: ba.status,
+        canRollback: ba.status !== 'rolled_back' && snapshotCount > 0,
+        isRolledBack: ba.status === 'rolled_back',
+        snapshotCount,
+      };
+    });
   }
 
   // ─── Import / Export ────────────────────────────────────

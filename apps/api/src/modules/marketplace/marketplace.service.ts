@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import {
   BadRequestException,
   ConflictException,
@@ -192,7 +193,7 @@ export class MarketplaceService {
           ebayExtra?.devId || '',
           ebayExtra?.authToken || '',
           this.scrapingService,
-          !!ebayExtra?.isSandbox,
+          ebayExtra?.isTestMode === true || ebayExtra?.isTestMode === 'true',
         );
       case Platform.ALIBABA:
         const alibabaExtra = integration.apiExtra as any;
@@ -449,77 +450,156 @@ export class MarketplaceService {
       throw new BadRequestException('tenantId zorunludur');
     }
 
-    const bridge = await this.getBridgeForTenant(
-      tenantId,
-      platform,
-      integrationId,
-    );
-    const raw = await bridge.syncProducts();
+    const targetIntegration = integrationId
+      ? await this.prisma.integration.findFirst({ where: { id: integrationId, tenantId } })
+      : await this.prisma.integration.findFirst({ where: { tenantId, platform: platform as unknown as PrismaPlatform, isActive: true } });
 
-    if (raw && raw.success === false) {
-      throw new BadRequestException(
-        raw.error || `${platform} ürün senkronizasyonu başarısız`,
-      );
+    const startedAt = new Date();
+    const lastSyncAttemptAt = startedAt.toISOString();
+
+    if (targetIntegration) {
+      try {
+        const extra = this.encryption.openExtra(targetIntegration.apiExtra);
+        extra.lastSyncAttemptAt = lastSyncAttemptAt;
+        extra.lastSyncStatus = 'in_progress';
+        await this.prisma.integration.update({
+          where: { id: targetIntegration.id },
+          data: { apiExtra: this.encryption.sealExtra(extra), updatedAt: startedAt },
+        });
+      } catch {}
     }
 
-    const products = this.extractProducts(raw);
-    let created = 0;
-    let updated = 0;
-    let failed = 0;
+    try {
+      const bridge = await this.getBridgeForTenant(
+        tenantId,
+        platform,
+        integrationId,
+      );
+      const raw = await bridge.syncProducts();
 
-    for (const source of products) {
-      try {
-        const normalized = this.normalizeProductForPersistence(
-          tenantId,
-          platform,
-          source,
-        );
-        const outcome = await this.persistMarketplaceProduct(normalized);
-        if (outcome === 'created') {
-          created += 1;
-        } else {
-          updated += 1;
-        }
-      } catch (error) {
-        failed += 1;
-        this.logger.warn(
-          `Product sync failed for platform=${platform}: ${(error as Error).message}`,
+      if (raw && raw.success === false) {
+        throw new BadRequestException(
+          raw.error || `${platform} ürün senkronizasyonu başarısız`,
         );
       }
+
+      const products = this.extractProducts(raw);
+      let created = 0;
+      let updated = 0;
+      let failed = 0;
+
+      for (const source of products) {
+        try {
+          const normalized = this.normalizeProductForPersistence(
+            tenantId,
+            platform,
+            source,
+          );
+          const outcome = await this.persistMarketplaceProduct(normalized);
+          if (outcome === 'created') {
+            created += 1;
+          } else {
+            updated += 1;
+          }
+        } catch (error) {
+          failed += 1;
+          this.logger.warn(
+            `Product sync failed for platform=${platform}: ${(error as Error).message}`,
+          );
+        }
+      }
+
+      const completedAt = new Date();
+
+      if (targetIntegration) {
+        try {
+          const extra = this.encryption.openExtra(targetIntegration.apiExtra);
+          extra.lastSyncAttemptAt = lastSyncAttemptAt;
+          extra.lastSuccessfulSyncAt = completedAt.toISOString();
+          extra.lastSyncStatus = 'success';
+          extra.lastSyncError = null;
+          extra.productsAdded = created;
+          extra.productsUpdated = updated;
+          extra.productsFailed = failed;
+          await this.prisma.integration.update({
+            where: { id: targetIntegration.id },
+            data: { apiExtra: this.encryption.sealExtra(extra), updatedAt: completedAt },
+          });
+
+          await this.prisma.integrationSyncLog.create({
+            data: {
+              integrationId: targetIntegration.id,
+              syncType: 'PRODUCT',
+              status: 'SUCCESS',
+              recordsSynced: created + updated,
+              errorMessage: failed > 0 ? `${failed} ürün aktarılamadı` : null,
+              startedAt,
+              completedAt,
+            },
+          });
+        } catch (logErr) {
+          this.logger.warn(`Telemetry update error: ${(logErr as Error).message}`);
+        }
+      }
+
+      await this.prisma.activityLog.create({
+        data: {
+          tenantId,
+          action: 'marketplace.products.sync',
+          resource: 'product',
+          details: {
+            platform,
+            total: products.length,
+            created,
+            updated,
+            failed,
+          } as Prisma.InputJsonValue,
+        },
+      });
+
+      return {
+        success: true,
+        platform,
+        total: products.length,
+        created,
+        updated,
+        failed,
+      };
+    } catch (syncError) {
+      const completedAt = new Date();
+      const errorMessage = (syncError as Error).message || `${platform} ürün senkronizasyonu başarısız`;
+
+      if (targetIntegration) {
+        try {
+          const extra = this.encryption.openExtra(targetIntegration.apiExtra);
+          extra.lastSyncAttemptAt = lastSyncAttemptAt;
+          extra.lastSyncStatus = 'failed';
+          extra.lastSyncError = errorMessage;
+          if (errorMessage.includes('401') || errorMessage.includes('403') || errorMessage.toLowerCase().includes('unauthorized')) {
+            extra.connectionStatus = 'verification_failed';
+            extra.lastVerificationError = errorMessage;
+          }
+          await this.prisma.integration.update({
+            where: { id: targetIntegration.id },
+            data: { apiExtra: this.encryption.sealExtra(extra), updatedAt: completedAt },
+          });
+
+          await this.prisma.integrationSyncLog.create({
+            data: {
+              integrationId: targetIntegration.id,
+              syncType: 'PRODUCT',
+              status: 'FAILED',
+              recordsSynced: 0,
+              errorMessage,
+              startedAt,
+              completedAt,
+            },
+          });
+        } catch {}
+      }
+
+      throw syncError;
     }
-
-    await this.prisma.integration.updateMany({
-      where: {
-        tenantId,
-        platform: platform as unknown as PrismaPlatform,
-        isActive: true,
-      },
-      data: { updatedAt: new Date() },
-    });
-
-    await this.prisma.activityLog.create({
-      data: {
-        tenantId,
-        action: 'marketplace.products.sync',
-        resource: 'product',
-        details: {
-          platform,
-          total: products.length,
-          created,
-          updated,
-          failed,
-        } as Prisma.InputJsonValue,
-      },
-    });
-
-    return {
-      success: true,
-      platform,
-      total: products.length,
-      created,
-      updated,
-      failed,
-    };
   }
 
   async syncIntegrationByStoreId(
@@ -963,6 +1043,31 @@ export class MarketplaceService {
         } as Prisma.InputJsonValue,
       },
     });
+
+    if (integration) {
+      try {
+        const extra = this.encryption.openExtra(integration.apiExtra);
+        extra.ordersSynced = (extra.ordersSynced || 0) + created + updated;
+        await this.prisma.integration.update({
+          where: { id: integration.id },
+          data: { apiExtra: this.encryption.sealExtra(extra), updatedAt: new Date() },
+        });
+
+        await this.prisma.integrationSyncLog.create({
+          data: {
+            integrationId: integration.id,
+            syncType: 'ORDER',
+            status: failed > 0 && created === 0 && updated === 0 ? 'FAILED' : 'SUCCESS',
+            recordsSynced: created + updated,
+            errorMessage: failed > 0 ? `${failed} sipariş aktarılamadı` : null,
+            startedAt: new Date(Date.now() - 5000),
+            completedAt: new Date(),
+          },
+        });
+      } catch (err) {
+        this.logger.warn(`Failed to update order sync telemetry: ${(err as Error).message}`);
+      }
+    }
 
     return {
       success: true,
@@ -1444,24 +1549,55 @@ export class MarketplaceService {
         const orderStats = orderStatsByPlatform.get(integration.platform);
         const meta = publicCredentialMetadata(integration.apiExtra);
         const lastSync = typeof meta.lastSuccessfulSyncAt === 'string' ? meta.lastSuccessfulSyncAt : null;
+        const lastSyncAttemptAt = typeof meta.lastSyncAttemptAt === 'string' ? meta.lastSyncAttemptAt : null;
+        const lastSyncStatus = typeof meta.lastSyncStatus === 'string' ? meta.lastSyncStatus : (lastSync ? 'success' : 'idle');
+        const lastSyncError = typeof meta.lastSyncError === 'string' ? meta.lastSyncError : null;
+        const lastVerificationError = typeof meta.lastVerificationError === 'string' ? meta.lastVerificationError : null;
+        const productsAdded = typeof meta.productsAdded === 'number' ? meta.productsAdded : 0;
+        const productsUpdated = typeof meta.productsUpdated === 'number' ? meta.productsUpdated : 0;
+        const productsFailed = typeof meta.productsFailed === 'number' ? meta.productsFailed : 0;
+        const ordersSynced = typeof meta.ordersSynced === 'number' ? meta.ordersSynced : 0;
+
+        let status: 'connected' | 'pending' | 'error' | 'disconnected' = 'disconnected';
+        if (!integration.isActive) {
+          status = 'disconnected';
+        } else if (meta.connectionStatus === 'verified') {
+          status = 'connected';
+        } else if (meta.connectionStatus === 'verification_failed' || (lastSyncStatus === 'failed' && (lastSyncError?.includes('401') || lastSyncError?.includes('403')))) {
+          status = 'error';
+        } else {
+          status = 'pending';
+        }
+
         const hoursSinceUpdate = integration.updatedAt
           ? (Date.now() - integration.updatedAt.getTime()) / (1000 * 60 * 60)
           : Number.POSITIVE_INFINITY;
 
-        const health = !integration.isActive
+        const health = status === 'disconnected'
           ? 0
-          : hoursSinceUpdate <= 24
-            ? 95
-            : hoursSinceUpdate <= 24 * 7
-              ? 85
-              : 70;
+          : status === 'error'
+            ? 25
+            : hoursSinceUpdate <= 24
+              ? 98
+              : hoursSinceUpdate <= 24 * 7
+                ? 85
+                : 70;
 
         return {
           id: integration.id,
           platform: integration.platform,
           name: `${integration.platform} Mağazası`,
-          status: !integration.isActive ? 'disconnected' : meta.connectionStatus === 'verified' ? 'connected' : 'pending',
+          status,
+          verified: meta.connectionStatus === 'verified',
+          connectionStatus: meta.connectionStatus || (integration.isActive ? 'verified' : 'disconnected'),
           lastSync,
+          lastSyncAttemptAt,
+          lastSyncStatus,
+          lastSyncError: lastSyncError || lastVerificationError,
+          productsAdded,
+          productsUpdated,
+          productsFailed,
+          ordersSynced,
           productCount: productCountByPlatform.get(integration.platform) ?? 0,
           orderCount: orderStats?.orderCount ?? 0,
           revenue: orderStats?.revenue ?? 0,
@@ -1556,7 +1692,7 @@ export class MarketplaceService {
     }
     const extra = sanitizedCredentials.apiExtra as Record<string, any>;
     const accountField = ['supplierId', 'merchantId', 'sellerId', 'shopDomain', 'siteUrl', 'shopId', 'vendorId'].find(key => extra[key]);
-    const accountId = accountField ? String(extra[accountField]) : sanitizedCredentials.apiKey;
+    const accountId = accountField ? String(extra[accountField]) : createHash('sha256').update(sanitizedCredentials.apiKey).digest('hex');
     extra.marketplaceId = providerId;
     extra.connectionStatus = verification.success ? 'verified' : 'verification_pending';
     if (verification.success) extra.lastVerifiedAt = verification.verifiedAt;
@@ -1571,10 +1707,11 @@ export class MarketplaceService {
           const stored = this.encryption.openExtra(candidate.apiExtra);
           const storedProvider = stored.marketplaceId || (normalizedPlatform === 'AMAZON' ? 'amazon-tr' : normalizedPlatform.toLowerCase().replace(/_/g, '-'));
           const storedField = ['supplierId', 'merchantId', 'sellerId', 'shopDomain', 'siteUrl', 'shopId', 'vendorId'].find(key => stored[key]);
-          const storedAccount = stored.externalAccountId || (storedField ? String(stored[storedField]) : this.encryption.decrypt(candidate.apiKey));
+          const storedAccount = stored.externalAccountId || (storedField ? String(stored[storedField]) : createHash('sha256').update(this.encryption.decrypt(candidate.apiKey)).digest('hex'));
           return storedProvider === providerId && (stored.isTestMode === true || stored.isTestMode === 'true') === extra.isTestMode && storedAccount === accountId;
         });
-        const data = { isActive: true, apiKey: this.encryption.encrypt(sanitizedCredentials.apiKey), apiSecret: this.encryption.encrypt(sanitizedCredentials.apiSecret), apiExtra: this.encryption.sealExtra(extra) };
+        extra.lastVerificationError = verification.success ? null : verification.message;
+        const data = { isActive: verification.success === true, apiKey: this.encryption.encrypt(sanitizedCredentials.apiKey), apiSecret: this.encryption.encrypt(sanitizedCredentials.apiSecret), apiExtra: this.encryption.sealExtra(extra) };
         return existing ? tx.integration.update({ where: { id: existing.id }, data }) : tx.integration.create({ data: { ...data, tenantId, platform: normalizedPlatform } });
       });
 

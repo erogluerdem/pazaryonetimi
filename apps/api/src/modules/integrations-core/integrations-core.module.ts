@@ -35,6 +35,7 @@ import { TenantContextInterceptor } from './context/tenant-context.interceptor';
 import { MarketplaceInventoryStrategy } from './strategies/marketplace-inventory.strategy';
 import { MarketplaceBridgeResolver } from './factory/marketplace-bridge.resolver';
 import { IntegrationAdapterFactory } from './factory/integration-adapter.factory';
+import { IntegrationMonitorService } from './health/integration-monitor.service';
 
 const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
 
@@ -76,6 +77,7 @@ const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
     IntegrationAdapterRegistry,
     MarketplaceInventoryStrategy,
     IntegrationsHubService,
+    IntegrationMonitorService,
     ...(schedulerEnabled ? [IntegrationSyncProcessor] : []),
     {
       provide: APP_INTERCEPTOR,
@@ -88,6 +90,7 @@ const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
     IntegrationSyncQueueModule,
     IntegrationsHubService,
     MarketplaceInventoryStrategy,
+    IntegrationMonitorService,
   ],
 })
 export class IntegrationsCoreModule {}

@@ -51,7 +51,8 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
     authType: 'API_KEY',
     requiredFields: [
       { key: 'merchantId', label: 'Merchant ID', type: 'text', required: true },
-      { key: 'apiKey', label: 'API Key', type: 'password', required: true },
+      { key: 'username', label: 'API kullanıcı adı', type: 'text', required: true },
+      { key: 'serviceKey', label: 'Servis anahtarı', type: 'password', required: true },
     ],
     features: { productSync: true, orderSync: true, inventorySync: true },
     status: 'ACTIVE',
@@ -66,6 +67,8 @@ export const PROVIDER_CATALOG: ProviderCatalogEntry[] = [
     requiredFields: [
       { key: 'sellerId', label: 'Seller ID', type: 'text', required: true },
       { key: 'refreshToken', label: 'Refresh Token', type: 'password', required: true },
+      { key: 'clientId', label: 'LWA Client ID', type: 'text', required: false },
+      { key: 'clientSecret', label: 'LWA Client Secret', type: 'password', required: false },
     ],
     features: { productSync: true, orderSync: true, inventorySync: true },
     status: 'ACTIVE',

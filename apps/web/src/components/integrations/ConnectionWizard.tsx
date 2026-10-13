@@ -248,6 +248,7 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
   const [testResult, setTestResult] = useState<{
     success: boolean;
     message: string;
+    supported?: boolean;
   } | null>(null);
   const [isTestMode, setIsTestMode] = useState(false);
   const [connectionResult, setConnectionResult] = useState<{ verified: boolean; message?: string } | null>(null);
@@ -576,7 +577,7 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
 
                     <button
                       onClick={handleForceConnect}
-                      disabled={isLoading}
+                      disabled={isLoading || testResult?.supported !== false}
                       className="w-full px-6 py-3 bg-amber-500/10 border border-amber-500/30 text-amber-600 dark:text-amber-400 rounded-xl font-medium hover:bg-amber-500/20 transition-colors flex items-center justify-center gap-2"
                     >
                       <CheckCircle2 className="w-4 h-4" />

@@ -66,7 +66,7 @@ export class IntegrationSyncQueueService {
       this.logger.warn(`Rate limit: ${params.tenantId}/${params.providerId}`);
     }
 
-    if (this.queue && gate.success) {
+    if (this.queue) {
       const job = await this.queue.add(
         `sync-${params.syncType}`,
         payload,
@@ -88,11 +88,12 @@ export class IntegrationSyncQueueService {
     }
 
     // Kuyruk kapalı veya tenant limiti — doğrudan çalıştır
+    if (!gate.success) throw new Error('Senkronizasyon bekletildi: ' + gate.reason);
     if (this.marketplaceService) {
-      await this.marketplaceService.syncIntegrationByStoreId(
+      const result = await this.marketplaceService.syncIntegrationByStoreId(
         params.tenantId,
         params.integrationId,
-        params.syncType === IntegrationSyncType.ORDERS ? 'orders' : 'all',
+        params.syncType === IntegrationSyncType.ORDERS ? 'orders' : params.syncType === IntegrationSyncType.PRODUCTS ? 'products' : 'all',
       );
       return {
         queued: false,
@@ -100,6 +101,6 @@ export class IntegrationSyncQueueService {
       };
     }
 
-    return { queued: false, message: 'Senkronizasyon kaydedildi' };
+    throw new Error('Senkronizasyon servisi kullanılamıyor');
   }
 }

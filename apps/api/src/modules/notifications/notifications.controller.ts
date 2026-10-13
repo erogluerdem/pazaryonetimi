@@ -15,6 +15,7 @@ import {
   ApiBearerAuth,
 } from '@nestjs/swagger';
 import { NotificationsGateway } from './notifications.gateway';
+import { PrismaService } from '../../database/prisma.service';
 
 class CreateNotificationDto {
   title!: string;
@@ -23,6 +24,7 @@ class CreateNotificationDto {
   severity?: string;
   actionUrl?: string;
   userId?: string;
+  data?: any;
 }
 
 class MarkReadDto {
@@ -33,7 +35,10 @@ class MarkReadDto {
 @Controller('notifications')
 @ApiBearerAuth()
 export class NotificationsController {
-  constructor(private readonly notificationsGateway: NotificationsGateway) {}
+  constructor(
+    private readonly notificationsGateway: NotificationsGateway,
+    private readonly prisma: PrismaService,
+  ) {}
 
   @Get()
   @ApiOperation({ summary: 'Get user notifications' })
@@ -55,13 +60,47 @@ export class NotificationsController {
       isRead: boolean;
       createdAt: Date;
       actionUrl?: string;
+      data?: any;
     }>;
     unreadCount: number;
   }> {
-    // In a real implementation, this would query the database
+    if (!tenantId) {
+      return {
+        notifications: [],
+        unreadCount: 0,
+      };
+    }
+
+    const unreadFilter = String(unreadOnly) === 'true';
+    const take = Math.min(Math.max(1, Number(limit) || 50), 100);
+
+    const [items, unreadCount] = await Promise.all([
+      this.prisma.notification.findMany({
+        where: {
+          tenantId,
+          ...(unreadFilter ? { isRead: false } : {}),
+        },
+        orderBy: { createdAt: 'desc' },
+        take,
+      }),
+      this.prisma.notification.count({
+        where: { tenantId, isRead: false },
+      }),
+    ]);
+
     return {
-      notifications: [],
-      unreadCount: 0,
+      notifications: items.map((n) => ({
+        id: n.id,
+        title: n.title,
+        message: n.message,
+        type: n.type,
+        severity: n.severity,
+        isRead: n.isRead,
+        createdAt: n.createdAt,
+        actionUrl: n.actionUrl || undefined,
+        data: n.data,
+      })),
+      unreadCount,
     };
   }
 
@@ -75,33 +114,37 @@ export class NotificationsController {
     @Headers('x-tenant-id') tenantId: string,
     @Body() dto: CreateNotificationDto,
   ): Promise<{ success: boolean; notificationId: string }> {
-    const notificationId = `notif_${Date.now()}`;
-
-    // Send via WebSocket if user is online
-    if (dto.userId) {
-      this.notificationsGateway.sendToUser(dto.userId, {
-        id: notificationId,
+    const effectiveTenantId = tenantId || 'default';
+    const created = await this.prisma.notification.create({
+      data: {
+        tenantId: effectiveTenantId,
+        userId: dto.userId || null,
         title: dto.title,
         message: dto.message,
-        type: dto.type as
-          | 'order'
-          | 'stock'
-          | 'price'
-          | 'review'
-          | 'system'
-          | 'integration'
-          | 'campaign',
-        severity: (dto.severity || 'info') as
-          | 'info'
-          | 'warning'
-          | 'error'
-          | 'success',
-        timestamp: new Date().toISOString(),
-        data: { actionUrl: dto.actionUrl },
-      });
+        type: dto.type || 'system',
+        severity: dto.severity || 'info',
+        actionUrl: dto.actionUrl || null,
+        data: dto.data || undefined,
+      },
+    });
+
+    const payload = {
+      id: created.id,
+      title: dto.title,
+      message: dto.message,
+      type: dto.type as any,
+      severity: (dto.severity || 'info') as any,
+      timestamp: created.createdAt.toISOString(),
+      data: { ...(dto.data || {}), actionUrl: dto.actionUrl },
+    };
+
+    if (dto.userId) {
+      this.notificationsGateway.sendToUser(dto.userId, payload);
+    } else if (tenantId) {
+      this.notificationsGateway.broadcastToTenant(tenantId, payload);
     }
 
-    return { success: true, notificationId };
+    return { success: true, notificationId: created.id };
   }
 
   @Patch('mark-read')
@@ -111,7 +154,19 @@ export class NotificationsController {
     @Headers('x-tenant-id') tenantId: string,
     @Body() dto: MarkReadDto,
   ): Promise<{ success: boolean; markedCount: number }> {
-    return { success: true, markedCount: dto.notificationIds.length };
+    if (!dto?.notificationIds?.length) {
+      return { success: true, markedCount: 0 };
+    }
+
+    const result = await this.prisma.notification.updateMany({
+      where: {
+        id: { in: dto.notificationIds },
+        ...(tenantId ? { tenantId } : {}),
+      },
+      data: { isRead: true, readAt: new Date() },
+    });
+
+    return { success: true, markedCount: result.count };
   }
 
   @Post('mark-all-read')
@@ -120,6 +175,13 @@ export class NotificationsController {
   async markAllAsRead(
     @Headers('x-tenant-id') tenantId: string,
   ): Promise<{ success: boolean }> {
+    if (!tenantId) return { success: true };
+
+    await this.prisma.notification.updateMany({
+      where: { tenantId, isRead: false },
+      data: { isRead: true, readAt: new Date() },
+    });
+
     return { success: true };
   }
 
@@ -179,8 +241,24 @@ export class NotificationsController {
       url?: string;
     },
   ) {
-    this.notificationsGateway.broadcastToTenant(tenantId || 'all', {
-      id: `push_${Date.now()}`,
+    const notificationId = `push_${Date.now()}`;
+    const effectiveTenant = tenantId || 'all';
+
+    if (tenantId) {
+      await this.prisma.notification.create({
+        data: {
+          tenantId,
+          type: data.type === 'buybox' ? 'price' : data.type,
+          severity: data.type === 'buybox' ? 'warning' : 'success',
+          title: data.title,
+          message: data.message,
+          actionUrl: data.url || '/dashboard',
+        },
+      }).catch(() => undefined);
+    }
+
+    this.notificationsGateway.broadcastToTenant(effectiveTenant, {
+      id: notificationId,
       title: data.title,
       message: data.message,
       type: (data.type === 'buybox' ? 'price' : data.type) as any,

@@ -1260,9 +1260,34 @@ export function useStores() {
     setLoading(true);
     setError(null);
     try {
-      const result = await apiClient.getStores() as Store[];
-      setStores(result);
-      return result;
+      const raw = (await apiClient.getStores()) as any[];
+      const mapped: Store[] = (raw || []).map((s: any) => ({
+        id: s.id,
+        platform: s.platform ? String(s.platform).toLowerCase() : '',
+        storeName: s.name || `${s.platform} Mağazası`,
+        name: s.name,
+        status: s.status || 'disconnected',
+        verified: s.verified === true,
+        connectionStatus: s.connectionStatus,
+        lastSync: s.lastSync
+          ? new Date(s.lastSync).toLocaleString('tr-TR')
+          : 'Henüz senkronize edilmedi',
+        lastSyncAttemptAt: s.lastSyncAttemptAt,
+        lastSyncStatus: s.lastSyncStatus,
+        lastSyncError: s.lastSyncError,
+        productsAdded: s.productsAdded ?? 0,
+        productsUpdated: s.productsUpdated ?? 0,
+        productsFailed: s.productsFailed ?? 0,
+        ordersSynced: s.ordersSynced ?? 0,
+        totalProducts: s.productCount ?? s.totalProducts ?? 0,
+        totalOrders: s.orderCount ?? s.totalOrders ?? 0,
+        revenue: s.revenue ?? 0,
+        rating: s.rating ?? 0,
+        health: s.health ?? 0,
+        credentials: s.credentials,
+      }));
+      setStores(mapped);
+      return mapped;
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Mağazalar yüklenemedi'));
       return [];
@@ -1320,12 +1345,23 @@ export interface Store {
   id: string;
   platform: string;
   storeName: string;
-  status: 'connected' | 'disconnected' | 'error' | 'syncing';
+  name?: string;
+  status: 'connected' | 'disconnected' | 'error' | 'pending' | 'syncing';
+  verified?: boolean;
+  connectionStatus?: string;
   lastSync: string;
+  lastSyncAttemptAt?: string | null;
+  lastSyncStatus?: string | null;
+  lastSyncError?: string | null;
+  productsAdded?: number;
+  productsUpdated?: number;
+  productsFailed?: number;
+  ordersSynced?: number;
   totalProducts: number;
   totalOrders: number;
   revenue: number;
   rating: number;
+  health?: number;
   credentials?: any;
   syncProgress?: number;
 }
@@ -2226,6 +2262,21 @@ export function useBulkActions() {
     }
   };
 
+  const rollbackBulkAction = async (bulkActionId: string) => {
+    setLoading(true);
+    setError(null);
+    try {
+      const result = await apiClient.rollbackBulkAction(bulkActionId);
+      await fetchHistory();
+      return result;
+    } catch (err) {
+      setError(err instanceof Error ? err : new Error('Geri alma başarısız'));
+      throw err;
+    } finally {
+      setLoading(false);
+    }
+  };
+
   const fetchHistory = async () => {
     try {
       const result = await apiClient.getBulkActionHistory() as BulkActionRecord[];
@@ -2238,19 +2289,27 @@ export function useBulkActions() {
     fetchHistory();
   }, []);
 
-  return { history, loading, error, executeBulkAction, fetchHistory };
+  return { history, loading, error, executeBulkAction, rollbackBulkAction, fetchHistory };
 }
 
 export interface BulkActionRecord {
   id: string;
   action: string;
-  status: 'completed' | 'in-progress' | 'failed' | 'partial';
-  affectedCount: number;
-  totalCount: number;
-  startedAt: string;
+  status: 'completed' | 'in-progress' | 'failed' | 'partial' | 'rolled_back';
+  affectedCount?: number;
+  totalCount?: number;
+  productCount?: number;
+  success?: number;
+  failed?: number;
+  startedAt?: string;
   completedAt?: string;
+  executedAt?: string;
   details?: string;
-  user: string;
+  user?: string;
+  executedBy?: string;
+  canRollback?: boolean;
+  isRolledBack?: boolean;
+  snapshotCount?: number;
 }
 
 // ==========================================

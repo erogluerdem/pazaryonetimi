@@ -60,7 +60,7 @@ async function getAuthSettings() {
 }
 
 export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
-    const dynamicSettings = await getAuthSettings();
+    const dynamicSettings = (await getAuthSettings())!;
 
     return {
         adapter: PrismaAdapter(prisma),
@@ -130,7 +130,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
             error: "/login",
         },
         callbacks: {
-            async signIn({ user, account, profile }) {
+            async signIn({ user, account }: { user: any; account: any }) {
                 if (account?.provider !== 'credentials') {
                     // Check if user has a tenantId, if not, assign default or create one
                     if (user.id && !(user as any).tenantId) {
@@ -140,16 +140,7 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
                         });
 
                         if (!existingUser?.tenantId) {
-                            // Find the first available tenant or create a default one
-                            let tenant = await prisma.tenant.findFirst();
-                            if (!tenant) {
-                                tenant = await prisma.tenant.create({
-                                    data: {
-                                        name: 'Default Tenant',
-                                        plan: 'FREE'
-                                    }
-                                });
-                            }
+                            const tenant = await prisma.tenant.create({ data: { name: user.name || 'Mağazam', plan: 'FREE' } });
                             await prisma.user.update({
                                 where: { id: user.id },
                                 data: { tenantId: tenant.id }

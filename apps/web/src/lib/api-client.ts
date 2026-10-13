@@ -45,7 +45,7 @@ export class ApiError extends Error {
     public endpoint: string,
     public responseBody?: any
   ) {
-    super(`API Error [${status}]: ${statusText} — ${endpoint}`);
+    super(Array.isArray(responseBody?.message) ? responseBody.message.join(', ') : responseBody?.message || responseBody?.error || `İşlem başarısız (HTTP ${status}): ${statusText}`);
     this.name = 'ApiError';
   }
 
@@ -1073,6 +1073,13 @@ class ApiClient {
   async getBulkActionHistory() {
     const params = this.addTenantParam();
     return this.request(`/products/bulk-action-history?${params}`);
+  }
+
+  async rollbackBulkAction(bulkActionId: string) {
+    return this.request(`/products/bulk-action/${bulkActionId}/rollback`, {
+      method: 'POST',
+      body: JSON.stringify({ tenantId: this.tenantId }),
+    });
   }
 
   // SEO Endpoints

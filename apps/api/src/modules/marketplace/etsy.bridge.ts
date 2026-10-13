@@ -31,6 +31,7 @@ export class EtsyBridge implements MarketplaceBridge {
     private readonly apiSecret: string,
     private readonly accessToken: string,
     private readonly scrapingService: ScrapingService,
+    private readonly shopId = '',
   ) {}
 
   private async makeAuthenticatedRequest(
@@ -41,7 +42,7 @@ export class EtsyBridge implements MarketplaceBridge {
       ...options,
       headers: {
         ...options.headers,
-        'x-api-key': this.apiKey,
+        'x-api-key': this.apiKey + ':' + this.apiSecret,
         Authorization: `Bearer ${this.accessToken}`,
       },
     });
@@ -52,7 +53,7 @@ export class EtsyBridge implements MarketplaceBridge {
     try {
       // Get shop listings
       const response = await this.makeAuthenticatedRequest(
-        `${this.apiUrl}/application/shops/me/listings/active`,
+        `${this.apiUrl}/application/shops/${encodeURIComponent(this.shopId)}/listings/active`,
       );
 
       if (!response.ok) {
@@ -86,7 +87,7 @@ export class EtsyBridge implements MarketplaceBridge {
   async syncOrders(): Promise<any> {
     try {
       const response = await this.makeAuthenticatedRequest(
-        `${this.apiUrl}/application/shops/me/receipts/open`,
+        `${this.apiUrl}/application/shops/${encodeURIComponent(this.shopId)}/receipts`,
       );
 
       if (!response.ok) {
@@ -245,8 +246,8 @@ export class EtsyBridge implements MarketplaceBridge {
     return {
       productId: item.listing_id?.toString() || `ETSY-${index}`,
       title: item.title || 'Unknown',
-      price: parseFloat(item.price?.amount) || 0,
-      salePrice: parseFloat(item.price?.amount) || 0,
+      price: (Number(item.price?.amount) || 0) / (Number(item.price?.divisor) || 100),
+      salePrice: (Number(item.price?.amount) || 0) / (Number(item.price?.divisor) || 100),
       stockCount: item.quantity || 0,
       rating: item.review_average || 0,
       reviewCount: item.num_favorers || 0,

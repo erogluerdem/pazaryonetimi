@@ -30,8 +30,21 @@ export class ProductController {
   async executeBulkAction(
     @Headers('x-tenant-id') tenantId: string,
     @Body() data: { action: string; productIds: string[]; [key: string]: any },
+    @Req() req: any,
   ) {
-    return this.productService.executeBulkAction({ ...data, tenantId });
+    const userId = req.user?.id || req.user?.sub;
+    return this.productService.executeBulkAction({ ...data, tenantId, userId });
+  }
+
+  @Post('bulk-action/:id/rollback')
+  @RequirePermission(Permission.PRODUCT_EDIT)
+  async rollbackBulkAction(
+    @Headers('x-tenant-id') tenantId: string,
+    @Param('id') bulkActionId: string,
+    @Req() req: any,
+  ) {
+    const userId = req.user?.id || req.user?.sub;
+    return this.productService.rollbackBulkAction(tenantId, bulkActionId, userId);
   }
 
   @Get('bulk-action-history')

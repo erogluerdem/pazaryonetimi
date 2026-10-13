@@ -255,7 +255,8 @@ export function normalizeMarketplaceCredentials(
     throw new UnprocessableEntityException('Bu pazaryeri için gizli anahtar/servis anahtarı zorunludur');
   }
   if (!apiSecret && !OPTIONAL_SECRET_PLATFORMS.has(platform)) {
-    apiSecret = apiKey;
+    if (platform === 'CICEKSEPETI') apiSecret = apiKey;
+    else throw new UnprocessableEntityException('Bu sağlayıcı için gizli anahtar veya erişim tokenı zorunludur');
   }
 
   if (!apiSecret) {

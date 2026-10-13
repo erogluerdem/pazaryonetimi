@@ -119,88 +119,15 @@ export class IntegrationSyncProcessor extends WorkerHost {
 
   /** Pazaryeri / e-ticaret sync — adapter normalize + DB persist */
   private async processCatalogSync(payload: IntegrationSyncJobPayload) {
-    if (this.adapterRegistry.has(payload.providerId)) {
-      try {
-        const credentials = await this.credentialResolver.resolveByProvider(
-          payload.tenantId,
-          payload.providerId,
-          payload.integrationId,
-        );
-        const provider = this.adapterRegistry.get(payload.providerId);
-        const ctx = this.buildCtx(payload);
-
-        const isOrders =
-          payload.syncType === IntegrationSyncType.ORDERS ||
-          payload.syncType === IntegrationSyncType.ALL;
-
-        let adapterResult: {
-          total: number;
-          created: number;
-          failed: number;
-        };
-
-        if (isOrders && 'syncOrders' in provider) {
-          adapterResult = await (
-            provider as {
-              syncOrders: (
-                c: typeof ctx,
-                cred: typeof credentials,
-              ) => Promise<{ total: number; created: number; failed: number }>;
-            }
-          ).syncOrders(ctx, credentials);
-        } else if (
-          payload.category === IntegrationCategory.GLOBAL_MARKETPLACE &&
-          'syncListings' in provider
-        ) {
-          adapterResult = await (
-            provider as {
-              syncListings: (
-                c: typeof ctx,
-                cred: typeof credentials,
-              ) => Promise<{ total: number; created: number; failed: number }>;
-            }
-          ).syncListings(ctx, credentials);
-        } else if ('syncProducts' in provider) {
-          adapterResult = await (
-            provider as {
-              syncProducts: (
-                c: typeof ctx,
-                cred: typeof credentials,
-              ) => Promise<{ total: number; created: number; failed: number }>;
-            }
-          ).syncProducts(ctx, credentials);
-        } else {
-          adapterResult = { total: 0, created: 0, failed: 0 };
-        }
-
-        await this.prisma.activityLog.create({
-          data: {
-            tenantId: payload.tenantId,
-            action: 'integration.adapter.sync',
-            resource: 'integration',
-            resourceId: payload.integrationId,
-            details: {
-              providerId: payload.providerId,
-              syncType: payload.syncType,
-              total: adapterResult.total,
-              created: adapterResult.created,
-              failed: adapterResult.failed,
-            },
-          },
-        });
-      } catch (error) {
-        this.logger.warn(
-          `Adapter audit failed ${payload.providerId}: ${(error as Error).message}`,
-        );
-      }
-    }
-
     const persisted = await this.marketplaceService.syncIntegrationByStoreId(
       payload.tenantId,
       payload.integrationId,
-      payload.syncType === IntegrationSyncType.ORDERS ? 'orders' : 'all',
+      payload.syncType === IntegrationSyncType.ORDERS ? 'orders' : payload.syncType === IntegrationSyncType.PRODUCTS ? 'products' : 'all',
     );
 
+    const hasProductFailure = Boolean(persisted.products && persisted.products.success === false);
+    const hasOrderFailure = Boolean(persisted.orders && (persisted.orders as { success?: boolean }).success === false);
+    if (hasProductFailure || hasOrderFailure) throw new Error('Pazaryeri senkronizasyonu tamamlanamadı; aktarım kayıtlarını kontrol edin');
     await this.prisma.integration.update({
       where: { id: payload.integrationId },
       data: { updatedAt: new Date() },

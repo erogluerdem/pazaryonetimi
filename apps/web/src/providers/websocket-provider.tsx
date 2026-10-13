@@ -120,6 +120,32 @@ export function WebSocketProvider({
     }
   }, [tenantId, userId]);
 
+  // Initial load of unread notifications from database
+  useEffect(() => {
+    if (!tenantId) return;
+    fetch('/api/v1/notifications', {
+      headers: { 'x-tenant-id': tenantId },
+    })
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data && Array.isArray(data.notifications)) {
+          setNotifications(
+            data.notifications.map((n: any) => ({
+              id: n.id,
+              type: n.type || 'system',
+              title: n.title,
+              message: n.message,
+              severity: n.severity || 'info',
+              timestamp: n.createdAt,
+              data: n.data,
+            })),
+          );
+          setUnreadCount(data.unreadCount ?? 0);
+        }
+      })
+      .catch(() => undefined);
+  }, [tenantId]);
+
   const subscribe = useCallback((channels: string[]) => {
     socketRef.current?.emit('subscribe', { channels });
   }, []);
@@ -135,7 +161,13 @@ export function WebSocketProvider({
 
   const markAllRead = useCallback(() => {
     setUnreadCount(0);
-  }, []);
+    if (tenantId) {
+      fetch('/api/v1/notifications/mark-all-read', {
+        method: 'POST',
+        headers: { 'x-tenant-id': tenantId },
+      }).catch(() => undefined);
+    }
+  }, [tenantId]);
 
   const onEvent = useCallback((event: string, callback: (data: unknown) => void) => {
     if (!eventListeners.current.has(event)) {

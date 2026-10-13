@@ -220,8 +220,8 @@ export class IntegrationsService {
             marketplace,
             credentials: {}, // Güvenlik için credentials gizli
             isActive: integration.isActive,
-            status: integration.isActive ? 'connected' : 'disconnected',
-            lastSync: integration.updatedAt || undefined,
+            status: !integration.isActive ? 'disconnected' : (integration.apiExtra as any)?.connectionStatus === 'verified' ? 'connected' : 'pending',
+            lastSync: (integration.apiExtra as any)?.lastSuccessfulSyncAt ? new Date((integration.apiExtra as any).lastSuccessfulSyncAt) : undefined,
             createdAt: integration.createdAt,
             updatedAt: integration.updatedAt,
           } as UserIntegration,
@@ -262,8 +262,8 @@ export class IntegrationsService {
           marketplace: marketplace!,
           credentials: {}, // Güvenlik için boş
           isActive: integration.isActive,
-          status: integration.isActive ? 'connected' : 'disconnected',
-          lastSync: integration.updatedAt || undefined,
+          status: !integration.isActive ? 'disconnected' : (integration.apiExtra as any)?.connectionStatus === 'verified' ? 'connected' : 'pending',
+          lastSync: (integration.apiExtra as any)?.lastSuccessfulSyncAt ? new Date((integration.apiExtra as any).lastSuccessfulSyncAt) : undefined,
           createdAt: integration.createdAt,
           updatedAt: integration.updatedAt,
         } as UserIntegration;
@@ -305,8 +305,8 @@ export class IntegrationsService {
                 marketplace,
                 credentials: {},
                 isActive: integration.isActive,
-                status: integration.isActive ? 'connected' : 'disconnected',
-                lastSync: integration.updatedAt || undefined,
+                status: !integration.isActive ? 'disconnected' : (integration.apiExtra as any)?.connectionStatus === 'verified' ? 'connected' : 'pending',
+                lastSync: (integration.apiExtra as any)?.lastSuccessfulSyncAt ? new Date((integration.apiExtra as any).lastSuccessfulSyncAt) : undefined,
                 createdAt: integration.createdAt,
                 updatedAt: integration.updatedAt,
               } as UserIntegration,
