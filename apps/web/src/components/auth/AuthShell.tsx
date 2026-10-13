@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
-import { GalleryVerticalEnd, Sparkles, ShieldCheck } from 'lucide-react';
+import { GalleryVerticalEnd } from 'lucide-react';
 
 interface AuthShellProps {
   children: React.ReactNode;
@@ -17,13 +17,31 @@ interface AuthShellProps {
   };
 }
 
-const MARKETPLACES = [
-  { name: 'Trendyol', color: '#f27a1a', bg: 'rgba(242, 122, 26, 0.1)' },
-  { name: 'Hepsiburada', color: '#ff6000', bg: 'rgba(255, 96, 0, 0.1)' },
-  { name: 'Amazon', color: '#ff9900', bg: 'rgba(255, 153, 0, 0.1)' },
-  { name: 'N11', color: '#5e35b1', bg: 'rgba(94, 53, 177, 0.1)' },
-  { name: 'Çiçeksepeti', color: '#00a0d6', bg: 'rgba(0, 160, 214, 0.1)' },
-  { name: 'Shopify', color: '#96bf48', bg: 'rgba(150, 191, 72, 0.1)' },
+const ROW_1_LOGOS = [
+  { name: 'Trendyol', src: '/images/pazaryeri/Trendyol.png' },
+  { name: 'Hepsiburada', src: '/images/pazaryeri/Hepsiburada.png' },
+  { name: 'Amazon', src: '/images/pazaryeri/Amazon.png' },
+  { name: 'N11', src: '/images/pazaryeri/N11.png' },
+  { name: 'Çiçeksepeti', src: '/images/pazaryeri/ciceksepeti.png' },
+  { name: 'Pazarama', src: '/images/pazaryeri/Pazarama.png' },
+  { name: 'eBay', src: '/images/pazaryeri/EBay.png' },
+  { name: 'Etsy', src: '/images/pazaryeri/Etsy.png' },
+];
+
+const ROW_2_LOGOS = [
+  { name: 'Shopify', src: '/images/pazaryeri/Shopify.png' },
+  { name: 'ikas', src: '/images/pazaryeri/ikas.png' },
+  { name: 'WooCommerce', src: '/images/pazaryeri/WooCommerce.png' },
+  { name: 'Ticimax', src: '/images/pazaryeri/ticimax.webp' },
+  { name: 'Ideasoft', src: '/images/pazaryeri/ideasoft-logo.webp' },
+  { name: 'T-Soft', src: '/images/pazaryeri/tsoft.webp' },
+  { name: 'OpenCart', src: '/images/pazaryeri/opencart.webp' },
+  { name: 'PrestaShop', src: '/images/pazaryeri/prestashop.webp' },
+];
+
+const ALL_MOBILE_LOGOS = [
+  ...ROW_1_LOGOS.slice(0, 5),
+  ...ROW_2_LOGOS.slice(0, 4),
 ];
 
 export function AuthShell({
@@ -37,6 +55,10 @@ export function AuthShell({
     href: '/register',
   },
 }: AuthShellProps) {
+  const row1Doubled = [...ROW_1_LOGOS, ...ROW_1_LOGOS];
+  const row2Doubled = [...ROW_2_LOGOS, ...ROW_2_LOGOS];
+  const mobileDoubled = [...ALL_MOBILE_LOGOS, ...ALL_MOBILE_LOGOS];
+
   return (
     <div className="relative flex min-h-screen min-h-[100dvh] flex-col overflow-hidden bg-background text-foreground font-sans selection:bg-primary/20">
       {/* Nexora Dot Pattern Background with Radial Vignette */}
@@ -69,9 +91,9 @@ export function AuthShell({
 
       {/* Main Split Layout */}
       <main className="relative z-10 flex flex-1 items-center justify-center px-6 py-8">
-        <div className="grid w-full max-w-5xl items-center gap-12 lg:grid-cols-[1fr_390px] xl:grid-cols-[1fr_420px] lg:gap-16">
+        <div className="grid w-full max-w-6xl items-center gap-10 lg:grid-cols-[1.1fr_390px] xl:grid-cols-[1.2fr_420px] lg:gap-14">
           {/* Left Hero Section (Desktop) */}
-          <section className="hidden lg:block">
+          <section className="hidden lg:block overflow-hidden">
             <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-border bg-card/60 px-3 py-1.5 text-xs text-muted-foreground backdrop-blur-sm shadow-xs">
               <span className="size-1.5 rounded-full bg-primary animate-pulse" />
               {badge}
@@ -85,23 +107,57 @@ export function AuthShell({
               {description}
             </p>
 
-            <div className="mt-14">
-              <p className="mb-4 text-xs font-semibold text-muted-foreground uppercase tracking-wider">
-                Entegre Lider Pazaryerleri
-              </p>
-              <div className="flex flex-wrap items-center gap-2.5">
-                {MARKETPLACES.map((mp) => (
-                  <div
-                    key={mp.name}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg border border-border bg-card/50 text-xs font-medium text-foreground backdrop-blur-xs hover:border-primary/40 transition-colors"
-                  >
-                    <span
-                      className="size-2 rounded-full shrink-0"
-                      style={{ backgroundColor: mp.color }}
-                    />
-                    {mp.name}
-                  </div>
-                ))}
+            {/* Seamless Infinite Logo Marquee / Slider */}
+            <div className="mt-12">
+              <div className="flex items-center justify-between mb-4">
+                <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                  Entegre Lider Pazaryerleri & E-Ticaret Altyapıları
+                </p>
+                <span className="text-[10px] text-muted-foreground/70 font-medium">
+                  30+ Entegrasyon
+                </span>
+              </div>
+
+              <div className="relative w-full overflow-hidden py-1 space-y-3">
+                {/* Edge fade gradients */}
+                <div className="absolute left-0 top-0 bottom-0 w-16 bg-gradient-to-r from-background via-background/80 to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-16 bg-gradient-to-l from-background via-background/80 to-transparent z-10 pointer-events-none" />
+
+                {/* Row 1 - Sliding Left */}
+                <div className="flex gap-3 animate-auth-marquee-left w-max">
+                  {row1Doubled.map((item, idx) => (
+                    <div
+                      key={`r1-${item.name}-${idx}`}
+                      title={item.name}
+                      className="flex items-center justify-center h-14 min-w-[130px] px-5 rounded-2xl border border-border/80 bg-card/80 dark:bg-card/50 backdrop-blur-md shadow-xs hover:border-primary/50 hover:bg-card hover:scale-105 transition-all shrink-0 cursor-default"
+                    >
+                      <img
+                        src={item.src}
+                        alt={item.name}
+                        className="h-7 w-auto max-w-[100px] object-contain filter contrast-105 dark:brightness-110"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+
+                {/* Row 2 - Sliding Right */}
+                <div className="flex gap-3 animate-auth-marquee-right w-max">
+                  {row2Doubled.map((item, idx) => (
+                    <div
+                      key={`r2-${item.name}-${idx}`}
+                      title={item.name}
+                      className="flex items-center justify-center h-14 min-w-[130px] px-5 rounded-2xl border border-border/80 bg-card/80 dark:bg-card/50 backdrop-blur-md shadow-xs hover:border-primary/50 hover:bg-card hover:scale-105 transition-all shrink-0 cursor-default"
+                    >
+                      <img
+                        src={item.src}
+                        alt={item.name}
+                        className="h-7 w-auto max-w-[100px] object-contain filter contrast-105 dark:brightness-110"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
               </div>
             </div>
           </section>
@@ -114,6 +170,33 @@ export function AuthShell({
             className="w-full rounded-2xl border border-border bg-card/90 dark:bg-card/75 p-7 shadow-xl backdrop-blur-md sm:p-8 text-card-foreground"
           >
             {children}
+
+            {/* Mobile Marquee (Under Form on Small Screens) */}
+            <div className="mt-8 pt-6 border-t border-border/60 lg:hidden overflow-hidden">
+              <p className="text-[11px] font-bold text-muted-foreground uppercase tracking-wider text-center mb-3">
+                Entegre Pazaryerleri
+              </p>
+              <div className="relative w-full overflow-hidden">
+                <div className="absolute left-0 top-0 bottom-0 w-8 bg-gradient-to-r from-card to-transparent z-10 pointer-events-none" />
+                <div className="absolute right-0 top-0 bottom-0 w-8 bg-gradient-to-l from-card to-transparent z-10 pointer-events-none" />
+
+                <div className="flex gap-2.5 animate-auth-marquee-left w-max">
+                  {mobileDoubled.map((item, idx) => (
+                    <div
+                      key={`m-${item.name}-${idx}`}
+                      className="flex items-center justify-center h-11 min-w-[100px] px-3.5 rounded-xl border border-border/70 bg-background/60 shadow-2xs shrink-0"
+                    >
+                      <img
+                        src={item.src}
+                        alt={item.name}
+                        className="h-5 w-auto max-w-[80px] object-contain"
+                        loading="lazy"
+                      />
+                    </div>
+                  ))}
+                </div>
+              </div>
+            </div>
           </motion.div>
         </div>
       </main>
@@ -144,6 +227,36 @@ export function AuthShell({
           </Link>
         </nav>
       </footer>
+
+      {/* Marquee Animation Styles */}
+      <style jsx global>{`
+        @keyframes auth-marquee-left {
+          0% {
+            transform: translateX(0);
+          }
+          100% {
+            transform: translateX(-50%);
+          }
+        }
+        @keyframes auth-marquee-right {
+          0% {
+            transform: translateX(-50%);
+          }
+          100% {
+            transform: translateX(0);
+          }
+        }
+        .animate-auth-marquee-left {
+          animation: auth-marquee-left 32s linear infinite;
+        }
+        .animate-auth-marquee-right {
+          animation: auth-marquee-right 32s linear infinite;
+        }
+        .animate-auth-marquee-left:hover,
+        .animate-auth-marquee-right:hover {
+          animation-play-state: paused;
+        }
+      `}</style>
     </div>
   );
 }
