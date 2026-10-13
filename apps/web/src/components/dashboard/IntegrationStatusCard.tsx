@@ -2,7 +2,7 @@
 
 import React from 'react';
 import Link from 'next/link';
-import { CheckCircle2, AlertCircle, RefreshCw, Plug } from 'lucide-react';
+import { CheckCircle2, AlertCircle, RefreshCw, Plug, ArrowUpRight } from 'lucide-react';
 import { DashboardCard, PLATFORM_COLORS } from './dashboard-ui';
 
 type PlatformRow = {
@@ -23,48 +23,64 @@ export function IntegrationStatusCard({
   const items = platforms || [];
 
   return (
-    <DashboardCard title="Entegrasyon Durumu" icon={Plug} loading={loading}>
+    <DashboardCard
+      title="Entegrasyon Durumu"
+      icon={Plug}
+      loading={loading}
+      action={
+        <Link
+          href="/dashboard/stores"
+          className="text-xs font-medium text-muted-foreground hover:text-foreground inline-flex items-center gap-1 transition-colors"
+        >
+          <span>Mağazalar</span>
+          <ArrowUpRight size={13} />
+        </Link>
+      }
+    >
       {items.length === 0 && !loading ? (
-        <div className="rounded-2xl border border-dashed border-border p-6 text-center">
-          <p className="text-sm font-semibold text-foreground">Henüz platform verisi yok</p>
-          <p className="text-xs text-slate-500 mt-1 mb-4">Pazaryeri entegrasyonlarını bağlayın.</p>
+        <div className="rounded-lg border border-dashed border-border/80 p-6 text-center">
+          <p className="text-xs font-medium text-foreground">Henüz platform verisi yok</p>
+          <p className="text-[11px] text-muted-foreground mt-1 mb-3">Pazaryeri mağazalarınızı bağlayın.</p>
           <Link
-            href="/dashboard/settings/integrations"
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-600 text-white text-xs font-bold hover:bg-orange-500 transition-colors"
+            href="/dashboard/stores"
+            className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-indigo-600 text-white text-xs font-medium hover:bg-indigo-500 transition-colors shadow-xs"
           >
             Entegrasyon Ekle
           </Link>
         </div>
       ) : (
-        <div className="space-y-3">
+        <div className="space-y-2.5">
           {items.slice(0, 5).map((p) => {
             const growth = p.growth ?? 0;
             const healthy = growth >= 0;
             const dot = PLATFORM_COLORS[p.platform] || 'bg-slate-400';
-            const share = Math.min(100, Math.max(4, p.share ?? (p.revenue ? 20 : 10)));
+            const share = Math.min(100, Math.max(6, p.share ?? (p.revenue ? 25 : 15)));
 
             return (
-              <div key={p.platform} className="p-3 rounded-2xl bg-background/50 border border-border">
+              <div key={p.platform} className="p-3 rounded-lg bg-muted/30 border border-border/60">
                 <div className="flex items-center justify-between gap-3 mb-2">
                   <div className="flex items-center gap-2 min-w-0">
-                    <span className={`w-2.5 h-2.5 rounded-full shrink-0 ${dot}`} />
-                    <span className="text-sm font-bold text-foreground truncate">{p.platform}</span>
+                    <span className={`w-2 h-2 rounded-full shrink-0 ${dot}`} />
+                    <span className="text-xs font-medium text-foreground truncate">{p.platform}</span>
                   </div>
-                  <div className={`flex items-center gap-1 text-[10px] font-black ${healthy ? 'text-emerald-500' : 'text-amber-500'}`}>
+                  <div
+                    className={`inline-flex items-center gap-1 text-[11px] font-medium ${
+                      healthy ? 'text-emerald-600 dark:text-emerald-400' : 'text-amber-600 dark:text-amber-400'
+                    }`}
+                  >
                     {healthy ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                    {healthy ? 'Senkron' : 'İzle'}
+                    <span>{healthy ? 'Aktif' : 'İncelenmeli'}</span>
                   </div>
                 </div>
-                <div className="h-2 rounded-full bg-slate-200/80 dark:bg-white/5 overflow-hidden">
+                <div className="h-1.5 rounded-full bg-muted overflow-hidden">
                   <div
-                    className={`h-full rounded-full ${dot} transition-all duration-700`}
+                    className={`h-full rounded-full ${dot} opacity-80 transition-all duration-500`}
                     style={{ width: `${share}%` }}
                   />
                 </div>
-                <div className="flex items-center justify-between mt-2 text-[10px] text-slate-500 font-bold">
+                <div className="flex items-center justify-between mt-2 text-[11px] text-muted-foreground">
                   <span>{p.orders ?? 0} sipariş</span>
-                  <span className="flex items-center gap-1">
-                    <RefreshCw size={10} />
+                  <span className="tabular-nums font-medium text-foreground">
                     ₺{(p.revenue ?? 0).toLocaleString('tr-TR')}
                   </span>
                 </div>

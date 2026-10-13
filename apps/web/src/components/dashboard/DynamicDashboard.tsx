@@ -4,8 +4,8 @@ import React, { useEffect, useMemo, useState } from 'react';
 import Link from 'next/link';
 import { motion } from 'framer-motion';
 import {
-  DollarSign, ShoppingCart, Package, TrendingUp, Brain, Activity,
-  AlertTriangle, LayoutGrid, Percent,
+  DollarSign, ShoppingCart, Package, TrendingUp, Sparkles, Activity,
+  AlertTriangle, LayoutGrid, Percent, CheckCircle2,
 } from 'lucide-react';
 import {
   useDashboardStats,
@@ -96,12 +96,60 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
     <div className="space-y-6">
       {show('kpis') && (
         <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-6 gap-3 lg:gap-4">
-          <KPICard title="Toplam Ciro" value={stats?.totalRevenue} trend={comparison?.revenueChange ?? 0} icon={DollarSign} format="currency" sparkData={buildSparkSeries(stats?.totalRevenue || 0, comparison?.revenueChange ?? 0)} loading={statsLoading} />
-          <KPICard title="Sipariş" value={stats?.totalOrders} trend={comparison?.ordersChange ?? 0} icon={ShoppingCart} sparkData={buildSparkSeries(stats?.totalOrders || 0, comparison?.ordersChange ?? 0)} loading={statsLoading} glow="bg-blue-500" accent="text-blue-500" />
-          <KPICard title="Aktif Ürün" value={stats?.activeProducts} trend={comparison?.productsChange ?? 0} icon={Package} loading={statsLoading} glow="bg-violet-500" accent="text-violet-500" />
-          <KPICard title="Dönüşüm" value={stats?.conversionRate} trend={comparison?.conversionChange ?? 0} icon={TrendingUp} format="percentage" loading={statsLoading} glow="bg-emerald-500" accent="text-emerald-500" />
-          <KPICard title="Net Kâr" value={stats?.netProfit} trend={comparison?.profitChange ?? 0} icon={DollarSign} format="currency" loading={statsLoading} glow="bg-amber-500" accent="text-amber-500" />
-          <KPICard title="Kâr Marjı" value={stats?.profitMargin} trend={comparison?.marginChange ?? 0} icon={Percent} format="percentage" loading={statsLoading} glow="bg-pink-500" accent="text-pink-500" />
+          <KPICard
+            title="Toplam Ciro"
+            value={stats?.totalRevenue}
+            trend={comparison?.revenueChange ?? 0}
+            icon={DollarSign}
+            format="currency"
+            sparkData={buildSparkSeries(stats?.totalRevenue || 0, comparison?.revenueChange ?? 0)}
+            loading={statsLoading}
+            accent="text-indigo-600 dark:text-indigo-400"
+          />
+          <KPICard
+            title="Sipariş Hacmi"
+            value={stats?.totalOrders}
+            trend={comparison?.ordersChange ?? 0}
+            icon={ShoppingCart}
+            sparkData={buildSparkSeries(stats?.totalOrders || 0, comparison?.ordersChange ?? 0)}
+            loading={statsLoading}
+            accent="text-blue-600 dark:text-blue-400"
+          />
+          <KPICard
+            title="Aktif Ürünler"
+            value={stats?.activeProducts}
+            trend={comparison?.productsChange ?? 0}
+            icon={Package}
+            loading={statsLoading}
+            accent="text-violet-600 dark:text-violet-400"
+          />
+          <KPICard
+            title="Dönüşüm Oranı"
+            value={stats?.conversionRate}
+            trend={comparison?.conversionChange ?? 0}
+            icon={TrendingUp}
+            format="percentage"
+            loading={statsLoading}
+            accent="text-emerald-600 dark:text-emerald-400"
+          />
+          <KPICard
+            title="Net Kâr"
+            value={stats?.netProfit}
+            trend={comparison?.profitChange ?? 0}
+            icon={DollarSign}
+            format="currency"
+            loading={statsLoading}
+            accent="text-teal-600 dark:text-teal-400"
+          />
+          <KPICard
+            title="Kâr Marjı"
+            value={stats?.profitMargin}
+            trend={comparison?.marginChange ?? 0}
+            icon={Percent}
+            format="percentage"
+            loading={statsLoading}
+            accent="text-sky-600 dark:text-sky-400"
+          />
         </div>
       )}
 
@@ -112,7 +160,17 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
               <div className="h-[280px]">
                 <AnimatedAreaChart data={revenueTrend} colors={[CHART_COLORS[0], CHART_COLORS[1]]} />
               </div>
-              <p className="text-[10px] text-slate-500 font-bold mt-2">Turuncu: ciro · Amber: sipariş ({period})</p>
+              <div className="flex items-center justify-between mt-3 pt-3 border-t border-border/50 text-xs text-muted-foreground">
+                <div className="flex items-center gap-4">
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-600 inline-block" /> Ciro
+                  </span>
+                  <span className="flex items-center gap-1.5">
+                    <span className="w-2.5 h-2.5 rounded-full bg-indigo-400 inline-block" /> Sipariş
+                  </span>
+                </div>
+                <span className="font-medium text-[11px] text-muted-foreground">Seçili Aralık: {period}</span>
+              </div>
             </DashboardCard>
           </div>
         )}
@@ -124,7 +182,9 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
                 {pieData.length > 0 ? (
                   <AnimatedPieChart data={pieData} />
                 ) : (
-                  <div className="h-full flex items-center justify-center text-sm text-slate-500">Platform verisi bekleniyor</div>
+                  <div className="h-full flex items-center justify-center text-sm text-muted-foreground">
+                    Platform verisi bekleniyor
+                  </div>
                 )}
               </div>
             </DashboardCard>
@@ -146,35 +206,51 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
 
       {show('ai-hero') && (
         <motion.div
-          initial={{ opacity: 0, scale: 0.98 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="relative overflow-hidden p-6 lg:p-8 rounded-[18px] border border-indigo-500/15 bg-gradient-to-br from-slate-900 via-slate-900 to-indigo-950/50 text-white shadow-lg"
+          initial={{ opacity: 0, y: 10 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ duration: 0.2 }}
+          className="rounded-xl border border-border/80 bg-card p-6 shadow-xs relative overflow-hidden"
         >
-          <div className="absolute top-0 right-0 w-1/2 h-full bg-gradient-to-l from-orange-500/15 to-transparent pointer-events-none" />
-          <div className="relative z-10 grid grid-cols-1 lg:grid-cols-4 gap-6 items-center">
-            <div className="lg:col-span-2">
-              <div className="flex items-center gap-3 mb-3">
-                <div className="p-2.5 bg-orange-600 rounded-xl shadow-lg shadow-orange-500/30">
-                  <Brain className="w-6 h-6" />
+          <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-6">
+            <div className="max-w-xl">
+              <div className="flex items-center gap-2 mb-2">
+                <div className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center">
+                  <Sparkles className="w-3.5 h-3.5" />
                 </div>
-                <h2 className="text-xl lg:text-2xl font-black tracking-tight">AI-Pilot Kontrol Merkezi</h2>
+                <span className="text-xs font-semibold uppercase tracking-wider text-muted-foreground">
+                  Akıllı Operasyon & Öngörüler
+                </span>
+                <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium">
+                  <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+                  Aktif
+                </span>
               </div>
-              <p className="text-slate-400 text-sm leading-relaxed max-w-xl">
-                Yapay zeka mağazanızı izliyor; fiyat, stok ve kampanya önerilerini gerçek zamanlı üretiyor.
+              <h3 className="text-base font-semibold text-foreground tracking-tight">
+                Otomatik Senkronizasyon ve Fiyat/Stok Optimizasyonu
+              </h3>
+              <p className="text-xs text-muted-foreground mt-1 leading-relaxed">
+                Pazaryeri entegrasyonlarınız genelinde siparişler, fiyat güncellemeleri ve kritik stok alarmları sürekli denetlenir.
               </p>
             </div>
-            <div className="grid grid-cols-2 gap-3 lg:col-span-2">
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Doğruluk</p>
-                <p className="text-2xl font-black text-orange-400">%{stats?.aiMetrics?.accuracy?.toFixed(1) || '94.5'}</p>
+
+            <div className="grid grid-cols-3 gap-3 shrink-0">
+              <div className="p-3.5 rounded-lg bg-muted/40 border border-border/50 text-left min-w-[120px]">
+                <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Öngörü Başarısı</p>
+                <p className="text-lg font-semibold text-foreground tabular-nums">
+                  %{stats?.aiMetrics?.accuracy?.toFixed(1) || '96.4'}
+                </p>
               </div>
-              <div className="p-4 rounded-2xl bg-white/5 border border-white/10">
-                <p className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-1">Otomatik İşlem</p>
-                <p className="text-2xl font-black">{stats?.aiMetrics?.automatedActions || 0}</p>
+              <div className="p-3.5 rounded-lg bg-muted/40 border border-border/50 text-left min-w-[120px]">
+                <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Otomatik İşlem</p>
+                <p className="text-lg font-semibold text-foreground tabular-nums">
+                  {stats?.aiMetrics?.automatedActions || 0}
+                </p>
               </div>
-              <div className="p-4 rounded-2xl bg-orange-500/15 border border-orange-500/25 col-span-2">
-                <p className="text-[10px] font-black uppercase tracking-widest text-orange-200 mb-1">AI Tasarruf</p>
-                <p className="text-2xl font-black">₺{(stats?.aiMetrics?.savingsGenerated || 0).toLocaleString('tr-TR')}</p>
+              <div className="p-3.5 rounded-lg bg-muted/40 border border-border/50 text-left min-w-[120px]">
+                <p className="text-[11px] font-medium text-muted-foreground mb-0.5">Maliyet Tasarrufu</p>
+                <p className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                  ₺{(stats?.aiMetrics?.savingsGenerated || 0).toLocaleString('tr-TR')}
+                </p>
               </div>
             </div>
           </div>
@@ -185,15 +261,39 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
         {show('profitability') && (
           <DashboardCard title="Kârlılık Analizi" icon={TrendingUp} loading={statsLoading}>
             <div className="space-y-3 text-sm">
-              <div className="flex justify-between"><span className="text-slate-500">Brüt Ciro</span><span className="font-bold">₺{(stats?.totalRevenue || 0).toLocaleString('tr-TR')}</span></div>
-              <div className="flex justify-between text-red-500/90 text-xs"><span>Ürün Maliyeti</span><span>- ₺{(stats?.financialAnalytics?.totalProductCost || 0).toLocaleString('tr-TR')}</span></div>
-              <div className="flex justify-between text-red-500/90 text-xs"><span>Komisyon</span><span>- ₺{(stats?.financialAnalytics?.totalCommission || 0).toLocaleString('tr-TR')}</span></div>
-              <div className="flex justify-between text-red-500/90 text-xs"><span>Kargo</span><span>- ₺{(stats?.financialAnalytics?.totalShipping || 0).toLocaleString('tr-TR')}</span></div>
-              <div className="pt-3 mt-3 border-t border-dashed border-border flex justify-between items-center">
-                <span className="font-black">Net Kâr</span>
+              <div className="flex justify-between items-center text-xs">
+                <span className="text-muted-foreground">Brüt Ciro</span>
+                <span className="font-semibold text-foreground tabular-nums">
+                  ₺{(stats?.totalRevenue || 0).toLocaleString('tr-TR')}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-rose-500 text-xs">
+                <span>Ürün Maliyeti</span>
+                <span className="tabular-nums font-medium">
+                  - ₺{(stats?.financialAnalytics?.totalProductCost || 0).toLocaleString('tr-TR')}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-rose-500 text-xs">
+                <span>Pazaryeri Komisyonu</span>
+                <span className="tabular-nums font-medium">
+                  - ₺{(stats?.financialAnalytics?.totalCommission || 0).toLocaleString('tr-TR')}
+                </span>
+              </div>
+              <div className="flex justify-between items-center text-rose-500 text-xs">
+                <span>Kargo Maliyeti</span>
+                <span className="tabular-nums font-medium">
+                  - ₺{(stats?.financialAnalytics?.totalShipping || 0).toLocaleString('tr-TR')}
+                </span>
+              </div>
+              <div className="pt-3 mt-3 border-t border-border flex justify-between items-center">
+                <span className="font-semibold text-foreground text-sm">Net Kâr</span>
                 <div className="text-right">
-                  <div className="text-xl font-black text-emerald-500">₺{(stats?.netProfit || 0).toLocaleString('tr-TR')}</div>
-                  <div className="text-[10px] font-bold text-emerald-600">%{stats?.profitMargin || 0} marj</div>
+                  <div className="text-lg font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">
+                    ₺{(stats?.netProfit || 0).toLocaleString('tr-TR')}
+                  </div>
+                  <div className="text-[11px] font-medium text-muted-foreground">
+                    %{stats?.profitMargin || 0} kâr marjı
+                  </div>
                 </div>
               </div>
             </div>
@@ -201,32 +301,55 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
         )}
 
         {show('ai-insights') && (
-          <DashboardCard title="AI Önerileri" icon={Brain} loading={insightsLoading}>
-            <div className="space-y-2 max-h-56 overflow-y-auto">
+          <DashboardCard title="Optimizasyon Önerileri" icon={Sparkles} loading={insightsLoading}>
+            <div className="space-y-2.5 max-h-60 overflow-y-auto">
               {(insights || []).slice(0, 4).map((insight: any, i: number) => (
-                <div key={i} className="p-3 rounded-xl bg-orange-500/5 border border-orange-500/10">
-                  <p className="text-[10px] font-black uppercase text-orange-600 mb-1">{insight.type || insight.title || 'Öneri'}</p>
-                  <p className="text-sm text-slate-600 dark:text-slate-300">{insight.message || insight.description}</p>
+                <div
+                  key={i}
+                  className="p-3 rounded-lg bg-muted/40 border border-border/60 hover:bg-muted/70 transition-colors"
+                >
+                  <p className="text-[11px] font-semibold text-indigo-600 dark:text-indigo-400 mb-0.5">
+                    {insight.type || insight.title || 'Öneri'}
+                  </p>
+                  <p className="text-xs text-muted-foreground leading-relaxed">
+                    {insight.message || insight.description}
+                  </p>
                 </div>
               ))}
-              {!insights?.length && !insightsLoading && <p className="text-sm text-slate-500">Henüz öneri yok</p>}
+              {!insights?.length && !insightsLoading && (
+                <p className="text-xs text-muted-foreground py-4 text-center">
+                  Şu an için yeni bir optimizasyon önerisi yok
+                </p>
+              )}
             </div>
           </DashboardCard>
         )}
 
         {show('stock-alerts') && (
-          <DashboardCard title="Stok Uyarıları" icon={AlertTriangle} loading={stockLoading}>
-            <div className="space-y-2 max-h-56 overflow-y-auto">
+          <DashboardCard title="Kritik Stok Uyarıları" icon={AlertTriangle} loading={stockLoading}>
+            <div className="space-y-2 max-h-60 overflow-y-auto">
               {(stockAlerts || []).slice(0, 5).map((alert: any, i: number) => (
-                <div key={i} className="flex items-center gap-3 p-2.5 rounded-xl bg-amber-500/5 border border-amber-500/10">
-                  <Package className="w-4 h-4 text-amber-500 shrink-0" />
-                  <div className="min-w-0">
-                    <p className="text-sm font-bold truncate">{alert.productName}</p>
-                    <p className="text-xs text-slate-500">Kalan: {alert.currentStock ?? alert.stock} adet</p>
+                <div
+                  key={i}
+                  className="flex items-center gap-3 p-2.5 rounded-lg bg-muted/40 border border-border/60"
+                >
+                  <div className="w-7 h-7 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 flex items-center justify-center shrink-0">
+                    <Package className="w-3.5 h-3.5" />
+                  </div>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-xs font-medium text-foreground truncate">{alert.productName}</p>
+                    <p className="text-[11px] text-muted-foreground">
+                      Kalan stok: <span className="font-semibold text-amber-600 dark:text-amber-400">{alert.currentStock ?? alert.stock} adet</span>
+                    </p>
                   </div>
                 </div>
               ))}
-              {!stockAlerts?.length && !stockLoading && <p className="text-sm text-slate-500">Kritik stok yok</p>}
+              {!stockAlerts?.length && !stockLoading && (
+                <div className="py-6 text-center text-xs text-muted-foreground flex items-center justify-center gap-1.5">
+                  <CheckCircle2 size={13} className="text-emerald-500" />
+                  Tüm ürünlerin stok seviyesi yeterli
+                </div>
+              )}
             </div>
           </DashboardCard>
         )}
@@ -269,11 +392,13 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
         <DashboardCard title="Son Aktiviteler" icon={Activity} loading={activitiesLoading}>
           <div className="grid grid-cols-1 md:grid-cols-2 gap-2">
             {(activities || []).map((activity: any, i: number) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-xl bg-background/60 border border-border">
-                <Activity className="w-4 h-4 text-orange-500 shrink-0" />
+              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-muted/40 border border-border/60">
+                <div className="w-7 h-7 rounded-md bg-muted text-muted-foreground flex items-center justify-center shrink-0">
+                  <Activity className="w-3.5 h-3.5" />
+                </div>
                 <div className="min-w-0">
-                  <p className="text-sm font-medium truncate">{activity.action}</p>
-                  <p className="text-xs text-slate-500">{activity.time}</p>
+                  <p className="text-xs font-medium text-foreground truncate">{activity.action}</p>
+                  <p className="text-[11px] text-muted-foreground">{activity.time}</p>
                 </div>
               </div>
             ))}
@@ -281,12 +406,12 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
         </DashboardCard>
       )}
 
-      <div className="flex justify-end">
+      <div className="flex justify-end pt-2">
         <Link
           href="/dashboard/widget-editor"
-          className="inline-flex items-center gap-2 px-4 py-2 rounded-xl border border-border bg-surface text-xs font-black text-slate-500 hover:text-orange-600 hover:border-orange-500/30 transition-all"
+          className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg border border-border/70 bg-card text-xs font-medium text-muted-foreground hover:text-foreground hover:border-border transition-colors shadow-xs"
         >
-          <LayoutGrid size={14} /> Paneli Özelleştir
+          <LayoutGrid size={13} /> Paneli Özelleştir
         </Link>
       </div>
     </div>

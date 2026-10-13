@@ -63,11 +63,11 @@ export default function GoalTracker({ goals: propGoals }: GoalTrackerProps) {
     };
 
     return (
-        <div className="bg-surface rounded-2xl border border-border p-5">
+        <div className="dash-card rounded-xl border border-border/70 bg-card p-5 lg:p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <Target className="w-5 h-5 text-primary" />
-                    <h3 className="text-sm font-bold text-foreground">Hedef Takibi</h3>
+                    <Target className="w-4 h-4 text-indigo-500" />
+                    <h3 className="text-sm font-semibold text-foreground tracking-tight">Hedef Takibi</h3>
                 </div>
                 <div className="flex items-center gap-1 text-[10px] text-slate-500">
                     <Calendar size={12} />
@@ -154,15 +154,17 @@ export default function GoalTracker({ goals: propGoals }: GoalTrackerProps) {
             )}
 
             {/* Overall Progress */}
-            {goals.length > 0 && <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-primary/10 to-purple-500/10 border border-primary/20">
-                <div className="flex items-center gap-2">
-                    <Trophy className="w-4 h-4 text-primary" />
-                    <span className="text-xs font-bold text-foreground">Genel Başarı Oranı</span>
-                    <span className="ml-auto text-sm font-black text-primary">
-                        %{(goals.reduce((acc, g) => acc + (g.current / g.target) * 100, 0) / goals.length).toFixed(0)}
-                    </span>
+            {goals.length > 0 && (
+                <div className="mt-4 p-3 rounded-lg bg-muted/40 border border-border/60">
+                    <div className="flex items-center gap-2">
+                        <Trophy className="w-4 h-4 text-indigo-500" />
+                        <span className="text-xs font-medium text-foreground">Genel Başarı Oranı</span>
+                        <span className="ml-auto text-sm font-semibold tabular-nums text-foreground">
+                            %{(goals.reduce((acc, g) => acc + (g.current / g.target) * 100, 0) / goals.length).toFixed(0)}
+                        </span>
+                    </div>
                 </div>
-            </div>}
+            )}
         </div>
     );
 }

@@ -56,10 +56,10 @@ function HeaderIconButton({
       type="button"
       aria-label={label}
       onClick={onClick}
-      className={`p-2.5 rounded-xl transition-all duration-200 haptic-tap group ${
+      className={`p-2 rounded-lg transition-colors haptic-tap ${
         active
-          ? 'bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 border border-indigo-500/20'
-          : 'text-slate-400 hover:text-foreground hover:bg-background/80 border border-transparent'
+          ? 'bg-muted text-foreground'
+          : 'text-muted-foreground hover:text-foreground hover:bg-muted/70'
       } ${className}`}
     >
       {children}
@@ -93,13 +93,13 @@ export function DashboardHeaderBar({
     <header
       role="banner"
       aria-label="Üst menü"
-      className={`dashboard-header dashboard-mobile-header sticky top-0 z-40 safe-area-top ${
+      className={`dashboard-header dashboard-mobile-header sticky top-0 z-40 safe-area-top border-b border-border/80 bg-background/80 backdrop-blur-md transition-all duration-200 ${
         isCompactHeader ? 'dashboard-mobile-header-compact' : ''
       }`}
     >
-      <div className="dashboard-header-inner h-[4.25rem] lg:h-[4.5rem] px-3 sm:px-4 lg:px-8 flex items-center justify-between gap-3 max-w-screen-2xl mx-auto w-full">
+      <div className="dashboard-header-inner h-16 px-4 lg:px-8 flex items-center justify-between gap-3 max-w-screen-2xl mx-auto w-full">
         {/* Sol: arama / sayfa başlığı */}
-        <div className="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-3 min-w-0 flex-1">
           <div className="hidden lg:flex flex-1 max-w-md">
             <div className="dashboard-search-shell w-full">
               <CommandPalette />
@@ -107,12 +107,12 @@ export function DashboardHeaderBar({
           </div>
 
           <div className="lg:hidden flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 sm:w-9 sm:h-9 rounded-[10px] bg-indigo-600 flex items-center justify-center shadow-sm shrink-0">
-              <span className="text-xs sm:text-sm font-bold text-white">P</span>
+            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs shrink-0">
+              <span className="text-xs font-semibold text-white">P</span>
             </div>
-            <div className="dashboard-mobile-title-chip flex flex-col leading-tight min-w-0 max-w-[110px] xs:max-w-[140px] sm:max-w-none">
+            <div className="dashboard-mobile-title-chip flex flex-col leading-tight min-w-0 max-w-[140px] sm:max-w-none">
               <span
-                className={`text-[9px] sm:text-[10px] font-semibold uppercase tracking-wide text-slate-500 truncate transition-all duration-200 ${
+                className={`text-[10px] font-medium text-muted-foreground truncate transition-all duration-200 ${
                   isCompactHeader ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'
                 }`}
               >
@@ -124,17 +124,14 @@ export function DashboardHeaderBar({
         </div>
 
         {/* Sağ: aksiyonlar */}
-        <div className="flex items-center gap-1 sm:gap-2 lg:gap-3 shrink-0">
+        <div className="flex items-center gap-1.5 sm:gap-2 lg:gap-3 shrink-0">
           <div className="lg:hidden">
             <CommandPalette />
           </div>
 
-          <div className="hidden xl:flex items-center gap-2 px-3 py-1.5 rounded-full bg-emerald-500/6 border border-emerald-500/15">
-            <span className="relative flex h-2 w-2">
-              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-60" />
-              <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
-            </span>
-            <span className="text-[10px] font-black text-emerald-600 dark:text-emerald-400 uppercase tracking-wider">
+          <div className="hidden xl:flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-500/8 border border-emerald-500/20">
+            <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
+            <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
               Canlı
             </span>
           </div>
@@ -144,19 +141,15 @@ export function DashboardHeaderBar({
             <button
               type="button"
               onClick={() => setCreditMenuOpen(!creditMenuOpen)}
-              className={`flex items-center gap-2 pl-2.5 pr-3 py-1.5 rounded-xl border transition-all duration-200 ${
+              className={`flex items-center gap-2 px-2.5 py-1.5 rounded-lg border text-xs font-medium transition-colors ${
                 creditMenuOpen
-                  ? 'bg-amber-500/12 border-amber-500/30 shadow-md shadow-amber-500/10'
-                  : 'bg-gradient-to-r from-amber-500/8 to-orange-500/8 border-amber-500/20 hover:border-amber-500/35'
+                  ? 'bg-muted border-border text-foreground shadow-xs'
+                  : 'bg-muted/40 border-border/70 hover:bg-muted/80 text-muted-foreground hover:text-foreground'
               }`}
             >
-              <span className="w-7 h-7 rounded-lg bg-amber-500/15 flex items-center justify-center">
-                <Zap size={14} className="text-amber-500 fill-amber-500/40" />
-              </span>
-              <div className="text-left leading-none">
-                <span className="text-xs font-black text-amber-700 dark:text-amber-300">{aiCredits.limit - aiCredits.used}</span>
-                <span className="text-[9px] font-bold text-slate-500 block">AI Kredi</span>
-              </div>
+              <Zap size={13} className="text-amber-500 fill-amber-500/30" />
+              <span className="tabular-nums font-semibold text-foreground">{aiCredits.limit - aiCredits.used}</span>
+              <span className="text-[11px] text-muted-foreground">Kredi</span>
             </button>
 
             <AnimatePresence>
@@ -164,32 +157,38 @@ export function DashboardHeaderBar({
                 <>
                   <div className="fixed inset-0 z-[60]" onClick={() => setCreditMenuOpen(false)} />
                   <motion.div
-                    initial={{ opacity: 0, y: 8, scale: 0.96 }}
+                    initial={{ opacity: 0, y: 6, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 8, scale: 0.96 }}
-                    className="absolute right-0 mt-3 w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-[1.35rem] shadow-2xl z-[61] overflow-hidden"
+                    exit={{ opacity: 0, y: 6, scale: 0.98 }}
+                    transition={{ duration: 0.15 }}
+                    className="absolute right-0 mt-2 w-72 bg-card border border-border rounded-xl shadow-xl z-[61] overflow-hidden"
                   >
-                    <div className="p-4 bg-gradient-to-br from-amber-500/10 to-orange-500/5 border-b border-border">
-                      <div className="flex items-center justify-between mb-3">
-                        <span className="text-sm font-black text-foreground">AI Üretim Kredisi</span>
-                        <Zap size={16} className="text-amber-500" />
+                    <div className="p-4 border-b border-border/80 space-y-3">
+                      <div className="flex items-center justify-between">
+                        <span className="text-xs font-semibold text-foreground">İşlem & AI Kredisi</span>
+                        <Zap size={14} className="text-amber-500" />
                       </div>
-                      <div className="flex items-end gap-1.5 mb-3">
-                        <span className="text-3xl font-black text-amber-600">{aiCredits.limit - aiCredits.used}</span>
-                        <span className="text-xs font-medium text-slate-500 mb-1">/ {aiCredits.limit} aylık</span>
+                      <div className="flex items-baseline gap-1.5">
+                        <span className="text-2xl font-semibold text-foreground tabular-nums">
+                          {aiCredits.limit - aiCredits.used}
+                        </span>
+                        <span className="text-xs text-muted-foreground">/ {aiCredits.limit} aylık</span>
                       </div>
-                      <div className="w-full bg-black/5 dark:bg-white/5 rounded-full h-2 mb-2 overflow-hidden">
-                        <div className="bg-gradient-to-r from-amber-400 to-orange-500 h-full rounded-full transition-all" style={{ width: `${100 - creditPct}%` }} />
+                      <div className="w-full bg-muted rounded-full h-1.5 overflow-hidden">
+                        <div
+                          className="bg-indigo-600 h-full rounded-full transition-all"
+                          style={{ width: `${100 - creditPct}%` }}
+                        />
                       </div>
-                      <p className="text-[10px] text-slate-500">{aiCredits.used} kredi kullanıldı</p>
+                      <p className="text-[11px] text-muted-foreground">{aiCredits.used} kredi kullanıldı</p>
                     </div>
                     <div className="p-3">
                       <Link href="/dashboard/upgrade" onClick={() => setCreditMenuOpen(false)}>
                         <button
                           type="button"
-                          className="w-full py-2.5 bg-gradient-to-r from-orange-600 to-amber-600 hover:from-orange-500 hover:to-amber-500 text-white text-xs font-black rounded-xl transition-all shadow-lg shadow-orange-500/20 flex items-center justify-center gap-2"
+                          className="w-full py-2 bg-indigo-600 hover:bg-indigo-500 text-white text-xs font-medium rounded-lg transition-colors flex items-center justify-center gap-1.5 shadow-xs"
                         >
-                          <Sparkles size={14} /> Paketi Yükselt
+                          <Sparkles size={13} /> Paketi Yükselt
                         </button>
                       </Link>
                     </div>
@@ -200,7 +199,7 @@ export function DashboardHeaderBar({
           </div>
 
           {/* İkon grubu */}
-          <div className="flex items-center gap-0.5 p-1 rounded-2xl bg-surface/70 border border-border/80 backdrop-blur-sm">
+          <div className="flex items-center gap-0.5 p-1 rounded-xl bg-muted/40 border border-border/70">
             <NotificationBell />
             <AnnouncementDropdown
               announcements={activeAnnouncements}
@@ -213,7 +212,7 @@ export function DashboardHeaderBar({
               label="Yardım"
               className="hidden sm:flex"
             >
-              <HelpCircle className="w-[1.15rem] h-[1.15rem] group-hover:scale-110 transition-transform" />
+              <HelpCircle className="w-4 h-4" />
             </HeaderIconButton>
             <HeaderIconButton
               onClick={() => {
@@ -223,9 +222,9 @@ export function DashboardHeaderBar({
               label="Tema değiştir"
             >
               {resolvedMode === 'dark' ? (
-                <Sun className="w-[1.15rem] h-[1.15rem] group-hover:rotate-45 transition-transform" />
+                <Sun className="w-4 h-4" />
               ) : (
-                <Moon className="w-[1.15rem] h-[1.15rem] group-hover:-rotate-12 transition-transform" />
+                <Moon className="w-4 h-4" />
               )}
             </HeaderIconButton>
             <HeaderIconButton
@@ -237,11 +236,11 @@ export function DashboardHeaderBar({
               active={showLiveFeed}
               className="hidden xl:flex"
             >
-              <Activity className={`w-[1.15rem] h-[1.15rem] ${showLiveFeed ? 'animate-pulse' : 'group-hover:scale-110'} transition-transform`} />
+              <Activity className="w-4 h-4" />
             </HeaderIconButton>
           </div>
 
-          <div className="hidden lg:block w-px h-9 bg-border/70" />
+          <div className="hidden lg:block w-px h-6 bg-border/80" />
 
           <DashboardUserMenu
             session={session}

@@ -24,14 +24,14 @@ const BRIEFING_KEY = 'pazaryonetimi-briefing-seen';
 function DashboardSkeleton() {
   return (
     <div className="space-y-6 animate-pulse">
-      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-4">
+      <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
         {[...Array(6)].map((_, i) => (
-          <div key={i} className="h-32 bg-surface rounded-2xl" />
+          <div key={i} className="h-28 bg-muted/40 rounded-xl border border-border/50" />
         ))}
       </div>
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        <div className="h-80 bg-surface rounded-2xl" />
-        <div className="h-80 bg-surface rounded-2xl" />
+        <div className="h-72 bg-muted/40 rounded-xl border border-border/50" />
+        <div className="h-72 bg-muted/40 rounded-xl border border-border/50" />
       </div>
     </div>
   );
@@ -71,57 +71,54 @@ export default function DashboardPage() {
     <>
       <AnimatePresence>{showBriefing && <MorningBriefing onClose={dismissBriefing} />}</AnimatePresence>
 
-      <div className="space-y-6 animate-in fade-in duration-500 pb-20" data-dashboard>
-        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-5">
+      <div className="space-y-6 animate-in fade-in duration-300 pb-20" data-dashboard>
+        <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
           <div>
-            <p className="text-[11px] font-semibold uppercase tracking-widest text-indigo-600 dark:text-indigo-400 mb-1.5">
-              Genel Bakış
-            </p>
-            <div className="flex items-center gap-3 flex-wrap">
-              <h1 className="text-2xl lg:text-[1.75rem] font-semibold text-foreground tracking-tight">
-                Kontrol Merkezi
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">
+                Kontrol Paneli
               </h1>
-              <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-emerald-50 dark:bg-emerald-500/10 border border-emerald-200/70 dark:border-emerald-500/20 text-[11px] font-medium text-emerald-700 dark:text-emerald-400">
+              <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded-full bg-emerald-500/8 border border-emerald-500/20 text-[11px] font-medium text-emerald-600 dark:text-emerald-400">
                 <span className="w-1.5 h-1.5 rounded-full bg-emerald-500" />
-                Canlı veri
+                Canlı Veri
               </span>
             </div>
-            <p className="text-sm text-slate-500 mt-1.5 max-w-xl">
-              Satış, stok ve finans metriklerinizi tek ekrandan izleyin.
+            <p className="text-xs text-muted-foreground mt-1">
+              Satış performansı, envanter durumu ve pazaryeri hareketlerinizin anlık özeti.
             </p>
           </div>
 
-          <div className="flex flex-wrap items-center gap-1.5 sm:gap-2 w-full sm:w-auto">
+          <div className="flex flex-wrap items-center gap-2 w-full sm:w-auto">
             <PeriodSelector value={period} onChange={setPeriod} />
 
-            <div className="flex items-center gap-1.5 sm:gap-2 ml-auto sm:ml-0">
+            <div className="flex items-center gap-1.5 ml-auto sm:ml-0">
               <Link
                 href="/dashboard/widget-editor"
-                className="flex items-center justify-center p-2 sm:px-3.5 sm:py-2 bg-slate-50 dark:bg-white/5 border border-border rounded-[10px] text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 hover:text-indigo-600 hover:border-indigo-200 dark:hover:border-indigo-500/30 transition-all"
-                title="Özelleştir"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs"
+                title="Paneli Özelleştir"
               >
-                <LayoutGrid className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden md:inline ml-1.5">Özelleştir</span>
+                <LayoutGrid className="w-3.5 h-3.5" />
+                <span className="hidden sm:inline">Özelleştir</span>
               </Link>
 
               <button
                 type="button"
                 onClick={handleRefresh}
                 disabled={isRefreshing}
-                className={`flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 bg-slate-50 dark:bg-white/5 border border-border rounded-[10px] text-xs sm:text-sm font-medium text-foreground hover:bg-slate-100 dark:hover:bg-white/8 transition-all ${isRefreshing ? 'opacity-50 cursor-not-allowed' : ''}`}
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs disabled:opacity-50"
               >
-                {isRefreshing ? <Loader2 className="w-3.5 h-3.5 sm:w-4 sm:h-4 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5 sm:w-4 sm:h-4" />}
-                <span>Yenile</span>
+                {isRefreshing ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />}
+                <span className="hidden sm:inline">Yenile</span>
               </button>
 
               <button
                 type="button"
                 onClick={handleDownloadReport}
-                className="flex items-center gap-1.5 px-2.5 py-1.5 sm:px-3.5 sm:py-2 dash-btn-primary text-xs sm:text-sm shadow-sm"
-                title="Rapor İndir"
+                className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white border border-transparent rounded-lg text-xs font-medium transition-colors shadow-xs"
+                title="Rapor Dışa Aktar"
               >
-                <Download className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-                <span className="hidden md:inline">Rapor</span>
+                <Download className="w-3.5 h-3.5" />
+                <span>Rapor</span>
               </button>
             </div>
           </div>

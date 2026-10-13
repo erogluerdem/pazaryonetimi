@@ -17,10 +17,14 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
 
   const checkOnboardingStatus = async () => {
     try {
+      if (typeof window !== "undefined" && localStorage.getItem("pazaryonetimi_onboarded") === "true") {
+        setIsLoading(false);
+        return;
+      }
+
       const response = await fetch("/api/onboarding");
       if (response.ok) {
         const data = await response.json();
-        // Show onboarding if not completed
         if (!data.isCompleted && data.isActive) {
           setShowOnboarding(true);
         }
@@ -32,6 +36,10 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
     }
   };
 
+  const handleClose = () => {
+    setShowOnboarding(false);
+  };
+
   if (isLoading) {
     return <>{children}</>;
   }
@@ -39,7 +47,7 @@ export function OnboardingProvider({ children }: OnboardingProviderProps) {
   return (
     <>
       {children}
-      {showOnboarding && <UserOnboarding />}
+      {showOnboarding && <UserOnboarding onClose={handleClose} />}
     </>
   );
 }

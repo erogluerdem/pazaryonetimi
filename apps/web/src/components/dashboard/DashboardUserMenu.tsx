@@ -29,10 +29,10 @@ function getInitials(name?: string | null) {
 }
 
 const menuItems = [
-  { href: '/dashboard/settings/profile', label: 'Profilim', icon: User, accent: 'text-blue-500 bg-blue-500/10' },
-  { href: '/dashboard/settings', label: 'Hesap Ayarları', icon: Settings, accent: 'text-slate-500 bg-slate-500/10' },
-  { href: '/dashboard/payments', label: 'Ödemeler & Plan', icon: CreditCard, accent: 'text-emerald-500 bg-emerald-500/10' },
-  { href: '/dashboard/security', label: 'Güvenlik', icon: Shield, accent: 'text-violet-500 bg-violet-500/10' },
+  { href: '/dashboard/settings/profile', label: 'Profilim', icon: User },
+  { href: '/dashboard/settings', label: 'Hesap Ayarları', icon: Settings },
+  { href: '/dashboard/payments', label: 'Ödemeler & Plan', icon: CreditCard },
+  { href: '/dashboard/security', label: 'Güvenlik', icon: Shield },
 ];
 
 interface DashboardUserMenuProps {
@@ -56,32 +56,31 @@ export function DashboardUserMenu({ session, tenantPlan = 'Pro', open, onToggle,
         onClick={onToggle}
         aria-expanded={open}
         aria-haspopup="menu"
-        className={`group flex items-center gap-2 lg:gap-3 pl-1 pr-2 lg:pr-3 py-1 rounded-2xl border transition-all duration-200 active:scale-[0.98] ${
+        className={`group flex items-center gap-2.5 p-1 lg:px-2.5 lg:py-1.5 rounded-xl border transition-colors ${
           open
-            ? 'bg-orange-500/8 border-orange-500/25 shadow-lg shadow-orange-500/10'
-            : 'bg-surface/60 border-border/80 hover:border-orange-500/20 hover:bg-surface'
+            ? 'bg-muted border-border text-foreground shadow-xs'
+            : 'bg-muted/30 border-border/70 hover:bg-muted/70 hover:border-border text-foreground'
         }`}
       >
         <div className="relative">
-          <div className="w-9 h-9 lg:w-10 lg:h-10 rounded-xl bg-gradient-to-br from-orange-500 via-orange-600 to-amber-600 flex items-center justify-center text-xs lg:text-sm font-black text-white shadow-md shadow-orange-500/25 ring-2 ring-background group-hover:scale-105 transition-transform">
+          <div className="w-8 h-8 rounded-full bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 flex items-center justify-center text-xs font-semibold">
             {initials}
           </div>
-          <span className="absolute -bottom-0.5 -right-0.5 w-3 h-3 rounded-full bg-emerald-500 border-2 border-background shadow-[0_0_8px_rgba(16,185,129,0.6)]" />
+          <span className="absolute -bottom-0.5 -right-0.5 w-2.5 h-2.5 rounded-full bg-emerald-500 border-2 border-background" />
         </div>
 
-        <div className="text-left hidden lg:block min-w-0 max-w-[140px]">
-          <div className="text-sm font-black text-foreground truncate leading-tight group-hover:text-orange-600 transition-colors">
+        <div className="text-left hidden lg:block min-w-0 max-w-[130px]">
+          <div className="text-xs font-semibold text-foreground truncate leading-tight">
             {name}
           </div>
           <div className="flex items-center gap-1 mt-0.5">
-            <Crown size={10} className="text-amber-500 shrink-0" />
-            <span className="text-[10px] font-bold text-slate-500 uppercase tracking-wider truncate">{planLabel}</span>
+            <span className="text-[10px] text-muted-foreground uppercase tracking-wide truncate">{planLabel}</span>
           </div>
         </div>
 
         <ChevronDown
-          size={14}
-          className={`text-slate-400 shrink-0 transition-transform duration-200 hidden sm:block ${open ? 'rotate-180 text-orange-500' : ''}`}
+          size={13}
+          className={`text-muted-foreground shrink-0 transition-transform duration-200 hidden sm:block ${open ? 'rotate-180 text-foreground' : ''}`}
         />
       </button>
 
@@ -91,69 +90,61 @@ export function DashboardUserMenu({ session, tenantPlan = 'Pro', open, onToggle,
             <div className="fixed inset-0 z-[60]" onClick={onClose} aria-hidden="true" />
             <motion.div
               role="menu"
-              initial={{ opacity: 0, y: 8, scale: 0.96 }}
+              initial={{ opacity: 0, y: 6, scale: 0.98 }}
               animate={{ opacity: 1, y: 0, scale: 1 }}
-              exit={{ opacity: 0, y: 8, scale: 0.96 }}
-              transition={{ duration: 0.18, ease: [0.22, 1, 0.36, 1] }}
-              className="absolute right-0 mt-3 w-[min(100vw-2rem,18rem)] sm:w-72 bg-surface/95 backdrop-blur-xl border border-border rounded-[1.35rem] shadow-2xl shadow-black/20 z-[61] overflow-hidden"
+              exit={{ opacity: 0, y: 6, scale: 0.98 }}
+              transition={{ duration: 0.15 }}
+              className="absolute right-0 mt-2 w-64 bg-card border border-border rounded-xl shadow-xl z-[61] overflow-hidden p-1.5"
             >
-              <div className="relative p-4 border-b border-border overflow-hidden">
-                <div className="absolute inset-0 bg-gradient-to-br from-orange-500/12 via-transparent to-amber-500/8 pointer-events-none" />
-                <div className="relative flex items-center gap-3">
-                  <div className="w-12 h-12 rounded-2xl bg-gradient-to-br from-orange-500 to-amber-600 flex items-center justify-center text-sm font-black text-white shadow-lg shadow-orange-500/20">
+              <div className="p-3 border-b border-border/70 mb-1">
+                <div className="flex items-center gap-2.5">
+                  <div className="w-9 h-9 rounded-full bg-indigo-600/10 text-indigo-700 dark:text-indigo-300 border border-indigo-500/20 flex items-center justify-center text-xs font-semibold shrink-0">
                     {initials}
                   </div>
                   <div className="min-w-0 flex-1">
-                    <p className="text-sm font-black text-foreground truncate">{name}</p>
-                    <p className="text-xs text-slate-500 truncate mt-0.5">{email}</p>
-                    <span className="inline-flex items-center gap-1 mt-2 px-2 py-0.5 rounded-full bg-amber-500/10 border border-amber-500/20 text-[10px] font-black text-amber-600 uppercase tracking-wider">
-                      <Sparkles size={10} />
-                      {planLabel} Plan
-                    </span>
+                    <p className="text-xs font-semibold text-foreground truncate">{name}</p>
+                    <p className="text-[11px] text-muted-foreground truncate">{email}</p>
                   </div>
+                </div>
+                <div className="mt-2.5 flex items-center justify-between">
+                  <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-md bg-muted text-[10px] font-medium text-muted-foreground border border-border/50">
+                    <Crown size={10} className="text-amber-500" />
+                    {planLabel} Paket
+                  </span>
+                  <Link
+                    href="/dashboard/upgrade"
+                    onClick={onClose}
+                    className="text-[11px] font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
+                  >
+                    Yükselt
+                  </Link>
                 </div>
               </div>
 
-              <div className="p-2">
+              <div className="space-y-0.5">
                 {menuItems.map((item) => (
                   <Link
                     key={item.href}
                     href={item.href}
                     role="menuitem"
                     onClick={onClose}
-                    className="flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-background/80 text-sm font-semibold text-foreground transition-all group"
+                    className="flex items-center gap-2.5 px-3 py-2 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted/60 transition-colors"
                   >
-                    <span className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${item.accent}`}>
-                      <item.icon size={15} />
-                    </span>
+                    <item.icon size={14} className="text-muted-foreground" />
                     <span className="flex-1">{item.label}</span>
-                    <ExternalLink size={12} className="text-slate-400 opacity-0 group-hover:opacity-100 transition-opacity" />
                   </Link>
                 ))}
               </div>
 
-              <div className="px-3 pb-3">
-                <Link
-                  href="/dashboard/upgrade"
-                  onClick={onClose}
-                  className="flex items-center justify-center gap-2 w-full py-2.5 rounded-xl bg-gradient-to-r from-orange-600 to-amber-600 text-white text-xs font-black shadow-lg shadow-orange-500/20 hover:from-orange-500 hover:to-amber-500 transition-all"
-                >
-                  <Crown size={14} />
-                  Planı Yükselt
-                </Link>
-              </div>
-
-              <div className="p-2 border-t border-border bg-background/40">
+              <div className="pt-1 mt-1 border-t border-border/70">
                 <button
                   type="button"
                   role="menuitem"
                   onClick={() => signOut({ callbackUrl: '/login' })}
-                  className="w-full flex items-center gap-3 px-3 py-2.5 rounded-xl hover:bg-red-500/10 text-sm font-semibold text-red-500 transition-all"
+                  className="flex items-center gap-2.5 w-full px-3 py-2 rounded-lg text-xs font-medium text-rose-600 dark:text-rose-400 hover:bg-rose-500/10 transition-colors"
                 >
-                  <span className="w-8 h-8 rounded-lg bg-red-500/10 flex items-center justify-center">
-                    <LogOut size={15} />
-                  </span>
-                  Çıkış Yap
+                  <LogOut size={14} />
+                  <span>Çıkış Yap</span>
                 </button>
               </div>
             </motion.div>

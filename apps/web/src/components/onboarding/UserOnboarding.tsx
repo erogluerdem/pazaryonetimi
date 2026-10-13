@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useMemo } from "react";
+import Image from "next/image";
 import { useRouter } from "next/navigation";
+import { useSession } from "next-auth/react";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Sparkles,
@@ -12,658 +14,1140 @@ import {
   Building2,
   Store,
   Package,
-  BarChart3,
   Zap,
   User,
   ArrowRight,
   Trophy,
   Gift,
   Star,
-  Play,
-  Pause,
+  ShieldCheck,
   RotateCcw,
+  TrendingUp,
+  Boxes,
+  Layers,
   HelpCircle,
+  Bot,
+  Phone,
+  Mail,
+  Briefcase,
+  Globe2,
+  Rocket,
+  CheckCircle,
 } from "lucide-react";
 
-interface OnboardingStep {
-  id: string;
-  title: string;
-  subtitle?: string;
-  description: string;
-  icon: React.ElementType;
-  component: React.ComponentType<StepProps>;
-  skippable: boolean;
+interface UserOnboardingProps {
+  onClose?: () => void;
 }
 
-interface StepProps {
-  onNext: () => void;
-  onSkip: () => void;
-  onBack: () => void;
-  isFirst: boolean;
-  isLast: boolean;
-  progress: number;
-}
+// Marketplace catalog with real brand assets from public/images/pazaryeri/
+const MARKETPLACES = [
+  {
+    id: "trendyol",
+    name: "Trendyol",
+    badge: "En Çok Satan",
+    desc: "Türkiye'nin lider pazaryeri",
+    logo: "/images/pazaryeri/Trendyol.png",
+    defaultSelected: true,
+  },
+  {
+    id: "hepsiburada",
+    name: "Hepsiburada",
+    badge: "Popüler",
+    desc: "Geniş kitle & HepsiJet",
+    logo: "/images/pazaryeri/Hepsiburada.png",
+    defaultSelected: true,
+  },
+  {
+    id: "amazon",
+    name: "Amazon Türkiye",
+    badge: "Global",
+    desc: "TR & Global Prime ağı",
+    logo: "/images/pazaryeri/Amazon.png",
+    defaultSelected: true,
+  },
+  {
+    id: "n11",
+    name: "N11",
+    badge: "Hızlı Kurulum",
+    desc: "Kupon & kampanya avantajı",
+    logo: "/images/pazaryeri/N11.png",
+    defaultSelected: true,
+  },
+  {
+    id: "ciceksepeti",
+    name: "Çiçeksepeti",
+    badge: "Niş Pazar",
+    desc: "Hediye & özel kategoriler",
+    logo: "/images/pazaryeri/ciceksepeti.png",
+    defaultSelected: false,
+  },
+  {
+    id: "pazarama",
+    name: "Pazarama",
+    badge: "Büyüyen",
+    desc: "İş Bankası güvencesi",
+    logo: "/images/pazaryeri/Pazarama.png",
+    defaultSelected: false,
+  },
+  {
+    id: "shopify",
+    name: "Shopify",
+    badge: "Kendi Siteniz",
+    desc: "Çift yönlü stok & ürün",
+    logo: "/images/pazaryeri/Shopify.png",
+    defaultSelected: false,
+  },
+  {
+    id: "woocommerce",
+    name: "WooCommerce",
+    badge: "WordPress",
+    desc: "Kendi sitenizi bağlayın",
+    logo: "/images/pazaryeri/WooCommerce.png",
+    defaultSelected: false,
+  },
+];
 
-// Step 1: Welcome
-function WelcomeStep({ onNext }: StepProps) {
-  return (
-    <div className="text-center space-y-6">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        className="w-24 h-24 bg-gradient-to-br from-blue-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-purple-500/30"
-      >
-        <Sparkles className="w-12 h-12 text-white" />
-      </motion.div>
-      
-      <div>
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-3xl font-bold bg-gradient-to-r from-blue-600 to-purple-600 bg-clip-text text-transparent"
-        >
-          Hoş Geldiniz! 🎉
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-slate-600 mt-2"
-        >
-          Pazaryonetimi'ni keşfetmeye hazır mısınız?
-        </motion.p>
-      </div>
+const SECTORS = [
+  {
+    id: "ecommerce",
+    title: "E-Ticaret / Pazaryeri Satıcısı",
+    desc: "Trendyol, Hepsiburada ve Amazon'da aktif satış",
+    icon: Store,
+  },
+  {
+    id: "retail",
+    title: "Fiziksel Mağaza + Online",
+    desc: "Hem cadde mağazası hem pazaryeri operasyonları",
+    icon: Building2,
+  },
+  {
+    id: "wholesale",
+    title: "Üretici & Toptancı (B2B)",
+    desc: "Büyük katalog, bayi dağıtımı ve çoklu depo",
+    icon: Package,
+  },
+  {
+    id: "dropshipping",
+    title: "E-İhracat / Dropshipping",
+    desc: "Yurt dışı satış, Amazon FBA ve tedarikçi XML",
+    icon: Globe2,
+  },
+];
 
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="bg-slate-50 rounded-xl p-4 text-left space-y-3"
-      >
-        <p className="text-sm text-slate-600">Bu kısa turda şunları öğreneceksiniz:</p>
-        <ul className="space-y-2 text-sm">
-          {[
-            "Dashboard'u kullanma",
-            "Pazaryerlerinizi bağlama",
-            "İlk ürünlerinizi ekleme",
-            "AI araçlarını kullanma",
-          ].map((item, i) => (
-            <motion.li
-              key={i}
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              transition={{ delay: 0.4 + i * 0.1 }}
-              className="flex items-center gap-2"
-            >
-              <Check className="w-4 h-4 text-green-500" />
-              <span className="text-slate-700">{item}</span>
-            </motion.li>
-          ))}
-        </ul>
-      </motion.div>
+const COMPANY_TYPES = ["Şahıs Şirketi", "Limited Şirket", "Anonim Şirket", "Bireysel / Girişimci"];
 
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.7 }}
-        onClick={onNext}
-        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-purple-500/30 transition-all flex items-center justify-center gap-2"
-      >
-        Turu Başlat
-        <ArrowRight className="w-5 h-5" />
-      </motion.button>
-    </div>
-  );
-}
+export function UserOnboarding({ onClose }: UserOnboardingProps) {
+  const router = useRouter();
+  const { data: session } = useSession();
 
-// Step 2: Profile Setup
-function ProfileSetupStep({ onNext }: StepProps) {
-  const [formData, setFormData] = useState({
+  const [currentStepIndex, setCurrentStepIndex] = useState(0);
+  const [isVisible, setIsVisible] = useState(true);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form State
+  const [profileData, setProfileData] = useState({
     fullName: "",
     phone: "",
-    timezone: "Europe/Istanbul",
+    role: "Mağaza Sahibi",
   });
 
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-green-500 to-emerald-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <User className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-800">Profilinizi Oluşturun</h2>
-        <p className="text-slate-500 mt-1">Kişisel bilgilerinizi girin</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Ad Soyad</label>
-          <input
-            type="text"
-            value={formData.fullName}
-            onChange={(e) => setFormData({ ...formData, fullName: e.target.value })}
-            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="Ali Veli"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Telefon</label>
-          <input
-            type="tel"
-            value={formData.phone}
-            onChange={(e) => setFormData({ ...formData, phone: e.target.value })}
-            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-            placeholder="+90 555 123 4567"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Zaman Dilimi</label>
-          <select
-            value={formData.timezone}
-            onChange={(e) => setFormData({ ...formData, timezone: e.target.value })}
-            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-blue-500 outline-none"
-          >
-            <option value="Europe/Istanbul">İstanbul (GMT+3)</option>
-            <option value="Europe/London">Londra (GMT+0)</option>
-            <option value="America/New_York">New York (GMT-5)</option>
-          </select>
-        </div>
-      </div>
-
-      <button
-        onClick={onNext}
-        disabled={!formData.fullName}
-        className="w-full py-4 bg-gradient-to-r from-blue-600 to-purple-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
-      >
-        Devam Et
-      </button>
-    </div>
-  );
-}
-
-// Step 3: Tenant/Store Setup
-function TenantSetupStep({ onNext }: StepProps) {
-  const [formData, setFormData] = useState({
+  const [storeData, setStoreData] = useState({
     storeName: "",
-    storeType: "ecommerce",
+    sector: "ecommerce",
+    companyType: "Limited Şirket",
   });
 
-  const storeTypes = [
-    { id: "ecommerce", label: "E-ticaret", icon: Store },
-    { id: "retail", label: "Perakende", icon: Building2 },
-    { id: "wholesale", label: "Toptan", icon: Package },
+  const [selectedPlatforms, setSelectedPlatforms] = useState<string[]>([
+    "trendyol",
+    "hepsiburada",
+    "amazon",
+    "n11",
+  ]);
+
+  const [activeTourTab, setActiveTourTab] = useState(0);
+
+  // Pre-fill user profile from session if available
+  useEffect(() => {
+    if (session?.user) {
+      const u = session.user;
+      setProfileData((prev) => ({
+        ...prev,
+        fullName: prev.fullName || u.name || "",
+      }));
+      setStoreData((prev) => ({
+        ...prev,
+        storeName:
+          prev.storeName ||
+          (u.name ? `${u.name}'in Mağazası` : "PazarYönetimi Mağazam"),
+      }));
+    }
+  }, [session]);
+
+  const stepMeta = [
+    { id: "welcome", title: "Karşılama", icon: Sparkles },
+    { id: "profile", title: "Profil", icon: User },
+    { id: "store", title: "Mağaza", icon: Building2 },
+    { id: "platforms", title: "Pazaryerleri", icon: Store },
+    { id: "tour", title: "Özellikler", icon: Zap },
+    { id: "complete", title: "Başarı", icon: Trophy },
   ];
 
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-purple-500 to-pink-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Building2 className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-800">Mağazanızı Kurun</h2>
-        <p className="text-slate-500 mt-1">İşletme bilgilerinizi ekleyin</p>
-      </div>
-
-      <div className="space-y-4">
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-1">Mağaza Adı</label>
-          <input
-            type="text"
-            value={formData.storeName}
-            onChange={(e) => setFormData({ ...formData, storeName: e.target.value })}
-            className="w-full px-4 py-3 border border-slate-200 rounded-lg focus:ring-2 focus:ring-purple-500 outline-none"
-            placeholder="Örnek Mağaza"
-          />
-        </div>
-
-        <div>
-          <label className="block text-sm font-medium text-slate-700 mb-2">İşletme Tipi</label>
-          <div className="grid grid-cols-3 gap-3">
-            {storeTypes.map((type) => (
-              <button
-                key={type.id}
-                onClick={() => setFormData({ ...formData, storeType: type.id })}
-                className={`p-4 rounded-xl border-2 transition-all flex flex-col items-center gap-2 ${
-                  formData.storeType === type.id
-                    ? "border-purple-500 bg-purple-50 text-purple-700"
-                    : "border-slate-200 hover:border-purple-300"
-                }`}
-              >
-                <type.icon className="w-6 h-6" />
-                <span className="text-sm font-medium">{type.label}</span>
-              </button>
-            ))}
-          </div>
-        </div>
-      </div>
-
-      <button
-        onClick={onNext}
-        disabled={!formData.storeName}
-        className="w-full py-4 bg-gradient-to-r from-purple-600 to-pink-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all disabled:opacity-50"
-      >
-        Mağazamı Oluştur
-      </button>
-    </div>
-  );
-}
-
-// Step 4: Platform Connections
-function PlatformConnectStep({ onNext }: StepProps) {
-  const [connected, setConnected] = useState<string[]>([]);
-
-  const platforms = [
-    { id: "trendyol", name: "Trendyol", color: "bg-orange-500", icon: "T" },
-    { id: "hepsiburada", name: "Hepsiburada", color: "bg-red-500", icon: "H" },
-    { id: "amazon", name: "Amazon", color: "bg-blue-500", icon: "A" },
-    { id: "n11", name: "N11", color: "bg-green-500", icon: "N" },
-  ];
+  const totalSteps = stepMeta.length;
+  const progressPercent = Math.round(((currentStepIndex + 1) / totalSteps) * 100);
 
   const togglePlatform = (id: string) => {
-    if (connected.includes(id)) {
-      setConnected(connected.filter((p) => p !== id));
+    setSelectedPlatforms((prev) =>
+      prev.includes(id) ? prev.filter((p) => p !== id) : [...prev, id]
+    );
+  };
+
+  const selectAllPlatforms = () => {
+    setSelectedPlatforms(MARKETPLACES.map((m) => m.id));
+  };
+
+  const selectPopularPlatforms = () => {
+    setSelectedPlatforms(["trendyol", "hepsiburada", "amazon", "n11"]);
+  };
+
+  const liveSlug = useMemo(() => {
+    return (storeData.storeName || "magazam")
+      .toLowerCase()
+      .replace(/[çÇ]/g, "c")
+      .replace(/[ğĞ]/g, "g")
+      .replace(/[ıİ]/g, "i")
+      .replace(/[öÖ]/g, "o")
+      .replace(/[şŞ]/g, "s")
+      .replace(/[üÜ]/g, "u")
+      .replace(/[^a-z0-9]+/g, "-")
+      .replace(/^-+|-+$/g, "")
+      .substring(0, 30);
+  }, [storeData.storeName]);
+
+  const handleNext = () => {
+    if (currentStepIndex < totalSteps - 1) {
+      setCurrentStepIndex((prev) => prev + 1);
     } else {
-      setConnected([...connected, id]);
+      finishOnboarding();
     }
   };
 
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-orange-500 to-red-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <Store className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-800">Pazaryerlerinizi Bağlayın</h2>
-        <p className="text-slate-500 mt-1">Satış yaptığınız platformları seçin</p>
-      </div>
-
-      <div className="grid grid-cols-2 gap-3">
-        {platforms.map((platform) => (
-          <button
-            key={platform.id}
-            onClick={() => togglePlatform(platform.id)}
-            className={`p-4 rounded-xl border-2 transition-all flex items-center gap-3 ${
-              connected.includes(platform.id)
-                ? "border-green-500 bg-green-50"
-                : "border-slate-200 hover:border-orange-300"
-            }`}
-          >
-            <div className={`w-10 h-10 ${platform.color} rounded-lg flex items-center justify-center text-white font-bold`}>
-              {platform.icon}
-            </div>
-            <div className="flex-1 text-left">
-              <p className="font-medium text-slate-800">{platform.name}</p>
-              {connected.includes(platform.id) && (
-                <p className="text-xs text-green-600 flex items-center gap-1">
-                  <Check className="w-3 h-3" /> Bağlandı
-                </p>
-              )}
-            </div>
-          </button>
-        ))}
-      </div>
-
-      <div className="bg-blue-50 rounded-lg p-4 flex items-start gap-3">
-        <HelpCircle className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
-        <p className="text-sm text-blue-700">
-          API anahtarlarınızı sonradan da ekleyebilirsiniz. Şimdilik atlayabilirsiniz.
-        </p>
-      </div>
-
-      <button
-        onClick={onNext}
-        className="w-full py-4 bg-gradient-to-r from-orange-600 to-red-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
-      >
-        {connected.length > 0 ? `${connected.length} Platform Bağlandı` : "Sonra Bağlayacağım"}
-      </button>
-    </div>
-  );
-}
-
-// Step 5: Dashboard Tour
-function DashboardTourStep({ onNext }: StepProps) {
-  const [currentTip, setCurrentTip] = useState(0);
-
-  const tips = [
-    {
-      title: "Ana Panel",
-      description: "Tüm mağazalarınızın özetini tek ekranda görün",
-      icon: BarChart3,
-      color: "bg-blue-500",
-    },
-    {
-      title: "AI Asistan",
-      description: "Yapay zeka ile ürün açıklamaları ve analizler",
-      icon: Zap,
-      color: "bg-purple-500",
-    },
-    {
-      title: "Siparişler",
-      description: "Tüm pazaryeri siparişlerinizi tek yerden yönetin",
-      icon: Package,
-      color: "bg-green-500",
-    },
-  ];
-
-  return (
-    <div className="space-y-6">
-      <div className="text-center">
-        <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-cyan-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
-          <BarChart3 className="w-8 h-8 text-white" />
-        </div>
-        <h2 className="text-2xl font-bold text-slate-800">Dashboard Turu</h2>
-        <p className="text-slate-500 mt-1">Önemli özellikleri keşfedin</p>
-      </div>
-
-      <div className="relative h-64">
-        <AnimatePresence mode="wait">
-          <motion.div
-            key={currentTip}
-            initial={{ opacity: 0, x: 50 }}
-            animate={{ opacity: 1, x: 0 }}
-            exit={{ opacity: 0, x: -50 }}
-            className="absolute inset-0 bg-slate-50 rounded-2xl p-6 flex flex-col items-center justify-center text-center"
-          >
-            <div className={`w-20 h-20 ${tips[currentTip].color} rounded-2xl flex items-center justify-center mb-4 shadow-lg`}>
-              {(() => {
-                const Icon = tips[currentTip].icon;
-                return <Icon className="w-10 h-10 text-white" />;
-              })()}
-            </div>
-            <h3 className="text-xl font-bold text-slate-800 mb-2">{tips[currentTip].title}</h3>
-            <p className="text-slate-600">{tips[currentTip].description}</p>
-          </motion.div>
-        </AnimatePresence>
-
-        <div className="absolute bottom-4 left-0 right-0 flex justify-center gap-2">
-          {tips.map((_, i) => (
-            <button
-              key={i}
-              onClick={() => setCurrentTip(i)}
-              className={`w-2 h-2 rounded-full transition-all ${
-                i === currentTip ? "w-6 bg-blue-500" : "bg-slate-300"
-              }`}
-            />
-          ))}
-        </div>
-      </div>
-
-      <button
-        onClick={onNext}
-        className="w-full py-4 bg-gradient-to-r from-blue-600 to-cyan-600 text-white font-semibold rounded-xl hover:shadow-lg transition-all"
-      >
-        Anladım, Devam Et
-      </button>
-    </div>
-  );
-}
-
-// Step 6: Completion
-function CompletionStep({ onNext }: StepProps) {
-  return (
-    <div className="text-center space-y-6">
-      <motion.div
-        initial={{ scale: 0 }}
-        animate={{ scale: 1 }}
-        transition={{ type: "spring", stiffness: 200, damping: 15 }}
-        className="w-24 h-24 bg-gradient-to-br from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center mx-auto shadow-xl shadow-orange-500/30"
-      >
-        <Trophy className="w-12 h-12 text-white" />
-      </motion.div>
-
-      <div>
-        <motion.h2
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.1 }}
-          className="text-3xl font-bold bg-gradient-to-r from-yellow-500 to-orange-600 bg-clip-text text-transparent"
-        >
-          Tebrikler! 🏆
-        </motion.h2>
-        <motion.p
-          initial={{ opacity: 0, y: 20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.2 }}
-          className="text-slate-600 mt-2"
-        >
-          Onboarding'i tamamladınız!
-        </motion.p>
-      </div>
-
-      <motion.div
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.3 }}
-        className="bg-gradient-to-br from-yellow-50 to-orange-50 rounded-xl p-6"
-      >
-        <h3 className="font-bold text-slate-800 mb-3 flex items-center gap-2">
-          <Gift className="w-5 h-5 text-orange-500" />
-          Kazandığınız Rozetler
-        </h3>
-        <div className="flex justify-center gap-4">
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 bg-yellow-100 rounded-full flex items-center justify-center mb-1">
-              <Star className="w-6 h-6 text-yellow-600" />
-            </div>
-            <span className="text-xs text-slate-600">Hızlı Başlangıç</span>
-          </div>
-          <div className="flex flex-col items-center">
-            <div className="w-12 h-12 bg-purple-100 rounded-full flex items-center justify-center mb-1">
-              <Zap className="w-6 h-6 text-purple-600" />
-            </div>
-            <span className="text-xs text-slate-600">AI Explorer</span>
-          </div>
-        </div>
-      </motion.div>
-
-      <motion.button
-        initial={{ opacity: 0, y: 20 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ delay: 0.5 }}
-        onClick={onNext}
-        className="w-full py-4 bg-gradient-to-r from-orange-500 to-red-600 text-white font-semibold rounded-xl hover:shadow-lg hover:shadow-orange-500/30 transition-all flex items-center justify-center gap-2"
-      >
-        Dashboard'a Git
-        <ArrowRight className="w-5 h-5" />
-      </motion.button>
-    </div>
-  );
-}
-
-// Main Onboarding Component
-export function UserOnboarding() {
-  const [currentStepIndex, setCurrentStepIndex] = useState(0);
-  const [isVisible, setIsVisible] = useState(true);
-  const [isCompleted, setIsCompleted] = useState(false);
-  const router = useRouter();
-
-  const steps: OnboardingStep[] = [
-    {
-      id: "welcome",
-      title: "Hoş Geldiniz",
-      description: "Platformu keşfedin",
-      icon: Sparkles,
-      component: WelcomeStep,
-      skippable: false,
-    },
-    {
-      id: "profile",
-      title: "Profil",
-      subtitle: "Kişisel bilgiler",
-      description: "Profil bilgilerinizi girin",
-      icon: User,
-      component: ProfileSetupStep,
-      skippable: true,
-    },
-    {
-      id: "tenant",
-      title: "Mağaza",
-      subtitle: "İşletme kurulumu",
-      description: "Mağazanızı oluşturun",
-      icon: Building2,
-      component: TenantSetupStep,
-      skippable: true,
-    },
-    {
-      id: "platforms",
-      title: "Pazaryerleri",
-      subtitle: "Platform bağlantıları",
-      description: "Pazaryerlerinizi bağlayın",
-      icon: Store,
-      component: PlatformConnectStep,
-      skippable: true,
-    },
-    {
-      id: "tour",
-      title: "Dashboard",
-      subtitle: "Özellik tanıtımı",
-      description: "Dashboard turu",
-      icon: BarChart3,
-      component: DashboardTourStep,
-      skippable: false,
-    },
-    {
-      id: "complete",
-      title: "Tebrikler!",
-      description: "Onboarding tamamlandı",
-      icon: Trophy,
-      component: CompletionStep,
-      skippable: false,
-    },
-  ];
-
-  const currentStep = steps[currentStepIndex];
-  const progress = ((currentStepIndex + 1) / steps.length) * 100;
-
-  const handleNext = useCallback(() => {
-    if (currentStepIndex < steps.length - 1) {
-      setCurrentStepIndex(currentStepIndex + 1);
-    } else {
-      handleComplete();
-    }
-  }, [currentStepIndex, steps.length]);
-
-  const handleBack = useCallback(() => {
+  const handleBack = () => {
     if (currentStepIndex > 0) {
-      setCurrentStepIndex(currentStepIndex - 1);
+      setCurrentStepIndex((prev) => prev - 1);
     }
-  }, [currentStepIndex]);
+  };
 
-  const handleSkip = useCallback(() => {
-    if (currentStep.skippable) {
-      handleNext();
-    }
-  }, [currentStep.skippable, handleNext]);
+  const finishOnboarding = useCallback(async () => {
+    setIsSubmitting(true);
 
-  const handleComplete = useCallback(async () => {
-    setIsCompleted(true);
-    
-    // Save onboarding completion to API
     try {
-      await fetch("/api/onboarding/complete", {
+      // 1. Save tenant store information & selected integrations
+      await fetch("/api/tenant/onboarding", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          completedSteps: steps.map((s) => s.id),
-          totalTimeSpent: 0, // Calculate if needed
+          companyName: storeData.storeName || "Pazar Mağazam",
+          companyType: storeData.companyType,
+          phone: profileData.phone,
+          selectedPlatforms,
         }),
-      });
-    } catch (error) {
-      console.error("Failed to save onboarding completion:", error);
-    }
+      }).catch((e) => console.warn("Tenant onboarding save warning:", e));
 
-    // Close onboarding and redirect to dashboard
-    setTimeout(() => {
+      // 2. Mark user onboarding complete
+      const stepIds = stepMeta.map((s) => s.id);
+      await Promise.all([
+        fetch("/api/onboarding", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            completedSteps: stepIds,
+            totalTimeSpent: 60,
+          }),
+        }).catch(() => null),
+        fetch("/api/onboarding/complete", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({
+            completedSteps: stepIds,
+            totalTimeSpent: 60,
+          }),
+        }).catch(() => null),
+      ]);
+
+      if (typeof window !== "undefined") {
+        localStorage.setItem("pazaryonetimi_onboarded", "true");
+      }
+    } catch (err) {
+      console.error("Onboarding completion error:", err);
+    } finally {
+      setIsSubmitting(false);
       setIsVisible(false);
+      if (onClose) onClose();
       router.push("/dashboard");
-    }, 500);
-  }, [router, steps]);
+    }
+  }, [storeData, profileData, selectedPlatforms, stepMeta, onClose, router]);
 
-  const handleClose = useCallback(() => {
+  const handleClose = () => {
+    if (typeof window !== "undefined") {
+      localStorage.setItem("pazaryonetimi_onboarded", "true");
+    }
     setIsVisible(false);
-  }, []);
+    if (onClose) onClose();
+  };
 
   if (!isVisible) return null;
 
-  const StepComponent = currentStep.component;
-
   return (
     <AnimatePresence>
-      {isVisible && (
+      <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-6 overflow-y-auto">
+        {/* Backdrop with multi-layer ambient blur */}
         <motion.div
           initial={{ opacity: 0 }}
           animate={{ opacity: 1 }}
           exit={{ opacity: 0 }}
-          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-900/80 backdrop-blur-sm"
+          onClick={handleClose}
+          className="fixed inset-0 bg-slate-950/75 backdrop-blur-md transition-opacity"
+        />
+
+        {/* Ambient Glowing Blobs */}
+        <div className="fixed top-1/4 left-1/3 -translate-x-1/2 w-96 h-96 bg-primary/20 rounded-full blur-[120px] pointer-events-none" />
+        <div className="fixed bottom-1/4 right-1/3 translate-x-1/2 w-96 h-96 bg-indigo-500/20 rounded-full blur-[120px] pointer-events-none" />
+
+        {/* Modal Window */}
+        <motion.div
+          initial={{ opacity: 0, scale: 0.94, y: 15 }}
+          animate={{ opacity: 1, scale: 1, y: 0 }}
+          exit={{ opacity: 0, scale: 0.94, y: 15 }}
+          transition={{ duration: 0.25, ease: "easeOut" }}
+          className="relative w-full max-w-2xl bg-card text-card-foreground border border-border/70 dark:border-white/10 rounded-2xl sm:rounded-[28px] shadow-2xl shadow-indigo-950/40 overflow-hidden flex flex-col z-10 max-h-[92vh]"
         >
-          <motion.div
-            initial={{ opacity: 0, scale: 0.9, y: 20 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.9, y: 20 }}
-            className="w-full max-w-lg bg-white rounded-3xl shadow-2xl overflow-hidden"
-          >
-            {/* Header with progress */}
-            <div className="bg-slate-50 px-6 py-4 border-b border-slate-100">
-              <div className="flex items-center justify-between mb-3">
-                <div className="flex items-center gap-2">
-                  <span className="text-sm font-medium text-slate-600">
-                    Adım {currentStepIndex + 1} / {steps.length}
-                  </span>
-                </div>
-                <button
-                  onClick={handleClose}
-                  className="p-2 hover:bg-slate-200 rounded-full transition-colors"
-                >
-                  <X className="w-4 h-4 text-slate-500" />
-                </button>
+          {/* Top Bar with Brand Badge, Step Tracker & Close */}
+          <div className="px-5 sm:px-7 pt-5 pb-3 border-b border-border/60 bg-muted/30">
+            <div className="flex items-center justify-between gap-3 mb-3">
+              <div className="flex items-center gap-2">
+                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-semibold bg-primary/10 text-primary border border-primary/20">
+                  <Sparkles className="size-3" />
+                  PazarYönetimi Hızlı Kurulum
+                </span>
+                <span className="text-xs text-muted-foreground hidden sm:inline">
+                  • Adım {currentStepIndex + 1} / {totalSteps}
+                </span>
               </div>
-              
-              {/* Progress bar */}
-              <div className="h-2 bg-slate-200 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full bg-gradient-to-r from-blue-500 to-purple-600"
-                  initial={{ width: 0 }}
-                  animate={{ width: `${progress}%` }}
-                  transition={{ duration: 0.3 }}
-                />
+
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-semibold text-primary px-2 py-0.5 rounded-md bg-primary/10">
+                  %{progressPercent}
+                </span>
+                <button
+                  type="button"
+                  onClick={handleClose}
+                  className="p-1.5 rounded-full text-muted-foreground hover:text-foreground hover:bg-muted/80 transition-colors"
+                  title="Kapat ve panele git"
+                >
+                  <X className="size-4" />
+                </button>
               </div>
             </div>
 
-            {/* Step content */}
-            <div className="p-6">
-              <StepComponent
-                onNext={handleNext}
-                onBack={handleBack}
-                onSkip={handleSkip}
-                isFirst={currentStepIndex === 0}
-                isLast={currentStepIndex === steps.length - 1}
-                progress={progress}
+            {/* Stepper Progress Bar */}
+            <div className="h-1.5 w-full bg-muted rounded-full overflow-hidden mb-3">
+              <motion.div
+                className="h-full bg-gradient-to-r from-primary via-indigo-500 to-violet-600 rounded-full"
+                initial={false}
+                animate={{ width: `${progressPercent}%` }}
+                transition={{ duration: 0.35, ease: "easeOut" }}
               />
             </div>
 
-            {/* Step indicators */}
-            <div className="px-6 pb-4">
-              <div className="flex justify-center gap-2">
-                {steps.map((step, index) => (
-                  <div
-                    key={step.id}
-                    className={`w-2 h-2 rounded-full transition-all ${
-                      index === currentStepIndex
-                        ? "w-6 bg-blue-500"
-                        : index < currentStepIndex
-                        ? "bg-green-500"
-                        : "bg-slate-300"
+            {/* Step Breadcrumbs (desktop only) */}
+            <div className="hidden sm:flex items-center justify-between text-xs text-muted-foreground pt-1">
+              {stepMeta.map((s, idx) => {
+                const isActive = idx === currentStepIndex;
+                const isPassed = idx < currentStepIndex;
+
+                return (
+                  <button
+                    key={s.id}
+                    type="button"
+                    onClick={() => setCurrentStepIndex(idx)}
+                    className={`flex items-center gap-1.5 transition-colors py-0.5 px-1 rounded ${
+                      isActive
+                        ? "text-primary font-semibold"
+                        : isPassed
+                        ? "text-foreground hover:text-primary"
+                        : "text-muted-foreground/60 hover:text-muted-foreground"
                     }`}
-                  />
-                ))}
-              </div>
+                  >
+                    <span
+                      className={`size-5 rounded-full flex items-center justify-center text-[10px] ${
+                        isActive
+                          ? "bg-primary text-primary-foreground shadow-sm shadow-primary/30"
+                          : isPassed
+                          ? "bg-emerald-500 text-white"
+                          : "bg-muted text-muted-foreground"
+                      }`}
+                    >
+                      {isPassed ? <Check className="size-3" /> : idx + 1}
+                    </span>
+                    <span>{s.title}</span>
+                  </button>
+                );
+              })}
             </div>
-          </motion.div>
+          </div>
+
+          {/* Dynamic Content Body */}
+          <div className="p-5 sm:p-7 overflow-y-auto flex-1">
+            <AnimatePresence mode="wait">
+              {/* STEP 1: WELCOME & CAPABILITIES */}
+              {currentStepIndex === 0 && (
+                <motion.div
+                  key="step-welcome"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-6 text-center"
+                >
+                  {/* Glowing Hero Icon */}
+                  <div className="relative mx-auto size-20 sm:size-24 flex items-center justify-center">
+                    <motion.div
+                      animate={{ rotate: 360 }}
+                      transition={{ duration: 20, repeat: Infinity, ease: "linear" }}
+                      className="absolute inset-0 rounded-3xl bg-gradient-to-tr from-primary/30 via-indigo-500/20 to-violet-500/30 blur-md"
+                    />
+                    <div className="relative size-16 sm:size-20 bg-gradient-to-br from-primary via-indigo-600 to-violet-600 rounded-2xl flex items-center justify-center shadow-lg shadow-primary/30 text-white">
+                      <Sparkles className="size-8 sm:size-10" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                      PazarYönetimi Ekosistemine Hoş Geldiniz! 🚀
+                    </h2>
+                    <p className="mt-2 text-sm sm:text-base text-muted-foreground max-w-lg mx-auto">
+                      Tüm pazaryeri mağazalarınızı, stoklarınızı, siparişlerinizi ve yapay zeka stratejilerinizi tek ekrandan yönetmeye hazır mısınız?
+                    </p>
+                  </div>
+
+                  {/* 4 Bento Feature Cards */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 text-left pt-1">
+                    <div className="p-3.5 rounded-xl border border-border/70 bg-muted/30 hover:border-primary/40 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="size-7 rounded-lg bg-orange-500/10 text-orange-600 dark:text-orange-400 flex items-center justify-center">
+                          <Layers className="size-4" />
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+                          Çoklu Pazaryeri Eşitleme
+                        </h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Trendyol, Hepsiburada, Amazon ve N11 stokları anlık senkronize olur; mükerrer sipariş riski sıfırlanır.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-border/70 bg-muted/30 hover:border-primary/40 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="size-7 rounded-lg bg-violet-500/10 text-violet-600 dark:text-violet-400 flex items-center justify-center">
+                          <Bot className="size-4" />
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+                          PazarAI Akıllı Strateji
+                        </h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Buybox rekabeti, dinamik fiyatlama önerileri ve yapay zeka ile otomatik ürün açıklamaları.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-border/70 bg-muted/30 hover:border-primary/40 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="size-7 rounded-lg bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 flex items-center justify-center">
+                          <Boxes className="size-4" />
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+                          Konsolide Sipariş & Kargo
+                        </h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Tüm platformlardan gelen siparişler tek havuzda toplanır, tek tıkla kargo fişi ve e-fatura üretilir.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl border border-border/70 bg-muted/30 hover:border-primary/40 transition-colors">
+                      <div className="flex items-center gap-2.5 mb-1.5">
+                        <div className="size-7 rounded-lg bg-blue-500/10 text-blue-600 dark:text-blue-400 flex items-center justify-center">
+                          <TrendingUp className="size-4" />
+                        </div>
+                        <h4 className="text-xs sm:text-sm font-semibold text-foreground">
+                          Net Kâr & Komisyon Analizi
+                        </h4>
+                      </div>
+                      <p className="text-xs text-muted-foreground leading-relaxed">
+                        Pazaryeri komisyonları, kargo ücretleri ve ürün maliyetleri düşülerek anlık net kârınız hesaplanır.
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="pt-2">
+                    <button
+                      type="button"
+                      onClick={handleNext}
+                      className="w-full py-3.5 px-6 rounded-xl bg-gradient-to-r from-primary via-indigo-600 to-violet-600 text-white font-semibold text-sm sm:text-base shadow-lg shadow-primary/25 hover:shadow-primary/40 hover:opacity-95 transition-all flex items-center justify-center gap-2"
+                    >
+                      Hızlı Kuruluma Başla
+                      <ArrowRight className="size-4" />
+                    </button>
+                    <p className="text-[11px] text-muted-foreground mt-2">
+                      ⚡ Sadece 60 saniyede mağazanızı satışa hazırlayın
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 2: PROFILE SETUP */}
+              {currentStepIndex === 1 && (
+                <motion.div
+                  key="step-profile"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-5"
+                >
+                  <div className="text-center">
+                    <div className="size-14 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white shadow-md shadow-emerald-500/20">
+                      <User className="size-7" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                      Profilinizi Tamamlayın
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      Kritik stok alarmları ve sipariş raporları bu bilgilere göre iletilir
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 max-w-lg mx-auto">
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        Adınız ve Soyadınız
+                      </label>
+                      <div className="relative">
+                        <User className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="text"
+                          value={profileData.fullName}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, fullName: e.target.value })
+                          }
+                          className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                          placeholder="Örn: Erdem Eroğlu"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        Telefon Numarası
+                      </label>
+                      <div className="relative">
+                        <Phone className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="tel"
+                          value={profileData.phone}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, phone: e.target.value })
+                          }
+                          className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                          placeholder="+90 5XX XXX XX XX"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        E-posta Adresi (Doğrulandı)
+                      </label>
+                      <div className="relative">
+                        <Mail className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <input
+                          type="email"
+                          disabled
+                          value={session?.user?.email || "Giriş yapılmış e-posta"}
+                          className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-input bg-muted/50 text-muted-foreground cursor-not-allowed"
+                        />
+                        <span className="absolute right-3 top-1/2 -translate-y-1/2 text-[11px] font-semibold text-emerald-600 bg-emerald-500/10 px-2 py-0.5 rounded-full flex items-center gap-1">
+                          <Check className="size-3" /> Doğrulandı
+                        </span>
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        Yönetici Rolü
+                      </label>
+                      <div className="relative">
+                        <Briefcase className="size-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-muted-foreground" />
+                        <select
+                          value={profileData.role}
+                          onChange={(e) =>
+                            setProfileData({ ...profileData, role: e.target.value })
+                          }
+                          className="w-full pl-10 pr-4 py-2.5 text-sm rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                        >
+                          <option value="Mağaza Sahibi">Mağaza Sahibi / Kurucu</option>
+                          <option value="E-Ticaret Yöneticisi">E-Ticaret Yöneticisi</option>
+                          <option value="Operasyon Sorumlusu">Operasyon & Depo Sorumlusu</option>
+                          <option value="Finans & Muhasebe">Finans & Muhasebe</option>
+                        </select>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 3: STORE / TENANT SETUP */}
+              {currentStepIndex === 2 && (
+                <motion.div
+                  key="step-store"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-5"
+                >
+                  <div className="text-center">
+                    <div className="size-14 bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white shadow-md shadow-indigo-500/20">
+                      <Building2 className="size-7" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                      Mağazanızı Tanımlayın
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      Şirket bilgilerinizi girin ve operasyon alanınızı belirleyin
+                    </p>
+                  </div>
+
+                  <div className="space-y-4 max-w-xl mx-auto">
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        Mağaza / Şirket Adı
+                      </label>
+                      <input
+                        type="text"
+                        value={storeData.storeName}
+                        onChange={(e) =>
+                          setStoreData({ ...storeData, storeName: e.target.value })
+                        }
+                        className="w-full px-4 py-2.5 text-sm rounded-xl border border-input bg-background focus:ring-2 focus:ring-primary focus:outline-none transition-all"
+                        placeholder="Örn: Trend Butik E-Ticaret"
+                      />
+                      <p className="text-[11px] text-muted-foreground mt-1 flex items-center gap-1 font-mono">
+                        <span className="text-primary">URL:</span> pazaryonetimi.com/{liveSlug}
+                      </p>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        İşletme Modeli / Sektörünüz
+                      </label>
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+                        {SECTORS.map((sec) => {
+                          const Icon = sec.icon;
+                          const isSelected = storeData.sector === sec.id;
+
+                          return (
+                            <button
+                              key={sec.id}
+                              type="button"
+                              onClick={() => setStoreData({ ...storeData, sector: sec.id })}
+                              className={`p-3 rounded-xl border text-left transition-all flex items-start gap-2.5 ${
+                                isSelected
+                                  ? "border-primary bg-primary/5 ring-1 ring-primary/40 shadow-xs"
+                                  : "border-border/70 hover:border-border hover:bg-muted/30"
+                              }`}
+                            >
+                              <div
+                                className={`size-8 rounded-lg flex items-center justify-center flex-shrink-0 ${
+                                  isSelected
+                                    ? "bg-primary text-white"
+                                    : "bg-muted text-muted-foreground"
+                                }`}
+                              >
+                                <Icon className="size-4" />
+                              </div>
+                              <div className="flex-1 min-w-0">
+                                <p className="text-xs font-semibold text-foreground truncate">
+                                  {sec.title}
+                                </p>
+                                <p className="text-[11px] text-muted-foreground line-clamp-1 mt-0.5">
+                                  {sec.desc}
+                                </p>
+                              </div>
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block text-xs font-semibold text-foreground mb-1.5">
+                        Şirket Türü
+                      </label>
+                      <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                        {COMPANY_TYPES.map((type) => {
+                          const isSelected = storeData.companyType === type;
+                          return (
+                            <button
+                              key={type}
+                              type="button"
+                              onClick={() => setStoreData({ ...storeData, companyType: type })}
+                              className={`py-2 px-2.5 text-xs rounded-lg border font-medium transition-all text-center ${
+                                isSelected
+                                  ? "border-primary bg-primary/10 text-primary font-semibold"
+                                  : "border-border/70 text-muted-foreground hover:bg-muted/30"
+                              }`}
+                            >
+                              {type}
+                            </button>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 4: MARKETPLACE CONNECTIONS WITH REAL LOGOS */}
+              {currentStepIndex === 3 && (
+                <motion.div
+                  key="step-platforms"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                >
+                  <div className="text-center">
+                    <div className="size-14 bg-gradient-to-br from-orange-500 to-amber-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white shadow-md shadow-orange-500/20">
+                      <Store className="size-7" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                      Pazaryerlerinizi Seçin
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      Satış yaptığınız platformları işaretleyin, ürün ve sipariş havuzunu oluşturalım
+                    </p>
+                  </div>
+
+                  {/* Quick Select Actions */}
+                  <div className="flex items-center justify-between text-xs pt-1 px-1">
+                    <span className="font-semibold text-foreground">
+                      Seçilen:{" "}
+                      <span className="text-primary font-bold">
+                        {selectedPlatforms.length} / {MARKETPLACES.length}
+                      </span>
+                    </span>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={selectPopularPlatforms}
+                        className="text-xs text-primary hover:underline font-medium"
+                      >
+                        En Popülerleri Seç (4)
+                      </button>
+                      <span className="text-muted-foreground/40">•</span>
+                      <button
+                        type="button"
+                        onClick={selectAllPlatforms}
+                        className="text-xs text-muted-foreground hover:text-foreground font-medium"
+                      >
+                        Tümünü Seç
+                      </button>
+                    </div>
+                  </div>
+
+                  {/* Marketplaces Grid with Real Logos */}
+                  <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5 max-h-[300px] overflow-y-auto p-1">
+                    {MARKETPLACES.map((mp) => {
+                      const isSelected = selectedPlatforms.includes(mp.id);
+
+                      return (
+                        <button
+                          key={mp.id}
+                          type="button"
+                          onClick={() => togglePlatform(mp.id)}
+                          className={`relative p-3 rounded-xl border text-left transition-all flex flex-col items-center justify-between gap-2.5 group ${
+                            isSelected
+                              ? "border-primary bg-primary/5 ring-1 ring-primary/40 shadow-xs"
+                              : "border-border/70 hover:border-border hover:bg-muted/20 opacity-80"
+                          }`}
+                        >
+                          {/* Selection Checkmark */}
+                          <div
+                            className={`absolute top-2 right-2 size-5 rounded-full flex items-center justify-center transition-all ${
+                              isSelected
+                                ? "bg-primary text-primary-foreground shadow-xs"
+                                : "border border-border/80 bg-background text-transparent"
+                            }`}
+                          >
+                            <Check className="size-3" />
+                          </div>
+
+                          {/* Real Brand Logo */}
+                          <div className="h-10 w-full flex items-center justify-center p-1 bg-white dark:bg-slate-900 rounded-lg border border-border/40 mt-1">
+                            <Image
+                              src={mp.logo}
+                              alt={mp.name}
+                              width={90}
+                              height={32}
+                              className="max-h-7 w-auto object-contain"
+                            />
+                          </div>
+
+                          <div className="text-center w-full">
+                            <p className="text-xs font-bold text-foreground truncate">
+                              {mp.name}
+                            </p>
+                            <span className="inline-block text-[10px] text-muted-foreground mt-0.5">
+                              {mp.badge}
+                            </span>
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Informative helper note */}
+                  <div className="p-3 rounded-xl bg-blue-500/10 border border-blue-500/20 flex items-start gap-2.5">
+                    <HelpCircle className="size-4 text-blue-600 dark:text-blue-400 flex-shrink-0 mt-0.5" />
+                    <p className="text-xs text-blue-700 dark:text-blue-300 leading-relaxed">
+                      API anahtarlarınızı kurulumdan sonra paneldeki <strong>Entegrasyonlar</strong> sekmesinden dilediğiniz zaman tek tıkla tanımlayabilirsiniz.
+                    </p>
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 5: AI & CAPABILITIES TOUR */}
+              {currentStepIndex === 4 && (
+                <motion.div
+                  key="step-tour"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-4"
+                >
+                  <div className="text-center">
+                    <div className="size-14 bg-gradient-to-br from-violet-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-3 text-white shadow-md shadow-violet-500/20">
+                      <Zap className="size-7" />
+                    </div>
+                    <h3 className="text-xl sm:text-2xl font-bold text-foreground">
+                      Güçlü Özellikleri Keşfedin
+                    </h3>
+                    <p className="text-xs sm:text-sm text-muted-foreground mt-1">
+                      PazarYönetimi ile operasyonunuzu otomatikleştirin
+                    </p>
+                  </div>
+
+                  {/* Tabs Switcher */}
+                  <div className="grid grid-cols-3 gap-1.5 p-1 bg-muted rounded-xl">
+                    {[
+                      { idx: 0, label: "PazarAI Brifing", icon: Bot },
+                      { idx: 1, label: "Mükerrer Önleme", icon: ShieldCheck },
+                      { idx: 2, label: "1-Tıkla Geri Alma", icon: RotateCcw },
+                    ].map((tab) => {
+                      const Icon = tab.icon;
+                      const isActive = activeTourTab === tab.idx;
+
+                      return (
+                        <button
+                          key={tab.idx}
+                          type="button"
+                          onClick={() => setActiveTourTab(tab.idx)}
+                          className={`py-2 px-2 rounded-lg text-xs font-semibold flex items-center justify-center gap-1.5 transition-all ${
+                            isActive
+                              ? "bg-background text-primary shadow-xs"
+                              : "text-muted-foreground hover:text-foreground"
+                          }`}
+                        >
+                          <Icon className="size-3.5" />
+                          <span className="truncate">{tab.label}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+
+                  {/* Showcase Card Preview */}
+                  <div className="min-h-[210px] p-4 rounded-2xl border border-border/70 bg-gradient-to-br from-muted/40 via-background to-muted/20 flex flex-col justify-center">
+                    {activeTourTab === 0 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <span className="size-2 rounded-full bg-emerald-500 animate-pulse" />
+                          <span className="text-xs font-semibold text-primary">
+                            Yapay Zekalı Günlük Operasyon Rehberi
+                          </span>
+                        </div>
+                        <h4 className="text-base font-bold text-foreground">
+                          🤖 PazarAI Sabah Brifingi & Buybox Takibi
+                        </h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Her sabah giriş yaptığınızda yapay zeka dün geceki ciroyu, kargo bekleyen siparişleri ve rakiplerinizin fiyat değişikliklerini analiz ederek günün stratejisini hazırlar.
+                        </p>
+                        <div className="grid grid-cols-2 gap-2 pt-1">
+                          <div className="p-2.5 rounded-lg bg-primary/10 border border-primary/20">
+                            <p className="text-[10px] text-muted-foreground font-medium">Örnek Buybox Tavsiyesi</p>
+                            <p className="text-xs font-semibold text-primary mt-0.5">
+                              ₺499 → ₺495 (1. sırayı geri al)
+                            </p>
+                          </div>
+                          <div className="p-2.5 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                            <p className="text-[10px] text-muted-foreground font-medium">Kritik Stok Uyarısı</p>
+                            <p className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 mt-0.5">
+                              3 üründe son 2 adet kaldı
+                            </p>
+                          </div>
+                        </div>
+                      </div>
+                    )}
+
+                    {activeTourTab === 1 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <ShieldCheck className="size-4 text-emerald-600 dark:text-emerald-400" />
+                          <span className="text-xs font-semibold text-emerald-600 dark:text-emerald-400">
+                            Yüksek Güvenlikli Entegrasyon Motoru
+                          </span>
+                        </div>
+                        <h4 className="text-base font-bold text-foreground">
+                          🛡️ Kesintiye Karşı Mükerrer Sipariş ve Stok Kalkanı
+                        </h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Pazaryeri API bağlantısı kopsa veya XML beslemesi kesilse dahi sistem idempotent kuyruk yapısıyla hiçbir zaman mükerrer ürün ve hatalı stok oluşturmaz.
+                        </p>
+                        <ul className="space-y-1.5 text-xs text-muted-foreground pt-1">
+                          <li className="flex items-center gap-2">
+                            <Check className="size-3.5 text-emerald-500" />
+                            <span>Bir pazaryerinde satılan ürün diğer tüm platformlarda anında düşer.</span>
+                          </li>
+                          <li className="flex items-center gap-2">
+                            <Check className="size-3.5 text-emerald-500" />
+                            <span>Bağlantı hatası durumunda yöneticiye otomatik bildirim ve 15 dk sağlık denetimi.</span>
+                          </li>
+                        </ul>
+                      </div>
+                    )}
+
+                    {activeTourTab === 2 && (
+                      <div className="space-y-3">
+                        <div className="flex items-center gap-2">
+                          <RotateCcw className="size-4 text-indigo-500" />
+                          <span className="text-xs font-semibold text-indigo-500">
+                            Geri Alınabilir Toplu İşlemler
+                          </span>
+                        </div>
+                        <h4 className="text-base font-bold text-foreground">
+                          ⏪ 1-Tıkla Değişiklik Geri Alma & Anlık Snapshot
+                        </h4>
+                        <p className="text-xs text-muted-foreground leading-relaxed">
+                          Binlerce üründe yaptığınız toplu fiyat artışı veya stok güncellemesi öncesi sistem otomatik güvenlik anlık görüntüsü (snapshot) alır. İstenmeyen bir durumda tek tıkla eski haline dönebilirsiniz.
+                        </p>
+                        <div className="p-2.5 rounded-lg bg-muted border border-border/80 flex items-center justify-between text-xs">
+                          <div>
+                            <p className="font-semibold text-foreground">Son Toplu İşlem: %15 Fiyat Güncellemesi</p>
+                            <p className="text-[10px] text-muted-foreground">324 ürün güncellendi • Yedek alındı</p>
+                          </div>
+                          <span className="px-2 py-1 rounded bg-primary text-white font-medium text-[11px] shadow-xs">
+                            Geri Al
+                          </span>
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </motion.div>
+              )}
+
+              {/* STEP 6: CELEBRATION & COMPLETION */}
+              {currentStepIndex === 5 && (
+                <motion.div
+                  key="step-complete"
+                  initial={{ opacity: 0, y: 12 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  exit={{ opacity: 0, y: -12 }}
+                  transition={{ duration: 0.2 }}
+                  className="space-y-5 text-center relative"
+                >
+                  {/* Confetti Particles */}
+                  <div className="absolute inset-0 pointer-events-none overflow-hidden">
+                    {[...Array(16)].map((_, i) => (
+                      <motion.div
+                        key={i}
+                        className="absolute size-2 rounded-full"
+                        style={{
+                          backgroundColor: [
+                            "#3b82f6",
+                            "#8b5cf6",
+                            "#10b981",
+                            "#f59e0b",
+                            "#ec4899",
+                          ][i % 5],
+                          left: `${15 + (i * 5) % 70}%`,
+                          top: `${20 + (i * 6) % 60}%`,
+                        }}
+                        initial={{ opacity: 0, scale: 0, y: 0 }}
+                        animate={{
+                          opacity: [0, 1, 0],
+                          scale: [0, 1.5, 0.8],
+                          y: [-20, (i % 2 === 0 ? 1 : -1) * 60],
+                          x: [(i % 2 === 0 ? -1 : 1) * 30, (i % 2 === 0 ? 1 : -1) * 50],
+                        }}
+                        transition={{
+                          duration: 2,
+                          repeat: Infinity,
+                          delay: i * 0.12,
+                          ease: "easeOut",
+                        }}
+                      />
+                    ))}
+                  </div>
+
+                  <div className="relative mx-auto size-20 sm:size-24 flex items-center justify-center">
+                    <motion.div
+                      animate={{ scale: [1, 1.15, 1] }}
+                      transition={{ duration: 2, repeat: Infinity }}
+                      className="absolute inset-0 rounded-3xl bg-amber-500/20 blur-xl"
+                    />
+                    <div className="relative size-16 sm:size-20 bg-gradient-to-br from-amber-400 via-orange-500 to-amber-600 rounded-2xl flex items-center justify-center shadow-lg shadow-orange-500/30 text-white">
+                      <Trophy className="size-8 sm:size-10" />
+                    </div>
+                  </div>
+
+                  <div>
+                    <h2 className="text-2xl sm:text-3xl font-extrabold tracking-tight text-foreground">
+                      Tebrikler! Mağazanız Hazır 🎉
+                    </h2>
+                    <p className="mt-1 text-xs sm:text-sm text-muted-foreground max-w-md mx-auto">
+                      İlk kurulumu başarıyla tamamladınız. Artık tüm satış kanallarınızı tek merkezden yönetebilirsiniz.
+                    </p>
+                  </div>
+
+                  {/* Summary Box */}
+                  <div className="p-4 rounded-2xl border border-border/80 bg-muted/30 text-left space-y-3 max-w-lg mx-auto">
+                    <div className="flex items-center justify-between pb-2 border-b border-border/60">
+                      <div>
+                        <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                          Mağaza Adı
+                        </span>
+                        <p className="text-sm font-bold text-foreground">
+                          {storeData.storeName || "PazarYönetimi Mağazam"}
+                        </p>
+                      </div>
+                      <span className="px-2.5 py-1 rounded-full text-xs font-semibold bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                        <CheckCircle className="size-3.5" /> %100 Hazır
+                      </span>
+                    </div>
+
+                    <div>
+                      <span className="text-[11px] text-muted-foreground uppercase tracking-wider font-semibold">
+                        Seçilen Pazaryerleri ({selectedPlatforms.length})
+                      </span>
+                      <div className="flex flex-wrap gap-1.5 mt-1.5">
+                        {selectedPlatforms.map((pid) => {
+                          const m = MARKETPLACES.find((x) => x.id === pid);
+                          return (
+                            <span
+                              key={pid}
+                              className="px-2.5 py-1 rounded-lg text-xs font-semibold bg-background border border-border/80 text-foreground flex items-center gap-1 shadow-2xs"
+                            >
+                              <Check className="size-3 text-primary" />
+                              {m?.name || pid}
+                            </span>
+                          );
+                        })}
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Badges Earned */}
+                  <div className="p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-primary/10 to-violet-500/10 border border-amber-500/20 max-w-lg mx-auto">
+                    <p className="text-xs font-bold text-foreground flex items-center justify-center gap-1.5 mb-2">
+                      <Gift className="size-3.5 text-amber-500" />
+                      Kazanılan Başlangıç Rozetleri
+                    </p>
+                    <div className="flex justify-center gap-3 sm:gap-6">
+                      <div className="flex flex-col items-center">
+                        <div className="size-9 rounded-full bg-amber-500/20 flex items-center justify-center text-amber-600 dark:text-amber-400 mb-1">
+                          <Star className="size-4" />
+                        </div>
+                        <span className="text-[10px] font-medium text-muted-foreground">Hızlı Başlangıç</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="size-9 rounded-full bg-primary/20 flex items-center justify-center text-primary mb-1">
+                          <Rocket className="size-4" />
+                        </div>
+                        <span className="text-[10px] font-medium text-muted-foreground">Çoklu Kanal</span>
+                      </div>
+                      <div className="flex flex-col items-center">
+                        <div className="size-9 rounded-full bg-violet-500/20 flex items-center justify-center text-violet-500 mb-1">
+                          <Bot className="size-4" />
+                        </div>
+                        <span className="text-[10px] font-medium text-muted-foreground">PazarAI Kaşifi</span>
+                      </div>
+                    </div>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+
+          {/* Bottom Action Footer */}
+          <div className="px-5 sm:px-7 py-4 border-t border-border/60 bg-muted/20 flex items-center justify-between gap-3">
+            {/* Back Button */}
+            {currentStepIndex > 0 && currentStepIndex < totalSteps - 1 ? (
+              <button
+                type="button"
+                onClick={handleBack}
+                className="py-2.5 px-4 rounded-xl border border-border bg-background text-foreground hover:bg-muted/50 text-xs sm:text-sm font-semibold transition-colors flex items-center gap-1.5"
+              >
+                <ChevronLeft className="size-4" />
+                Geri
+              </button>
+            ) : (
+              <button
+                type="button"
+                onClick={handleClose}
+                className="text-xs text-muted-foreground hover:text-foreground font-medium transition-colors"
+              >
+                Atla ve Panele Git
+              </button>
+            )}
+
+            {/* Next / Finish Button */}
+            <div className="flex items-center gap-2">
+              {currentStepIndex < totalSteps - 1 ? (
+                <button
+                  type="button"
+                  onClick={handleNext}
+                  className="py-2.5 px-5 rounded-xl bg-primary text-primary-foreground text-xs sm:text-sm font-semibold shadow-md shadow-primary/25 hover:opacity-95 transition-all flex items-center gap-1.5"
+                >
+                  {currentStepIndex === 0 ? "Kuruluma Başla" : "Devam Et"}
+                  <ChevronRight className="size-4" />
+                </button>
+              ) : (
+                <button
+                  type="button"
+                  disabled={isSubmitting}
+                  onClick={finishOnboarding}
+                  className="py-3 px-6 rounded-xl bg-gradient-to-r from-emerald-600 via-teal-600 to-primary text-white text-xs sm:text-sm font-bold shadow-lg shadow-emerald-600/30 hover:opacity-95 transition-all flex items-center gap-2 disabled:opacity-50"
+                >
+                  {isSubmitting ? "Kaydediliyor..." : "Panele Geç ve Yönetmeye Başla 🚀"}
+                </button>
+              )}
+            </div>
+          </div>
         </motion.div>
-      )}
+      </div>
     </AnimatePresence>
   );
 }
+export default UserOnboarding;

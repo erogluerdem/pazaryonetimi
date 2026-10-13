@@ -757,34 +757,34 @@ body {
 .dashboard-pro {
   --dash-accent: #4f46e5;
   --dash-accent-hover: #4338ca;
-  --dash-accent-soft: rgba(79, 70, 229, 0.08);
-  --dash-accent-border: rgba(79, 70, 229, 0.18);
-  --dash-surface-elevated: color-mix(in srgb, var(--surface-color) 96%, #fff);
-  --dash-sidebar-bg: color-mix(in srgb, var(--background) 94%, #f8fafc);
-  --dash-radius: 14px;
-  --dash-radius-lg: 18px;
-  --dash-shadow-sm: 0 1px 2px rgba(15, 23, 42, 0.04), 0 1px 3px rgba(15, 23, 42, 0.06);
-  --dash-shadow-md: 0 4px 16px rgba(15, 23, 42, 0.06), 0 2px 6px rgba(15, 23, 42, 0.04);
+  --dash-accent-soft: rgba(79, 70, 229, 0.06);
+  --dash-accent-border: rgba(79, 70, 229, 0.15);
+  --dash-surface-elevated: var(--card);
+  --dash-sidebar-bg: var(--background);
+  --dash-radius: 12px;
+  --dash-radius-lg: 14px;
+  --dash-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.04);
+  --dash-shadow-md: 0 4px 12px rgba(0, 0, 0, 0.06);
 }
 
 [data-theme="dark"] .dashboard-pro {
-  --dash-sidebar-bg: color-mix(in srgb, var(--background) 88%, #0f172a);
-  --dash-surface-elevated: color-mix(in srgb, var(--surface-color) 92%, #1e293b);
+  --dash-sidebar-bg: var(--background);
+  --dash-surface-elevated: var(--card);
   --dash-shadow-sm: 0 1px 2px rgba(0, 0, 0, 0.2);
-  --dash-shadow-md: 0 8px 24px rgba(0, 0, 0, 0.28);
+  --dash-shadow-md: 0 4px 16px rgba(0, 0, 0, 0.3);
 }
 
 .dashboard-pro .dash-card {
-  background: var(--dash-surface-elevated);
-  border: 1px solid color-mix(in srgb, var(--border-color) 90%, transparent);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: var(--dash-radius-lg);
   box-shadow: var(--dash-shadow-sm);
-  transition: box-shadow 0.2s ease, border-color 0.2s ease;
+  transition: box-shadow 0.15s ease, border-color 0.15s ease;
 }
 
 .dashboard-pro .dash-card:hover {
   box-shadow: var(--dash-shadow-md);
-  border-color: color-mix(in srgb, var(--dash-accent-border) 60%, var(--border-color));
+  border-color: color-mix(in srgb, var(--border) 80%, var(--dash-accent));
 }
 
 .dashboard-pro .dash-nav-active {

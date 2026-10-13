@@ -50,13 +50,13 @@ export default function MarketplaceHealthMap({ data: propData }: MarketplaceHeal
     };
 
     return (
-        <div className="bg-surface rounded-2xl border border-border p-5">
+        <div className="dash-card rounded-xl border border-border/70 bg-card p-5 lg:p-6 shadow-xs">
             <div className="flex items-center justify-between mb-4">
                 <div className="flex items-center gap-2">
-                    <Globe className="w-5 h-5 text-primary" />
-                    <h3 className="text-sm font-bold text-foreground">Pazaryeri Sağlık Haritası</h3>
+                    <Globe className="w-4 h-4 text-indigo-500" />
+                    <h3 className="text-sm font-semibold text-foreground tracking-tight">Pazaryeri Sağlık Haritası</h3>
                 </div>
-                <span className="text-[10px] font-bold text-slate-500 uppercase">Gerçek Zamanlı</span>
+                <span className="text-[11px] font-medium text-muted-foreground">Canlı</span>
             </div>
 
             {data.length === 0 ? (
@@ -111,7 +111,7 @@ export default function MarketplaceHealthMap({ data: propData }: MarketplaceHeal
                                         />
                                     </svg>
                                     <div className="absolute inset-0 flex items-center justify-center">
-                                        <span className={`text-lg font-black ${style.text}`}>{platform.score}</span>
+                                        <span className={`text-base font-semibold tabular-nums ${style.text}`}>{platform.score}</span>
                                     </div>
                                 </div>
                             </div>
@@ -144,10 +144,10 @@ export default function MarketplaceHealthMap({ data: propData }: MarketplaceHeal
                                 <div className="grid grid-cols-2 md:grid-cols-5 gap-3 mb-3">
                                     {Object.entries(platform.metrics).map(([key, value]) => (
                                         <div key={key} className="text-center">
-                                            <div className={`text-lg font-black ${value >= 80 ? 'text-green-500' : value >= 60 ? 'text-amber-500' : 'text-red-500'}`}>
+                                            <div className={`text-base font-semibold tabular-nums ${value >= 80 ? 'text-emerald-500' : value >= 60 ? 'text-amber-500' : 'text-rose-500'}`}>
                                                 %{value}
                                             </div>
-                                            <div className="text-[10px] text-slate-500">{metricLabels[key]}</div>
+                                            <div className="text-[11px] text-muted-foreground mt-0.5">{metricLabels[key]}</div>
                                         </div>
                                     ))}
                                 </div>

@@ -162,14 +162,14 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 className="hidden lg:flex w-[17.5rem] flex-col fixed inset-y-0 z-50 border-r border-border"
                 style={{ background: 'var(--dash-sidebar-bg)' }}
             >
-                <div className="px-5 py-5 border-b border-border/80">
+                <div className="px-5 py-4 border-b border-border/70">
                     <Link href="/" className="flex items-center gap-3 group">
-                        <div className="w-9 h-9 rounded-[10px] bg-indigo-600 flex items-center justify-center shadow-sm group-hover:bg-indigo-500 transition-colors">
-                            <span className="text-base font-bold text-white">P</span>
+                        <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs group-hover:bg-indigo-500 transition-colors">
+                            <span className="text-sm font-semibold text-white">P</span>
                         </div>
                         <div className="min-w-0">
-                            <span className="text-[15px] font-semibold tracking-tight text-foreground block truncate">Pazar Yönetimi</span>
-                            <span className="text-[11px] font-medium text-slate-500">İşletme Paneli</span>
+                            <span className="text-sm font-semibold tracking-tight text-foreground block truncate">Pazar Yönetimi</span>
+                            <span className="text-[11px] font-medium text-muted-foreground">İşletme Paneli</span>
                         </div>
                     </Link>
                 </div>
@@ -179,31 +179,31 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     <div className="flex gap-2">
                         <button
                             onClick={openQuickSale}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-50 dark:bg-indigo-500/10 hover:bg-indigo-100 dark:hover:bg-indigo-500/15 border border-indigo-200/80 dark:border-indigo-500/20 rounded-[10px] text-xs font-semibold text-indigo-700 dark:text-indigo-300 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-colors shadow-xs"
                         >
                             <Zap size={13} /> Hızlı Satış
                         </button>
                         <button
                             onClick={openAddProduct}
-                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-slate-50 dark:bg-white/5 hover:bg-slate-100 dark:hover:bg-white/8 border border-border rounded-[10px] text-xs font-semibold text-slate-700 dark:text-slate-300 transition-colors"
+                            className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-muted/60 hover:bg-muted text-foreground border border-border/70 rounded-lg text-xs font-medium transition-colors"
                         >
                             <Package size={13} /> Ürün Ekle
                         </button>
                     </div>
                 </div>
 
-                <div className="flex-1 px-3 py-4 space-y-2 overflow-y-auto scrollbar-thin scrollbar-thumb-white/10 scrollbar-track-transparent">
+                <div className="flex-1 px-3 py-3 space-y-1.5 overflow-y-auto scrollbar-thin scrollbar-thumb-muted scrollbar-track-transparent">
                     {sidebarSections.map((section) => (
                         <div key={section.title} className="mb-1">
                             <button
                                 onClick={() => toggleSection(section.title)}
                                 aria-expanded={expandedSections.has(section.title)}
                                 aria-controls={`nav-section-${section.title}`}
-                                className="w-full flex items-center justify-between px-3 py-2 text-[11px] font-semibold text-slate-500 uppercase tracking-wide hover:text-slate-600 dark:hover:text-slate-400 transition-colors"
+                                className="w-full flex items-center justify-between px-2.5 py-1.5 text-[11px] font-medium text-muted-foreground uppercase tracking-wider hover:text-foreground transition-colors"
                             >
                                 {section.title}
                                 <ChevronDown
-                                    size={14}
+                                    size={13}
                                     aria-hidden="true"
                                     className={`transition-transform duration-200 ${expandedSections.has(section.title) ? 'rotate-180' : ''}`}
                                 />
@@ -214,7 +214,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                         initial={{ height: 0, opacity: 0 }}
                                         animate={{ height: 'auto', opacity: 1 }}
                                         exit={{ height: 0, opacity: 0 }}
-                                        transition={{ duration: 0.2 }}
+                                        transition={{ duration: 0.15 }}
                                         className="overflow-hidden"
                                     >
                                         {section.items.map((item) => {
@@ -224,36 +224,36 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                                                 <Link
                                                     key={item.href}
                                                     href={item.href}
-                                                    className={`flex items-center gap-3 px-3 py-2 rounded-[10px] transition-all group mb-0.5 ${isActive
-                                                        ? 'dash-nav-active border'
-                                                        : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100/80 dark:hover:bg-white/5 hover:text-foreground border border-transparent'
+                                                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors group mb-0.5 text-xs ${isActive
+                                                        ? 'bg-muted text-foreground font-semibold shadow-xs'
+                                                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                                                         }`}
                                                 >
-                                                    <ItemIcon className={`w-[15px] h-[15px] shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-slate-400 group-hover:text-indigo-500 transition-colors'}`} />
-                                                    <span className="text-[13px] font-medium flex-1">{item.label}</span>
+                                                    <ItemIcon className={`w-4 h-4 shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground group-hover:text-foreground transition-colors'}`} />
+                                                    <span className="flex-1 truncate">{item.label}</span>
                                                     {item.label === 'Siparişler' ? (
-                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-primary/20 text-primary">
+                                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                                                             {orderStats?.today?.total || '0'}
                                                         </span>
                                                     ) : item.id === 'inventory' && criticalStockCount > 0 ? (
-                                                        <span className="text-[10px] font-bold px-1.5 py-0.5 rounded bg-orange-500/20 text-orange-400">
+                                                        <span className="text-[10px] font-medium px-1.5 py-0.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
                                                             {criticalStockCount}
                                                         </span>
                                                     ) : item.badge && (
-                                                        <span className={`text-[10px] font-bold px-1.5 py-0.5 rounded ${item.badge === '!'
-                                                            ? 'bg-orange-500/20 text-orange-400'
-                                                            : 'bg-primary/20 text-primary'
+                                                        <span className={`text-[10px] font-medium px-1.5 py-0.5 rounded-md ${item.badge === '!'
+                                                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                            : 'bg-muted text-muted-foreground'
                                                             }`}>
                                                             {item.badge}
                                                         </span>
                                                     )}
                                                     {item.pro && !hasModuleAccess(item.moduleKey || '') && (
-                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-yellow-500 to-orange-500 text-white uppercase flex items-center gap-1">
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50 uppercase flex items-center gap-1">
                                                             <Lock size={8} /> Pro
                                                         </span>
                                                     )}
                                                     {item.pro && hasModuleAccess(item.moduleKey || '') && (
-                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded bg-gradient-to-r from-green-500 to-emerald-500 text-white uppercase flex items-center gap-1">
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-1">
                                                             <Crown size={8} /> Aktif
                                                         </span>
                                                     )}
@@ -267,23 +267,24 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                     ))}
                 </div>
 
-                <div className="p-4 mt-auto border-t border-border/60">
-                    <div className="rounded-[14px] p-4 border border-border bg-slate-50/80 dark:bg-white/[0.03]">
-                        <div className="flex items-center gap-2 mb-1.5">
-                            <Sparkles size={13} className="text-indigo-500" />
-                            <span className="text-[11px] font-semibold text-slate-600 dark:text-slate-400 uppercase tracking-wide">{tenantPlan} Plan</span>
+                <div className="p-3.5 mt-auto border-t border-border/60">
+                    <div className="rounded-xl p-3.5 border border-border/70 bg-muted/30">
+                        <div className="flex items-center gap-2 mb-1">
+                            <Sparkles size={12} className="text-indigo-500" />
+                            <span className="text-[11px] font-semibold text-foreground uppercase tracking-wider">{tenantPlan} Plan</span>
                         </div>
-                        <p className="text-sm font-medium text-foreground mb-1">Modül kullanımı</p>
-                        <p className="text-[10px] text-slate-500 mb-3 leading-snug">Kilitli menüler paketinize göre; Pro rozeti olanlar yükseltme gerektirir.</p>
-                        <div className="w-full bg-slate-200/70 dark:bg-white/10 h-1.5 rounded-full overflow-hidden mb-2">
+                        <p className="text-xs text-muted-foreground mb-2.5">
+                            {activeModuleCount}/{allModules.length} modül aktif
+                        </p>
+                        <div className="w-full bg-muted h-1 rounded-full overflow-hidden mb-2">
                             <div
-                                className="bg-indigo-600 h-full rounded-full transition-all duration-500"
+                                className="bg-indigo-600 h-full rounded-full transition-all duration-300"
                                 style={{ width: `${Math.min(100, Math.round((activeModuleCount / Math.max(allModules.length, 1)) * 100))}%` }}
                             />
                         </div>
-                        <div className="flex justify-between text-[11px] text-slate-500">
-                            <span>{activeModuleCount}/{allModules.length} modül</span>
-                            <Link href="/dashboard/upgrade" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">Yükselt</Link>
+                        <div className="flex justify-between items-center text-[11px] text-muted-foreground">
+                            <span>Kullanım</span>
+                            <Link href="/dashboard/upgrade" className="text-indigo-600 dark:text-indigo-400 font-medium hover:underline">Yükselt</Link>
                         </div>
                     </div>
                 </div>
