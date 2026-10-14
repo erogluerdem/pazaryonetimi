@@ -67,10 +67,10 @@ export const useQuickSale = (onClose: () => void) => {
             }
             return [...prev, {
                 productId: product.id,
-                name: product.name,
+                name: product.name || product.title || 'İsimsiz Ürün',
                 quantity: 1,
-                price: product.price,
-                sku: product.sku
+                price: Number(product.price) || 0,
+                sku: product.sku || ''
             }];
         });
         setSearchQuery('');
@@ -124,10 +124,22 @@ export const useQuickSale = (onClose: () => void) => {
         }
     };
 
-    const filteredProducts = (products || []).filter((p: Product) =>
-        p.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        (p.sku && p.sku.toLowerCase().includes(searchQuery.toLowerCase()))
-    ).slice(0, 5);
+    const productList: any[] = Array.isArray(products)
+        ? products
+        : (Array.isArray((products as any)?.data)
+            ? (products as any).data
+            : (Array.isArray((products as any)?.products) ? (products as any).products : []));
+
+    const filteredProducts = productList.filter((p: any) => {
+        const title = (p.name || p.title || '').toLowerCase();
+        const sku = (p.sku || '').toLowerCase();
+        const query = searchQuery.toLowerCase();
+        return title.includes(query) || sku.includes(query);
+    }).map((p: any) => ({
+        ...p,
+        name: p.name || p.title || 'İsimsiz Ürün',
+        price: Number(p.price) || 0,
+    })).slice(0, 5);
 
     // Keyboard navigation logic
     const handleKeyDown = useCallback((e: React.KeyboardEvent) => {

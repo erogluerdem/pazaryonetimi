@@ -53,7 +53,8 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const currentPageTitle = useMemo(() => getPageTitle(pathname ?? '/dashboard'), [pathname]);
 
     const activeModuleCount = useMemo(() => {
-        if (enabledModules.length > 0) return enabledModules.length;
+        if (Array.isArray(enabledModules) && enabledModules.length > 0) return enabledModules.length;
+        if (!Array.isArray(allModules)) return 0;
         return allModules.filter((m) => hasModuleAccess(m.key)).length;
     }, [enabledModules, allModules, hasModuleAccess]);
 

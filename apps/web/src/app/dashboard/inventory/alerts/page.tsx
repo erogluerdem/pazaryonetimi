@@ -29,7 +29,10 @@ export default function CriticalStockAlertsPage() {
         return items.filter((a) => a.rule.toLowerCase().includes(q) || (a.sku || '').toLowerCase().includes(q));
     }, [stockAlerts, search]);
 
-    const criticalCount = (stockAlerts || []).filter((a: any) => a.status === 'critical').length;
+    const safeStockAlerts = Array.isArray(stockAlerts)
+        ? stockAlerts
+        : (Array.isArray((stockAlerts as any)?.data) ? (stockAlerts as any).data : []);
+    const criticalCount = safeStockAlerts.filter((a: any) => a.status === 'critical').length;
 
     return (
         <div className="max-w-7xl mx-auto space-y-8 animate-in fade-in duration-500 pb-20">

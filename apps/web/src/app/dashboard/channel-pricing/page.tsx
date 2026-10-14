@@ -19,7 +19,18 @@ const marketplaces = [
 
 export default function ChannelPricingPage() {
     const { data, loading, refetch } = useProducts();
-    const rawProducts: Product[] = data ?? [];
+    const rawList: any[] = Array.isArray(data)
+        ? data
+        : (Array.isArray((data as any)?.data)
+            ? (data as any).data
+            : (Array.isArray((data as any)?.products) ? (data as any).products : []));
+
+    const rawProducts: Product[] = rawList.map((p: any) => ({
+        ...p,
+        name: p.name || p.title || 'İsimsiz Ürün',
+        price: Number(p.price) || 0,
+    }));
+
     // Local prices overrides map: productId -> { CHANNEL: price }
     const [priceOverrides, setPriceOverrides] = useState<Record<string, Record<string, number>>>({});
     const [selectedProducts, setSelectedProducts] = useState<string[]>([]);
@@ -34,7 +45,7 @@ export default function ChannelPricingPage() {
     const [saving, setSaving] = useState<string | null>(null);
 
     const products = rawProducts.filter(p =>
-        p.name.toLowerCase().includes(search.toLowerCase()) ||
+        (p.name || '').toLowerCase().includes(search.toLowerCase()) ||
         (p.brand || '').toLowerCase().includes(search.toLowerCase())
     );
 

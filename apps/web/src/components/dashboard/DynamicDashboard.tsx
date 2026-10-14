@@ -61,18 +61,38 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
   const { data: stats, loading: statsLoading } = useDashboardStats(period);
   const comparison = stats?.periodComparison;
   const { data: ordersRaw, loading: ordersLoading } = useRecentOrders(8);
-  const orders = ordersRaw ?? [];
-  const { data: insights, loading: insightsLoading } = useAiInsights();
-  const { data: platforms, loading: platformsLoading } = usePlatformPerformance();
-  const { data: activities, loading: activitiesLoading } = useActivityFeed(8);
-  const { data: stockAlerts, loading: stockLoading } = useStockAlerts();
-  const { data: goals, loading: goalsLoading } = useGoals();
-  const { data: marketplaceHealth, loading: healthLoading } = useMarketplaceHealth();
+  const orders = Array.isArray(ordersRaw)
+    ? ordersRaw
+    : (Array.isArray((ordersRaw as any)?.data) ? (ordersRaw as any).data : []);
+  const { data: insightsRaw, loading: insightsLoading } = useAiInsights();
+  const insights = Array.isArray(insightsRaw)
+    ? insightsRaw
+    : (Array.isArray((insightsRaw as any)?.data) ? (insightsRaw as any).data : []);
+  const { data: platformsRaw, loading: platformsLoading } = usePlatformPerformance();
+  const platforms = Array.isArray(platformsRaw)
+    ? platformsRaw
+    : (Array.isArray((platformsRaw as any)?.data) ? (platformsRaw as any).data : []);
+  const { data: activitiesRaw, loading: activitiesLoading } = useActivityFeed(8);
+  const activities = Array.isArray(activitiesRaw)
+    ? activitiesRaw
+    : (Array.isArray((activitiesRaw as any)?.data) ? (activitiesRaw as any).data : []);
+  const { data: stockAlertsRaw, loading: stockLoading } = useStockAlerts();
+  const stockAlerts = Array.isArray(stockAlertsRaw)
+    ? stockAlertsRaw
+    : (Array.isArray((stockAlerts as any)?.data) ? (stockAlerts as any).data : []);
+  const { data: goalsRaw, loading: goalsLoading } = useGoals();
+  const goals = Array.isArray(goalsRaw)
+    ? goalsRaw
+    : (Array.isArray((goalsRaw as any)?.data) ? (goalsRaw as any).data : []);
+  const { data: marketplaceHealthRaw, loading: healthLoading } = useMarketplaceHealth();
+  const marketplaceHealth = Array.isArray(marketplaceHealthRaw)
+    ? marketplaceHealthRaw
+    : (Array.isArray((marketplaceHealthRaw as any)?.data) ? (marketplaceHealthRaw as any).data : []);
   const { syncQueue, orderPipeline, retrySyncIntegration } = useModules();
 
   const pieData = useMemo(
     () =>
-      (platforms || []).map((p: any) => ({
+      platforms.map((p: any) => ({
         name: p.platform,
         value: Math.round(p.revenue || p.orders || 1),
       })),

@@ -300,8 +300,10 @@ export function useAnnouncements() {
     dismissAnnouncement 
   } = useModules();
   
-  // Güvenli filter - announcements undefined olabilir
-  const safeAnnouncements = announcements || [];
+  // Güvenli filter - announcements undefined veya object olabilir
+  const safeAnnouncements = Array.isArray(announcements)
+    ? announcements
+    : (Array.isArray((announcements as any)?.data) ? (announcements as any).data : []);
   
   const activeAnnouncements = safeAnnouncements.filter(
     a => a.isActive && !a.isDismissed && (!a.endsAt || new Date(a.endsAt) > new Date())
