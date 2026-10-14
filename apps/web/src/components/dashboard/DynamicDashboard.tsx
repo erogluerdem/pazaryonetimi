@@ -40,6 +40,13 @@ import { OrderPipeline } from './OrderPipeline';
 import { SyncQueuePanel } from './SyncQueuePanel';
 import { useModules } from '@/lib/modules';
 
+function toSafeArray<T = any>(val: any): T[] {
+  if (Array.isArray(val)) return val;
+  if (Array.isArray(val?.data)) return val.data;
+  if (Array.isArray(val?.items)) return val.items;
+  return [];
+}
+
 interface DynamicDashboardProps {
   period?: DashboardPeriod;
   editable?: boolean;
@@ -61,33 +68,19 @@ export const DynamicDashboard: React.FC<DynamicDashboardProps> = ({ period = '30
   const { data: stats, loading: statsLoading } = useDashboardStats(period);
   const comparison = stats?.periodComparison;
   const { data: ordersRaw, loading: ordersLoading } = useRecentOrders(8);
-  const orders = Array.isArray(ordersRaw)
-    ? ordersRaw
-    : (Array.isArray((ordersRaw as any)?.data) ? (ordersRaw as any).data : []);
+  const orders = toSafeArray(ordersRaw);
   const { data: insightsRaw, loading: insightsLoading } = useAiInsights();
-  const insights = Array.isArray(insightsRaw)
-    ? insightsRaw
-    : (Array.isArray((insightsRaw as any)?.data) ? (insightsRaw as any).data : []);
+  const insights = toSafeArray(insightsRaw);
   const { data: platformsRaw, loading: platformsLoading } = usePlatformPerformance();
-  const platforms = Array.isArray(platformsRaw)
-    ? platformsRaw
-    : (Array.isArray((platformsRaw as any)?.data) ? (platformsRaw as any).data : []);
+  const platforms = toSafeArray(platformsRaw);
   const { data: activitiesRaw, loading: activitiesLoading } = useActivityFeed(8);
-  const activities = Array.isArray(activitiesRaw)
-    ? activitiesRaw
-    : (Array.isArray((activitiesRaw as any)?.data) ? (activitiesRaw as any).data : []);
+  const activities = toSafeArray(activitiesRaw);
   const { data: stockAlertsRaw, loading: stockLoading } = useStockAlerts();
-  const stockAlerts = Array.isArray(stockAlertsRaw)
-    ? stockAlertsRaw
-    : (Array.isArray((stockAlerts as any)?.data) ? (stockAlerts as any).data : []);
+  const stockAlerts = toSafeArray(stockAlertsRaw);
   const { data: goalsRaw, loading: goalsLoading } = useGoals();
-  const goals = Array.isArray(goalsRaw)
-    ? goalsRaw
-    : (Array.isArray((goalsRaw as any)?.data) ? (goalsRaw as any).data : []);
+  const goals = toSafeArray(goalsRaw);
   const { data: marketplaceHealthRaw, loading: healthLoading } = useMarketplaceHealth();
-  const marketplaceHealth = Array.isArray(marketplaceHealthRaw)
-    ? marketplaceHealthRaw
-    : (Array.isArray((marketplaceHealthRaw as any)?.data) ? (marketplaceHealthRaw as any).data : []);
+  const marketplaceHealth = toSafeArray(marketplaceHealthRaw);
   const { syncQueue, orderPipeline, retrySyncIntegration } = useModules();
 
   const pieData = useMemo(
