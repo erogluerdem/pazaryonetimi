@@ -23,7 +23,10 @@ export function ConsoleSuppressor() {
         errorMsg.includes('WebSocket connection') ||
         errorMsg.includes('socket.io') ||
         errorStr.includes('WebSocket connection to') ||
-        (typeof Error !== 'undefined' && args[0] instanceof Error && args[0].message?.includes('WebSocket'))
+        (typeof Error !== 'undefined' && args[0] instanceof Error && args[0].message?.includes('WebSocket')) ||
+        errorMsg.includes('beforeinstallpromptevent.preventDefault') ||
+        errorMsg.includes('Banner not shown') ||
+        errorMsg.includes('beforeinstallprompt')
       ) {
         return; // Silently ignore
       }

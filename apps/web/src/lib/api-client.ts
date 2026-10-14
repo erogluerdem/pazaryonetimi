@@ -18,9 +18,71 @@ function normalizeApiBaseUrl(raw?: string): string {
   return `https://${value}`.replace(/\/$/, '');
 }
 
+function getDirectApiBaseUrl(): string {
+  const envUrl = normalizeApiBaseUrl(process.env.NEXT_PUBLIC_API_URL);
+  if (envUrl && !envUrl.includes('localhost') && !envUrl.startsWith('/')) {
+    return envUrl;
+  }
+  if (typeof window !== 'undefined') {
+    const host = window.location.hostname;
+    if (host === 'localhost' || host === '127.0.0.1') {
+      return 'http://localhost:3001';
+    }
+    return 'https://api.pazaryonetimi.com';
+  }
+  return process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001';
+}
+
+function combineUrl(base: string, endpoint: string): string {
+  const cleanBase = (base || '').replace(/\/+$/, '');
+  const cleanEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
+
+  if (!cleanBase) {
+    if (cleanEndpoint.startsWith('/api/v1/')) return cleanEndpoint;
+    if (cleanEndpoint.startsWith('/api/')) return `/api/v1${cleanEndpoint.slice(4)}`;
+    return `/api/v1${cleanEndpoint}`;
+  }
+
+  if (cleanBase.endsWith('/api/v1')) {
+    if (cleanEndpoint.startsWith('/api/v1/')) {
+      return `${cleanBase.slice(0, -7)}${cleanEndpoint}`;
+    }
+    if (cleanEndpoint.startsWith('/api/')) {
+      return `${cleanBase.slice(0, -7)}/api/v1${cleanEndpoint.slice(4)}`;
+    }
+    return `${cleanBase}${cleanEndpoint}`;
+  }
+
+  if (cleanBase.endsWith('/api')) {
+    if (cleanEndpoint.startsWith('/api/v1/')) {
+      return `${cleanBase.slice(0, -4)}${cleanEndpoint}`;
+    }
+    if (cleanEndpoint.startsWith('/api/')) {
+      return `${cleanBase.slice(0, -4)}/api/v1${cleanEndpoint.slice(4)}`;
+    }
+    return `${cleanBase}/v1${cleanEndpoint}`;
+  }
+
+  if (cleanEndpoint.startsWith('/api/v1/')) {
+    return `${cleanBase}${cleanEndpoint}`;
+  }
+  if (cleanEndpoint.startsWith('/api/')) {
+    return `${cleanBase}/api/v1${cleanEndpoint.slice(4)}`;
+  }
+  return `${cleanBase}/api/v1${cleanEndpoint}`;
+}
+
 const API_BASE_URL = typeof window !== 'undefined'
   ? ''
   : (normalizeApiBaseUrl(process.env.API_INTERNAL_URL || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) || (process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001'));
+
+// Track if direct API is preferred (e.g. when Next.js proxy returns 500)
+let globalDirectPreferred = false;
+if (typeof window !== 'undefined') {
+  try {
+    globalDirectPreferred = sessionStorage.getItem('pazar_direct_api_preferred') === 'true';
+  } catch {}
+}
 
 // ─── Retry Configuration ──────────────────────────
 interface RetryConfig {
@@ -31,10 +93,10 @@ interface RetryConfig {
 }
 
 const DEFAULT_RETRY_CONFIG: RetryConfig = {
-  maxRetries: 3,
-  baseDelay: 1000,
-  maxDelay: 10000,
-  retryableStatuses: [408, 429, 500, 502, 503, 504],
+  maxRetries: 1,
+  baseDelay: 400,
+  maxDelay: 1500,
+  retryableStatuses: [408, 429, 502, 503, 504],
 };
 
 // ─── API Error Class ──────────────────────────────
@@ -82,11 +144,11 @@ class ApiClient {
     this.retryConfig = { ...DEFAULT_RETRY_CONFIG, ...retryConfig };
   }
 
-  setTenantId(tenantId: string) {
+  setTenantId(tenantId: string | null) {
     this.tenantId = tenantId;
   }
 
-  setAccessToken(token: string) {
+  setAccessToken(token: string | null) {
     this.accessToken = token;
   }
 
@@ -96,7 +158,7 @@ class ApiClient {
 
   private getRetryDelay(attempt: number): number {
     const delay = Math.min(
-      this.retryConfig.baseDelay * Math.pow(2, attempt) + Math.random() * 500,
+      this.retryConfig.baseDelay * Math.pow(2, attempt) + Math.random() * 300,
       this.retryConfig.maxDelay
     );
     return delay;
@@ -105,40 +167,39 @@ class ApiClient {
   private buildUrlCandidates(endpoint: string): string[] {
     const normalizedEndpoint = endpoint.startsWith('/') ? endpoint : `/${endpoint}`;
 
-    // In browser, same-origin relative endpoints prevent CORS preflight and network blockage
+    if (normalizedEndpoint.startsWith('http://') || normalizedEndpoint.startsWith('https://')) {
+      return [normalizedEndpoint];
+    }
+
+    // In browser:
     if (typeof window !== 'undefined') {
-      const candidates: string[] = [];
+      const directBase = getDirectApiBaseUrl();
+
+      let relativeUrl: string;
       if (normalizedEndpoint.startsWith('/api/v1/')) {
-        candidates.push(normalizedEndpoint);
+        relativeUrl = normalizedEndpoint;
       } else if (normalizedEndpoint.startsWith('/api/')) {
-        const stripped = normalizedEndpoint.replace(/^\/api\//, '/');
-        // Prioritize /api/v1/ because NestJS backend uses URI versioning (v1) with global prefix 'api'
-        candidates.push(`/api/v1${stripped}`, normalizedEndpoint);
+        relativeUrl = `/api/v1${normalizedEndpoint.slice(4)}`;
       } else {
-        candidates.push(`/api/v1${normalizedEndpoint}`, `/api${normalizedEndpoint}`, normalizedEndpoint);
+        relativeUrl = `/api/v1${normalizedEndpoint}`;
       }
-      return [...new Set(candidates)];
+
+      const directUrl = combineUrl(directBase, normalizedEndpoint);
+
+      // If direct API is preferred (because same-origin Next.js proxy previously failed or 500'd),
+      // prioritize direct backend URL so queries succeed immediately with zero delay.
+      if (globalDirectPreferred) {
+        return [...new Set([directUrl, relativeUrl])];
+      }
+
+      // Default: relative proxy first (avoids CORS preflight if rewrite works), direct API as fallback candidate
+      return [...new Set([relativeUrl, directUrl])];
     }
 
+    // Server-side (SSR / Node):
     const base = (this.baseUrl || '').replace(/\/$/, '');
-    const root = base.replace(/\/api(?:\/v1)?$/, '');
-    const hasApiPrefix = /\/api(?:\/v1)?$/.test(base);
-
-    const prefixes: string[] = [];
-    if (base) {
-      if (!hasApiPrefix) {
-        prefixes.push(`${base}/api/v1`, `${base}/api`, base);
-      } else {
-        prefixes.push(base);
-      }
-      if (root && root !== base) {
-        prefixes.push(`${root}/api/v1`, `${root}/api`);
-      }
-    } else {
-      prefixes.push('/api/v1', '/api', '');
-    }
-
-    return [...new Set(prefixes.map((candidate) => `${candidate}${normalizedEndpoint}`))];
+    const directUrl = combineUrl(base, normalizedEndpoint);
+    return [directUrl];
   }
 
   public async request<T>(
@@ -158,16 +219,22 @@ class ApiClient {
         let timeoutId: ReturnType<typeof setTimeout> | undefined;
         try {
           const controller = new AbortController();
-          timeoutId = setTimeout(() => controller.abort(), /marketplace\/(connect|sync-store)/.test(endpoint) ? 125000 : 30000); // 30s timeout
+          const timeoutMs = /marketplace\/(connect|sync-store)/.test(endpoint) ? 125000 : 12000;
+          timeoutId = setTimeout(() => controller.abort(), timeoutMs);
+
+          const customHeaders = options.headers instanceof Headers
+            ? Object.fromEntries(options.headers.entries())
+            : (Array.isArray(options.headers) ? Object.fromEntries(options.headers) : (options.headers || {}));
 
           const response = await fetch(url, {
             ...options,
+            credentials: options.credentials || 'include',
             signal: controller.signal,
             headers: {
               'Content-Type': 'application/json',
               ...(this.tenantId ? { 'x-tenant-id': this.tenantId } : {}),
               ...(this.accessToken ? { 'Authorization': `Bearer ${this.accessToken}` } : {}),
-              ...options.headers,
+              ...customHeaders,
             },
           });
 
@@ -179,15 +246,17 @@ class ApiClient {
 
             const apiError = new ApiError(response.status, response.statusText, `${endpoint} (${url})`, responseBody);
 
-            // Try next URL candidate on 404 path mismatches.
-            if (apiError.isNotFound && !isLastCandidate) {
-              continue;
-            }
-
             // Don't retry auth errors.
             if (apiError.isAuthError) {
               emitApiError(apiError);
               throw apiError;
+            }
+
+            // If current candidate returned 404 (wrong route), 500, 502, 503, or 504
+            // (e.g. Next.js rewrite failed to reach backend or gateway error),
+            // immediately try the next URL candidate before breaking into retry delays!
+            if ((apiError.isNotFound || apiError.isServerError) && !isLastCandidate) {
+              continue;
             }
 
             if (
@@ -200,6 +269,15 @@ class ApiClient {
 
             emitApiError(apiError);
             throw apiError;
+          }
+
+          // If request succeeded using a direct URL (starts with http/https) in browser,
+          // mark globalDirectPreferred = true so all future requests use direct API directly.
+          if (typeof window !== 'undefined' && (url.startsWith('http://') || url.startsWith('https://'))) {
+            globalDirectPreferred = true;
+            try {
+              sessionStorage.setItem('pazar_direct_api_preferred', 'true');
+            } catch {}
           }
 
           return response.json();
