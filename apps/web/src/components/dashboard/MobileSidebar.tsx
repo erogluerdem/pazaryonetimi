@@ -81,14 +81,14 @@ export default function MobileSidebar({ isOpen, onClose, onHaptic }: MobileSideb
                         </div>
 
                         {/* Header */}
-                        <div className="flex items-center justify-between px-5 py-3 border-b border-border">
-                            <div className="flex items-center gap-3">
-                                <div className="w-9 h-9 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center shadow-lg shadow-primary/30">
-                                    <span className="text-lg font-black italic text-white">P</span>
+                        <div className="flex items-center justify-between px-4 py-3 border-b border-border/70">
+                            <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs">
+                                    <span className="text-xs font-semibold text-white">P</span>
                                 </div>
-                                <div>
-                                    <span className="text-base font-black tracking-tight text-foreground">PAZAR</span>
-                                    <span className="text-base font-black tracking-tight text-primary">YÖNETİMİ</span>
+                                <div className="leading-tight">
+                                    <span className="text-xs font-semibold tracking-tight text-foreground block">Pazar Yönetimi</span>
+                                    <span className="text-[10px] text-muted-foreground font-medium">İşletme Menüsü</span>
                                 </div>
                             </div>
                             <button
@@ -97,14 +97,14 @@ export default function MobileSidebar({ isOpen, onClose, onHaptic }: MobileSideb
                                     onClose();
                                 }}
                                 aria-label="Menüyü kapat"
-                                className="p-2 rounded-xl bg-surface border border-border text-slate-400 hover:text-foreground active:scale-90 transition-all haptic-tap"
+                                className="p-1.5 rounded-lg bg-muted/50 border border-border/70 text-muted-foreground hover:text-foreground active:scale-95 transition-all haptic-tap"
                             >
-                                <X size={18} aria-hidden="true" />
+                                <X size={16} aria-hidden="true" />
                             </button>
                         </div>
 
                         {/* Quick Actions */}
-                        <div className="px-5 py-4 border-b border-border">
+                        <div className="px-4 py-3 border-b border-border/70">
                             <div className="flex gap-2">
                                 <button
                                     onClick={() => {
@@ -112,9 +112,9 @@ export default function MobileSidebar({ isOpen, onClose, onHaptic }: MobileSideb
                                         onClose();
                                         openQuickSale();
                                     }}
-                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-primary/10 hover:bg-primary/20 border border-primary/20 rounded-2xl text-xs font-bold text-primary transition-all active:scale-95 haptic-tap"
+                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-colors shadow-xs active:scale-95 haptic-tap"
                                 >
-                                    <Zap size={15} /> Hızlı Satış
+                                    <Zap size={13} /> Hızlı Satış
                                 </button>
                                 <button
                                     onClick={() => {
@@ -122,18 +122,18 @@ export default function MobileSidebar({ isOpen, onClose, onHaptic }: MobileSideb
                                         onClose();
                                         openAddProduct();
                                     }}
-                                    className="flex-1 flex items-center justify-center gap-2 px-3 py-3 bg-green-500/10 hover:bg-green-500/20 border border-green-500/20 rounded-2xl text-xs font-bold text-green-500 transition-all active:scale-95 haptic-tap"
+                                    className="flex-1 flex items-center justify-center gap-1.5 px-3 py-2 bg-card hover:bg-muted text-foreground border border-border/70 rounded-lg text-xs font-medium transition-colors active:scale-95 haptic-tap"
                                 >
-                                    <Package size={15} /> Ürün Ekle
+                                    <Package size={13} /> Ürün Ekle
                                 </button>
                             </div>
                         </div>
 
                         {/* Navigation */}
-                        <div className="flex-1 overflow-y-auto overscroll-contain px-4 py-3 space-y-4 mobile-scroll">
+                        <div className="flex-1 overflow-y-auto overscroll-contain px-3 py-3 space-y-3 mobile-scroll">
                             {mobileSections.map((section) => (
                                 <div key={section.title}>
-                                    <div className="px-2 mb-2 text-[10px] font-black text-slate-500 uppercase tracking-widest">
+                                    <div className="px-2 mb-1.5 text-[10px] font-medium text-muted-foreground uppercase tracking-wider">
                                         {section.title}
                                     </div>
                                     <div className="space-y-0.5">
@@ -145,40 +145,40 @@ export default function MobileSidebar({ isOpen, onClose, onHaptic }: MobileSideb
                                                     key={item.href}
                                                     href={item.href}
                                                     onClick={onHaptic}
-                                                    className={`flex items-center gap-3 px-3 py-3 rounded-2xl transition-all active:scale-[0.98] haptic-tap ${isActive
-                                                        ? 'bg-orange-500/10 text-orange-600 border border-orange-500/20'
-                                                        : 'text-slate-400 hover:bg-surface active:bg-surface'
+                                                    className={`flex items-center gap-2.5 px-2.5 py-2 rounded-lg transition-colors active:scale-[0.98] haptic-tap text-xs ${isActive
+                                                        ? 'bg-muted text-foreground font-semibold shadow-xs'
+                                                        : 'text-muted-foreground hover:bg-muted/50 hover:text-foreground'
                                                         }`}
                                                 >
-                                                    <ItemIcon className={`w-5 h-5 flex-shrink-0 ${isActive ? 'text-orange-500' : ''}`} />
-                                                    <span className="text-sm font-medium flex-1">{item.label}</span>
+                                                    <ItemIcon className={`w-4 h-4 flex-shrink-0 ${isActive ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`} />
+                                                    <span className="font-medium flex-1 truncate">{item.label}</span>
                                                     {item.label === 'Siparişler' ? (
-                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-primary/20 text-primary">
+                                                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                                                             {orderStats?.today?.total || '0'}
                                                         </span>
                                                     ) : item.id === 'inventory' && criticalStockCount > 0 ? (
-                                                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-orange-500/20 text-orange-400">
+                                                        <span className="text-[10px] font-medium px-1.5 py-0.2 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
                                                             {criticalStockCount}
                                                         </span>
                                                     ) : item.badge && (
-                                                        <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${item.badge === '!'
-                                                            ? 'bg-orange-500/20 text-orange-400'
-                                                            : 'bg-primary/20 text-primary'
+                                                        <span className={`text-[10px] font-medium px-1.5 py-0.2 rounded-md ${item.badge === '!'
+                                                            ? 'bg-amber-500/10 text-amber-600 dark:text-amber-400'
+                                                            : 'bg-muted text-muted-foreground'
                                                             }`}>
                                                             {item.badge}
                                                         </span>
                                                     )}
                                                     {item.pro && !hasModuleAccess(item.moduleKey || '') && (
-                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-gradient-to-r from-yellow-500 to-orange-500 text-white uppercase flex items-center gap-1">
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-muted text-muted-foreground border border-border/50 uppercase flex items-center gap-1">
                                                             <Lock size={8} /> Pro
                                                         </span>
                                                     )}
                                                     {item.pro && hasModuleAccess(item.moduleKey || '') && (
-                                                        <span className="text-[8px] font-black px-1.5 py-0.5 rounded-full bg-gradient-to-r from-green-500 to-emerald-500 text-white uppercase flex items-center gap-1">
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.2 rounded bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 uppercase flex items-center gap-1">
                                                             <Crown size={8} /> Aktif
                                                         </span>
                                                     )}
-                                                    <ChevronRight size={14} className={`flex-shrink-0 ${isActive ? 'text-primary/60' : 'text-slate-600'}`} />
+                                                    <ChevronRight size={13} className={`flex-shrink-0 ${isActive ? 'text-indigo-600' : 'text-muted-foreground/60'}`} />
                                                 </Link>
                                             );
                                         })}
@@ -188,31 +188,31 @@ export default function MobileSidebar({ isOpen, onClose, onHaptic }: MobileSideb
                         </div>
 
                         {/* Footer - User & Plan */}
-                        <div className="border-t border-border p-4 space-y-3 safe-area-bottom">
+                        <div className="border-t border-border/70 p-3 space-y-2.5 safe-area-bottom">
                             {/* Plan */}
-                            <div className="bg-gradient-to-br from-primary/10 to-purple-600/10 rounded-2xl p-3 border border-primary/20">
-                                <div className="flex items-center justify-between mb-2">
+                            <div className="bg-card rounded-xl p-2.5 border border-border/70">
+                                <div className="flex items-center justify-between mb-1.5">
                                     <div className="flex items-center gap-1.5">
-                                        <Sparkles size={13} className="text-primary" />
-                                        <span className="text-[10px] font-black text-primary uppercase">{tenantPlan} Plan</span>
+                                        <Sparkles size={11} className="text-indigo-500" />
+                                        <span className="text-[10px] font-semibold text-foreground uppercase tracking-wider">{tenantPlan} Plan</span>
                                     </div>
-                                    <Link href="/dashboard/upgrade" className="text-[10px] font-bold text-primary flex items-center gap-0.5">
+                                    <Link href="/dashboard/upgrade" className="text-[10px] font-medium text-indigo-600 dark:text-indigo-400 flex items-center gap-0.5">
                                         Yükselt <ArrowUpRight size={10} />
                                     </Link>
                                 </div>
-                                <div className="w-full bg-background/50 h-1.5 rounded-full overflow-hidden">
-                                    <div className="bg-gradient-to-r from-primary to-purple-500 w-3/4 h-full rounded-full" />
+                                <div className="w-full bg-muted h-1 rounded-full overflow-hidden">
+                                    <div className="bg-indigo-600 w-3/4 h-full rounded-full" />
                                 </div>
                             </div>
 
                             {/* User */}
-                            <div className="flex items-center gap-3 p-3 rounded-2xl bg-surface border border-border">
-                                <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-purple-600 flex items-center justify-center text-sm font-bold text-white">
+                            <div className="flex items-center gap-2.5 p-2.5 rounded-xl bg-muted/40 border border-border/70">
+                                <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center text-xs font-semibold text-white">
                                     {session?.user?.name?.split(' ').map((n: string) => n[0]).join('').toUpperCase() || 'AY'}
                                 </div>
                                 <div className="flex-1 min-w-0">
-                                    <div className="text-sm font-bold text-foreground truncate">{session?.user?.name || 'Kullanıcı'}</div>
-                                    <div className="text-[10px] text-slate-500 truncate">{session?.user?.email}</div>
+                                    <div className="text-xs font-semibold text-foreground truncate">{session?.user?.name || 'Kullanıcı'}</div>
+                                    <div className="text-[10px] text-muted-foreground truncate">{session?.user?.email}</div>
                                 </div>
                             </div>
                         </div>

@@ -135,45 +135,45 @@ export default function OrdersPage() {
             />
 
             {/* Header & Hızlı Aksiyonlar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-2xl sm:text-3xl font-extrabold text-foreground tracking-tight">Sipariş Yönetimi</h1>
-                    <p className="text-xs sm:text-sm text-slate-500 font-medium mt-0.5">Tüm pazaryerlerinden gelen siparişlerinizi tek ekrandan yönetin</p>
+                    <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">Sipariş Yönetimi</h1>
+                    <p className="text-xs text-muted-foreground mt-0.5">Tüm pazaryerlerinden gelen siparişlerinizi tek ekrandan yönetin</p>
                 </div>
-                <div className="flex flex-wrap items-center gap-2 sm:gap-3">
+                <div className="flex flex-wrap items-center gap-2">
                     <select
                         value={dateRange}
                         onChange={(e) => setDateRange(e.target.value)}
-                        className="bg-surface border border-border rounded-xl px-3 py-2 text-xs sm:text-sm font-semibold text-foreground focus:outline-none focus:border-primary/50"
+                        className="bg-card border border-border/70 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:border-indigo-500/50"
                     >
                         <option value="today">Bugün</option>
                         <option value="week">Bu Hafta</option>
                         <option value="month">Bu Ay</option>
                         <option value="custom">Tüm Zamanlar</option>
                     </select>
-                    <button className="flex items-center gap-1.5 px-3 py-2 bg-surface border border-border rounded-xl text-xs sm:text-sm font-semibold text-foreground hover:bg-surface/80 transition-all shadow-2xs">
-                        <Download size={15} /> Rapor İndir
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border/70 rounded-lg text-xs font-medium text-foreground hover:bg-muted transition-all shadow-2xs">
+                        <Download size={13} /> Rapor İndir
                     </button>
-                    <button onClick={fetchOrders} className="flex items-center gap-1.5 px-3 py-2 bg-primary text-white rounded-xl text-xs sm:text-sm font-bold hover:bg-primary/90 transition-all shadow-xs">
-                        <RefreshCw size={15} className={loading ? "animate-spin" : ""} /> Senkronize Et
+                    <button onClick={fetchOrders} className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-all shadow-xs">
+                        <RefreshCw size={13} className={loading ? "animate-spin" : ""} /> Senkronize Et
                     </button>
                 </div>
             </div>
 
-            {/* Pazaryeri Şerit Rozetleri (Gerçek Pazaryeri Logoları & Tam Oturan Kutular) */}
+            {/* Pazaryeri Şerit Rozetleri */}
             <div>
-                <div className="flex items-center justify-between mb-2.5">
-                    <span className="text-xs font-bold uppercase tracking-wider text-slate-500">Pazaryerine Göre Filtrele</span>
+                <div className="flex items-center justify-between mb-2">
+                    <span className="text-[11px] font-medium uppercase tracking-wider text-muted-foreground">Pazaryerine Göre Filtrele</span>
                     {selectedPlatform !== 'Tümü' && (
                         <button
                             onClick={() => setSelectedPlatform('Tümü')}
-                            className="text-xs font-semibold text-primary hover:underline"
+                            className="text-xs font-medium text-indigo-600 dark:text-indigo-400 hover:underline"
                         >
                             Filtreyi Temizle (Tümü)
                         </button>
                     )}
                 </div>
-                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-11 gap-2 sm:gap-2.5">
+                <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-6 xl:grid-cols-6 2xl:grid-cols-11 gap-2">
                     {MARKETPLACE_LIST.map((m) => {
                         const count = orders.filter(o => o.platform?.toUpperCase() === m.name).length;
                         const isActive = selectedPlatform === m.name;
@@ -184,14 +184,14 @@ export default function OrdersPage() {
                                 key={m.name}
                                 type="button"
                                 onClick={() => setSelectedPlatform(isActive ? 'Tümü' : m.name)}
-                                className={`group p-2.5 sm:p-3 rounded-xl border transition-all text-left flex items-center justify-between gap-2 min-w-0 shadow-2xs ${
+                                className={`group p-2 rounded-lg border transition-all text-left flex items-center justify-between gap-1.5 min-w-0 shadow-2xs ${
                                     isActive
-                                        ? 'bg-primary/10 border-primary ring-1 ring-primary/30 shadow-sm'
-                                        : 'bg-surface border-border hover:bg-surface/90 hover:border-border/90 hover:shadow-xs'
+                                        ? 'bg-indigo-500/10 border-indigo-500/40 ring-1 ring-indigo-500/20 shadow-xs'
+                                        : 'bg-card border-border/70 hover:border-border hover:shadow-xs'
                                 }`}
                             >
                                 <div className="flex items-center gap-2 min-w-0">
-                                    <div className="w-6 h-6 rounded-md bg-white dark:bg-slate-800 p-0.5 border border-slate-100 dark:border-slate-700 flex items-center justify-center shrink-0 shadow-2xs">
+                                    <div className="w-5 h-5 rounded-md bg-white dark:bg-slate-800 p-0.5 border border-border/50 flex items-center justify-center shrink-0">
                                         <img
                                             src={logoUrl}
                                             alt={m.label}
@@ -201,10 +201,10 @@ export default function OrdersPage() {
                                             }}
                                         />
                                     </div>
-                                    <span className="text-xs font-bold text-foreground truncate">{m.label}</span>
+                                    <span className="text-xs font-medium text-foreground truncate">{m.label}</span>
                                 </div>
-                                <span className={`text-[11px] font-black px-1.5 py-0.5 rounded-full shrink-0 tabular-nums ${
-                                    count > 0 ? 'bg-primary/15 text-primary' : 'bg-slate-100 dark:bg-white/5 text-slate-400'
+                                <span className={`text-[10px] font-semibold px-1.5 py-0.2 rounded-full shrink-0 tabular-nums ${
+                                    count > 0 ? 'bg-indigo-500/15 text-indigo-600 dark:text-indigo-400' : 'bg-muted text-muted-foreground'
                                 }`}>
                                     {count}
                                 </span>
@@ -215,60 +215,60 @@ export default function OrdersPage() {
             </div>
 
             {/* KPI İstatistik Kartları */}
-            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3 sm:gap-4">
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="dash-card p-4 sm:p-5 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-500">
-                            <ShoppingBag size={18} />
+            <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-2.5 sm:gap-3.5">
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="dash-card p-3 sm:p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-500">
+                            <ShoppingBag size={16} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-slate-400">Tümü</span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-muted-foreground">Tümü</span>
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-foreground tabular-nums">{stats.total}</div>
-                    <div className="text-xs text-slate-500 font-semibold mt-0.5">Toplam Sipariş</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats.total}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Toplam Sipariş</div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="dash-card p-4 sm:p-5 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-amber-500/10 border border-amber-500/15 flex items-center justify-center text-amber-500">
-                            <Clock size={18} />
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="dash-card p-3 sm:p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/15 flex items-center justify-center text-amber-500">
+                            <Clock size={16} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-amber-500">Onay Bekliyor</span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-amber-500">Onay Bekliyor</span>
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-foreground tabular-nums">{stats.pending}</div>
-                    <div className="text-xs text-slate-500 font-semibold mt-0.5">Bekleyen Sipariş</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats.pending}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Bekleyen Sipariş</div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="dash-card p-4 sm:p-5 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-500">
-                            <Package size={18} />
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="dash-card p-3 sm:p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 border border-blue-500/15 flex items-center justify-center text-blue-500">
+                            <Package size={16} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-blue-500">Paketleniyor</span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-blue-500">Paketleniyor</span>
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-foreground tabular-nums">{stats.preparing}</div>
-                    <div className="text-xs text-slate-500 font-semibold mt-0.5">Hazırlanan Sipariş</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats.preparing}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Hazırlanan Sipariş</div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="dash-card p-4 sm:p-5 rounded-2xl">
-                    <div className="flex items-center justify-between mb-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-violet-500/10 border border-violet-500/15 flex items-center justify-center text-violet-500">
-                            <Truck size={18} />
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="dash-card p-3 sm:p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-violet-500/10 border border-violet-500/15 flex items-center justify-center text-violet-500">
+                            <Truck size={16} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-violet-500">Yolda</span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-violet-500">Yolda</span>
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-foreground tabular-nums">{stats.shipped}</div>
-                    <div className="text-xs text-slate-500 font-semibold mt-0.5">Kargodaki Sipariş</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats.shipped}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Kargodaki Sipariş</div>
                 </motion.div>
 
-                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="dash-card p-4 sm:p-5 rounded-2xl col-span-2 sm:col-span-1">
-                    <div className="flex items-center justify-between mb-2.5">
-                        <div className="w-9 h-9 rounded-xl bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-500">
-                            <CreditCard size={18} />
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="dash-card p-3 sm:p-3.5 rounded-xl border border-border/70 bg-card shadow-2xs col-span-2 sm:col-span-1">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 border border-emerald-500/15 flex items-center justify-center text-emerald-500">
+                            <CreditCard size={16} />
                         </div>
-                        <span className="text-[10px] font-bold uppercase tracking-wider text-emerald-500">Net Ciro</span>
+                        <span className="text-[10px] font-medium uppercase tracking-wider text-emerald-500">Net Ciro</span>
                     </div>
-                    <div className="text-xl sm:text-2xl font-black text-foreground tabular-nums">₺{stats.totalRevenue.toLocaleString('tr-TR')}</div>
-                    <div className="text-xs text-slate-500 font-semibold mt-0.5">Toplam Ciro</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">₺{stats.totalRevenue.toLocaleString('tr-TR')}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Toplam Ciro</div>
                 </motion.div>
             </div>
 

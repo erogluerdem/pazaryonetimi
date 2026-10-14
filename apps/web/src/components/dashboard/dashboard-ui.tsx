@@ -39,18 +39,18 @@ export function DashboardCard({
       initial={{ opacity: 0, y: 10 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ duration: 0.2 }}
-      className={`dash-card p-5 lg:p-6 relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs transition-shadow duration-200 hover:shadow-sm ${className}`}
+      className={`dash-card p-4 sm:p-5 relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xs transition-shadow duration-200 hover:shadow-xs ${className}`}
     >
       {(title || Icon) && (
-        <div className="flex items-center justify-between mb-4 relative z-10">
-          <div className="flex items-center gap-2.5 min-w-0">
+        <div className="flex items-center justify-between mb-3.5 relative z-10">
+          <div className="flex items-center gap-2 min-w-0">
             {Icon && (
-              <div className="w-8 h-8 rounded-lg bg-muted/60 text-muted-foreground border border-border/40 flex items-center justify-center shrink-0">
-                <Icon className="w-4 h-4" />
+              <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-muted/60 text-muted-foreground border border-border/40 flex items-center justify-center shrink-0">
+                <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </div>
             )}
             {title && (
-              <h3 className="text-sm font-semibold text-foreground tracking-tight truncate">
+              <h3 className="text-xs sm:text-sm font-semibold text-foreground tracking-tight truncate">
                 {title}
               </h3>
             )}
@@ -74,7 +74,7 @@ export function PeriodSelector({
   onChange: (p: DashboardPeriod) => void;
 }) {
   return (
-    <div className="inline-flex p-1 rounded-xl bg-muted/50 border border-border/60">
+    <div className="inline-flex p-0.5 rounded-lg bg-muted/50 border border-border/60">
       {(Object.keys(PERIOD_LABELS) as DashboardPeriod[]).map((p) => {
         const isSelected = value === p;
         return (
@@ -82,7 +82,7 @@ export function PeriodSelector({
             key={p}
             type="button"
             onClick={() => onChange(p)}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all duration-150 ${
+            className={`px-2.5 py-1 rounded-md text-xs transition-all duration-150 ${
               isSelected
                 ? 'bg-card text-foreground font-semibold shadow-xs border border-border/40'
                 : 'text-muted-foreground hover:text-foreground font-medium'
@@ -227,23 +227,23 @@ export function KPICard({
     <motion.div
       whileHover={{ y: -2 }}
       transition={{ duration: 0.15 }}
-      className="dash-card p-4 sm:p-5 relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-xs hover:shadow-sm hover:border-border transition-all duration-200 min-w-0"
+      className="dash-card p-3.5 sm:p-4 relative overflow-hidden rounded-xl border border-border/70 bg-card shadow-2xs hover:shadow-xs hover:border-border transition-all duration-200 min-w-0"
     >
       {loading ? (
-        <div className="flex items-center gap-2 py-5">
+        <div className="flex items-center gap-2 py-4">
           <Loader2 className="w-4 h-4 animate-spin text-muted-foreground" />
           <span className="text-xs text-muted-foreground">Yükleniyor...</span>
         </div>
       ) : (
         <>
-          <div className="flex items-center justify-between mb-3 relative z-10 gap-2">
-            <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 bg-muted/60 text-muted-foreground border border-border/40 ${accent}`}>
-              <Icon className="w-4 h-4" />
+          <div className="flex items-center justify-between mb-2.5 relative z-10 gap-2">
+            <div className={`w-7 h-7 sm:w-8 sm:h-8 rounded-lg flex items-center justify-center shrink-0 bg-muted/60 text-muted-foreground border border-border/40 ${accent}`}>
+              <Icon className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
             </div>
             {trend !== undefined && trend !== null && <TrendBadge value={trend} />}
           </div>
           <p className="text-xs font-medium text-muted-foreground mb-1 truncate">{title}</p>
-          <p className="text-xl sm:text-2xl font-semibold text-foreground tracking-tight tabular-nums truncate">
+          <p className="text-lg sm:text-xl font-semibold text-foreground tracking-tight tabular-nums truncate">
             {typeof value === 'number' ? (
               <AnimatedNumber
                 value={value}

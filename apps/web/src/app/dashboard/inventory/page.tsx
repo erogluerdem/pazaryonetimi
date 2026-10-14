@@ -117,77 +117,77 @@ export default function InventoryPage() {
     };
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-4 sm:space-y-6 animate-in fade-in duration-300 pb-16">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                 <div>
-                    <h1 className="text-3xl font-black text-foreground tracking-tight">Stok Yönetimi</h1>
-                    <p className="text-slate-500 font-medium">Tüm pazaryerlerinizdeki envanterinizi tek panelden yönetin</p>
+                    <h1 className="text-lg sm:text-xl font-semibold text-foreground tracking-tight">Stok Yönetimi</h1>
+                    <p className="text-xs text-muted-foreground">Tüm pazaryerlerinizdeki envanterinizi tek panelden yönetin</p>
                 </div>
-                <div className="flex items-center gap-3">
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-bold text-foreground hover:bg-surface/80 transition-all">
-                        <Download size={16} /> Dışa Aktar
+                <div className="flex items-center gap-2">
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-card border border-border/70 rounded-lg text-xs font-medium text-foreground hover:bg-muted transition-all shadow-2xs">
+                        <Download size={13} /> Dışa Aktar
                     </button>
-                    <button className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20">
-                        <Plus size={16} /> Yeni Ürün
+                    <button className="flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 text-white rounded-lg text-xs font-medium transition-all shadow-xs">
+                        <Plus size={13} /> Yeni Ürün
                     </button>
-                    <button onClick={() => loadData()} className="p-2.5 bg-surface border border-border rounded-xl text-foreground hover:bg-surface/80">
-                        <RefreshCw size={18} className={loading ? "animate-spin" : ""} />
+                    <button onClick={() => loadData()} className="p-1.5 bg-card border border-border/70 rounded-lg text-muted-foreground hover:text-foreground">
+                        <RefreshCw size={14} className={loading ? "animate-spin" : ""} />
                     </button>
                 </div>
             </div>
 
             {/* Stats Cards */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface p-6 rounded-2xl border border-border">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 rounded-xl bg-blue-500/10 text-blue-500"><Box size={20} /></div>
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-2.5 sm:gap-3.5">
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-blue-500/10 text-blue-500 flex items-center justify-center"><Box size={16} /></div>
                     </div>
-                    <div className="text-3xl font-black text-foreground tabular-nums">{stats?.totalProducts || 0}</div>
-                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Toplam SKU</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats?.totalProducts || 0}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Toplam SKU</div>
                 </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-surface p-6 rounded-2xl border border-border">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 rounded-xl bg-red-500/10 text-red-500"><AlertTriangle size={20} /></div>
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-rose-500/10 text-rose-500 flex items-center justify-center"><AlertTriangle size={16} /></div>
                     </div>
-                    <div className="text-3xl font-black text-foreground tabular-nums">{stats?.criticalStockCount || 0}</div>
-                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Kritik Stok</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats?.criticalStockCount || 0}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Kritik Stok</div>
                 </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-surface p-6 rounded-2xl border border-border">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 rounded-xl bg-orange-500/10 text-orange-500"><BarChart3 size={20} /></div>
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-amber-500/10 text-amber-500 flex items-center justify-center"><BarChart3 size={16} /></div>
                     </div>
-                    <div className="text-3xl font-black text-foreground tabular-nums">{stats?.lowStockCount || 0}</div>
-                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Düşük Stok</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">{stats?.lowStockCount || 0}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Düşük Stok</div>
                 </motion.div>
-                <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.3 }} className="bg-surface p-6 rounded-2xl border border-border">
-                    <div className="flex items-center justify-between mb-4">
-                        <div className="p-2 rounded-xl bg-emerald-500/10 text-emerald-500"><TrendingUp size={20} /></div>
+                <motion.div initial={{ opacity: 0, y: 12 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-2xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="w-8 h-8 rounded-lg bg-emerald-500/10 text-emerald-500 flex items-center justify-center"><TrendingUp size={16} /></div>
                     </div>
-                    <div className="text-3xl font-black text-foreground tabular-nums">₺{stats?.totalValue?.toLocaleString('tr-TR') || 0}</div>
-                    <div className="text-xs text-slate-500 font-bold uppercase tracking-wider mt-1">Envanter Değeri</div>
+                    <div className="text-base sm:text-lg font-semibold text-foreground tracking-tight tabular-nums">₺{stats?.totalValue?.toLocaleString('tr-TR') || 0}</div>
+                    <div className="text-xs text-muted-foreground mt-0.5 font-normal">Envanter Değeri</div>
                 </motion.div>
             </div>
 
             {/* Filters */}
-            <div className="bg-surface p-4 rounded-2xl border border-border flex flex-wrap items-center gap-4">
-                <div className="flex-1 min-w-[300px] relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-slate-500" />
+            <div className="bg-card p-3 rounded-xl border border-border/70 flex flex-wrap items-center gap-2.5 shadow-2xs">
+                <div className="flex-1 min-w-[240px] relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder="Ürün adı, SKU veya barkod ara..."
                         value={searchTerm}
                         onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                        className="w-full pl-10 pr-4 py-2.5 bg-background border border-border rounded-xl text-sm focus:outline-none focus:border-primary/50"
+                        className="w-full pl-9 pr-3 py-1.5 bg-background border border-border/70 rounded-lg text-xs sm:text-sm focus:outline-none focus:border-indigo-500/50"
                     />
                 </div>
-                <div className="h-8 w-px bg-border" />
-                <div className="flex items-center gap-2">
+                <div className="h-6 w-px bg-border/60 hidden sm:block" />
+                <div className="flex items-center gap-1.5 flex-wrap">
                     {categories.map(c => (
                         <button
                             key={c}
                             onClick={() => setSelectedCategory(c)}
-                            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${selectedCategory === c ? 'bg-primary text-white' : 'bg-background text-slate-500 hover:bg-background/80'}`}
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-all ${selectedCategory === c ? 'bg-indigo-600 text-white shadow-2xs' : 'bg-muted/50 text-muted-foreground hover:text-foreground'}`}
                         >
                             {c}
                         </button>
@@ -196,29 +196,29 @@ export default function InventoryPage() {
             </div>
 
             {/* Inventory Table */}
-            <div className="bg-surface rounded-2xl border border-border overflow-hidden shadow-sm">
+            <div className="bg-card rounded-xl border border-border/70 overflow-hidden shadow-2xs">
                 <div className="overflow-x-auto">
-                    <table className="w-full text-sm">
-                        <thead className="bg-background/50 border-b border-border">
+                    <table className="w-full text-xs sm:text-sm">
+                        <thead className="bg-muted/40 border-b border-border/70">
                             <tr>
-                                <th className="p-4 text-left w-10">
+                                <th className="px-4 py-3 text-left w-10">
                                     <input
                                         type="checkbox"
                                         checked={selectedItems.length === items.length && items.length > 0}
                                         onChange={toggleSelectAll}
-                                        className="w-4 h-4 rounded border-border text-primary focus:ring-primary"
+                                        className="w-4 h-4 rounded border-border text-indigo-600 focus:ring-indigo-500"
                                     />
                                 </th>
-                                <th className="p-4 text-left font-black text-slate-500 uppercase tracking-widest text-[10px] cursor-pointer" onClick={() => toggleSort('name')}>
-                                    <div className="flex items-center gap-2">Ürün Bilgisi <ArrowUpDown size={12} /></div>
+                                <th className="px-4 py-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-[11px] cursor-pointer" onClick={() => toggleSort('name')}>
+                                    <div className="flex items-center gap-1.5">Ürün Bilgisi <ArrowUpDown size={11} /></div>
                                 </th>
-                                <th className="p-4 text-left font-black text-slate-500 uppercase tracking-widest text-[10px]">Kategori</th>
-                                <th className="p-4 text-center font-black text-slate-500 uppercase tracking-widest text-[10px] cursor-pointer" onClick={() => toggleSort('stock')}>
-                                    <div className="flex items-center justify-center gap-2">Stok Durumu <ArrowUpDown size={12} /></div>
+                                <th className="px-4 py-3 text-left font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Kategori</th>
+                                <th className="px-4 py-3 text-center font-medium text-muted-foreground uppercase tracking-wider text-[11px] cursor-pointer" onClick={() => toggleSort('stock')}>
+                                    <div className="flex items-center justify-center gap-1.5">Stok Durumu <ArrowUpDown size={11} /></div>
                                 </th>
-                                <th className="p-4 text-right font-black text-slate-500 uppercase tracking-widest text-[10px]">Satış Fiyatı</th>
-                                <th className="p-4 text-center font-black text-slate-500 uppercase tracking-widest text-[10px]">Pazaryerleri</th>
-                                <th className="p-4 text-center font-black text-slate-500 uppercase tracking-widest text-[10px]">İşlemler</th>
+                                <th className="px-4 py-3 text-right font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Satış Fiyatı</th>
+                                <th className="px-4 py-3 text-center font-medium text-muted-foreground uppercase tracking-wider text-[11px]">Pazaryerleri</th>
+                                <th className="px-4 py-3 text-center font-medium text-muted-foreground uppercase tracking-wider text-[11px]">İşlemler</th>
                             </tr>
                         </thead>
                         <tbody className="divide-y divide-border">

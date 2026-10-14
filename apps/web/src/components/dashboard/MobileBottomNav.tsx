@@ -31,7 +31,7 @@ export default function MobileBottomNav({ onMenuOpen, onHaptic }: MobileBottomNa
 
   return (
     <nav className="mobile-bottom-nav fixed bottom-0 left-0 right-0 z-[100] lg:hidden px-2 pb-[calc(0.25rem+env(safe-area-inset-bottom,0px))]">
-      <div className="mobile-bottom-nav-inner relative mx-auto flex items-end justify-around px-2 pt-2 pb-[calc(0.5rem+env(safe-area-inset-bottom,0px))]">
+      <div className="mobile-bottom-nav-inner relative mx-auto flex items-end justify-around px-2 pt-2 pb-[calc(0.45rem+env(safe-area-inset-bottom,0px))]">
         {navItems.map((item) => {
           const active = isActive(item.href);
           const Icon = resolveNavIcon(item.icon);
@@ -41,32 +41,32 @@ export default function MobileBottomNav({ onMenuOpen, onHaptic }: MobileBottomNa
               key={item.href}
               href={item.href}
               onClick={onHaptic}
-              className="flex flex-col items-center justify-center min-w-[64px] py-1 relative group active:scale-90 transition-transform duration-150 haptic-tap"
+              className="flex flex-col items-center justify-center min-w-[60px] py-1 relative group active:scale-95 transition-transform duration-150 haptic-tap"
             >
               {active && (
                 <motion.div
                   layoutId="bottomNavIndicator"
-                  className="absolute -top-1 w-8 h-1 rounded-full bg-orange-500"
+                  className="absolute -top-1 w-6 h-0.5 rounded-full bg-indigo-600 dark:bg-indigo-400"
                   transition={{ type: 'spring', stiffness: 500, damping: 35 }}
                 />
               )}
               <motion.div
                 className="relative"
-                animate={active && !shouldReduceMotion ? { y: [0, -3, 0], scale: [1, 1.08, 1] } : { y: 0, scale: 1 }}
-                transition={{ duration: shouldReduceMotion ? 0.01 : 0.34, ease: 'easeOut' }}
+                animate={active && !shouldReduceMotion ? { y: [0, -2, 0], scale: [1, 1.05, 1] } : { y: 0, scale: 1 }}
+                transition={{ duration: shouldReduceMotion ? 0.01 : 0.28, ease: 'easeOut' }}
               >
                 <Icon
-                  size={22}
-                  strokeWidth={active ? 2.5 : 1.8}
-                  className={`transition-colors duration-200 ${active ? 'text-orange-500' : 'text-slate-400'}`}
+                  size={20}
+                  strokeWidth={active ? 2.0 : 1.6}
+                  className={`transition-colors duration-200 ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}
                 />
                 {badge !== undefined && Number(badge) > 0 && (
-                  <span className="absolute -top-1.5 -right-2 min-w-[16px] h-4 px-1 rounded-full bg-orange-500 text-white text-[9px] font-black flex items-center justify-center">
+                  <span className="absolute -top-1 -right-2 min-w-[15px] h-3.5 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-medium flex items-center justify-center">
                     {badge}
                   </span>
                 )}
               </motion.div>
-              <span className={`text-[10px] font-bold mt-1 transition-colors ${active ? 'text-orange-500' : 'text-slate-500'}`}>
+              <span className={`text-[10px] font-medium mt-0.5 tracking-tight transition-colors ${active ? 'text-indigo-600 dark:text-indigo-400' : 'text-muted-foreground'}`}>
                 {item.label.split(' ')[0]}
               </span>
             </Link>
@@ -80,10 +80,10 @@ export default function MobileBottomNav({ onMenuOpen, onHaptic }: MobileBottomNa
             onMenuOpen();
           }}
           aria-label="Menüyü aç"
-          className="flex flex-col items-center justify-center min-w-[64px] py-1 active:scale-90 transition-transform haptic-tap"
+          className="flex flex-col items-center justify-center min-w-[60px] py-1 active:scale-95 transition-transform haptic-tap"
         >
-          <Menu size={22} className="text-slate-400" />
-          <span className="text-[10px] font-bold mt-1 text-slate-500">Menü</span>
+          <Menu size={20} strokeWidth={1.6} className="text-muted-foreground" />
+          <span className="text-[10px] font-medium mt-0.5 tracking-tight text-muted-foreground">Menü</span>
         </button>
       </div>
     </nav>

@@ -97,28 +97,28 @@ export function DashboardHeaderBar({
         isCompactHeader ? 'dashboard-mobile-header-compact' : ''
       }`}
     >
-      <div className="dashboard-header-inner h-16 px-4 lg:px-8 flex items-center justify-between gap-3 max-w-screen-2xl mx-auto w-full">
+      <div className="dashboard-header-inner h-14 lg:h-16 px-3 sm:px-4 lg:px-8 flex items-center justify-between gap-2.5 sm:gap-3 max-w-screen-2xl mx-auto w-full">
         {/* Sol: arama / sayfa başlığı */}
-        <div className="flex items-center gap-3 min-w-0 flex-1">
+        <div className="flex items-center gap-2.5 min-w-0 flex-1">
           <div className="hidden lg:flex flex-1 max-w-md">
             <div className="dashboard-search-shell w-full">
               <CommandPalette />
             </div>
           </div>
 
-          <div className="lg:hidden flex items-center gap-2 min-w-0">
-            <div className="w-8 h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs shrink-0">
+          <div className="lg:hidden flex items-center gap-2 min-w-0 flex-1">
+            <div className="w-7 h-7 sm:w-8 sm:h-8 rounded-lg bg-indigo-600 flex items-center justify-center shadow-xs shrink-0">
               <span className="text-xs font-semibold text-white">P</span>
             </div>
-            <div className="dashboard-mobile-title-chip flex flex-col leading-tight min-w-0 max-w-[140px] sm:max-w-none">
+            <div className="flex flex-col leading-tight min-w-0 flex-1">
               <span
-                className={`text-[10px] font-medium text-muted-foreground truncate transition-all duration-200 ${
+                className={`text-[10px] font-medium text-muted-foreground truncate tracking-wide transition-all duration-200 ${
                   isCompactHeader ? 'opacity-0 h-0 overflow-hidden' : 'opacity-100'
                 }`}
               >
                 Pazar Yönetimi
               </span>
-              <span className="text-xs sm:text-sm font-semibold text-foreground truncate">{currentPageTitle}</span>
+              <span className="text-xs sm:text-sm font-semibold text-foreground truncate tracking-tight">{currentPageTitle}</span>
             </div>
           </div>
         </div>

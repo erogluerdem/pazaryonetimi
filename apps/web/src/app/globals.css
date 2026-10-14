@@ -18,7 +18,8 @@
   --color-input: var(--input);
   --color-ring: var(--ring);
 
-  --font-display: var(--theme-font, 'Inter', system-ui, sans-serif);
+  --font-sans: var(--theme-font, var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
+  --font-display: var(--theme-font, var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif);
 }
 
 /* Hide Next.js 15 Dev Indicators (Static/Dynamic Icon & Route Loading Bar) */
@@ -75,7 +76,7 @@ nextjs-portal,
   --theme-primary-rgb: 59,130,246;
   --theme-primary-hover: #2563eb;
   --theme-radius: 12px;
-  --theme-font: 'Inter', system-ui, sans-serif;
+  --theme-font: var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
 }
 
 [data-theme="dark"] {
@@ -241,9 +242,13 @@ nextjs-portal,
 body {
   background: var(--background);
   color: var(--foreground);
-  font-family: var(--font-display);
+  font-family: var(--font-sans);
   overflow-x: hidden;
   -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  text-rendering: optimizeLegibility;
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  letter-spacing: -0.011em;
   transition: background-color 0.3s ease, color 0.3s ease;
 }
 
@@ -870,55 +875,59 @@ body {
   }
 
   .dashboard-mobile-header {
-    margin: 0.5rem auto 0;
-    width: calc(100% - 0.9rem);
-    max-width: calc(100% - 0.9rem);
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
     box-sizing: border-box;
-    border-radius: 20px;
-    border: 1px solid var(--border-color);
-    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.18);
-    transition: margin 0.25s ease, border-radius 0.25s ease, box-shadow 0.25s ease, background-color 0.25s ease;
+    border-radius: 0;
+    border-bottom: 1px solid var(--border-color);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+    background: color-mix(in srgb, var(--surface-color) 92%, transparent);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
+    transition: background-color 0.2s ease, box-shadow 0.2s ease;
   }
 
   .dashboard-mobile-header-compact {
-    margin: 0.25rem auto 0;
-    width: calc(100% - 0.6rem);
-    max-width: calc(100% - 0.6rem);
-    box-sizing: border-box;
-    border-radius: 16px;
-    box-shadow: 0 8px 18px rgba(0, 0, 0, 0.16);
-    background: color-mix(in srgb, var(--surface-color) 94%, transparent);
+    margin: 0;
+    width: 100%;
+    max-width: 100%;
+    border-radius: 0;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+    background: color-mix(in srgb, var(--surface-color) 96%, transparent);
   }
 
   .dashboard-mobile-title-chip {
-    padding: 0.2rem 0.55rem;
-    border-radius: 999px;
-    background: color-mix(in srgb, var(--surface-color) 90%, transparent);
-    border: 1px solid color-mix(in srgb, var(--border-color) 88%, transparent);
-    max-width: 130px;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    border: none;
+    max-width: none;
   }
 
   .dashboard-mobile-content {
     min-width: 0;
     max-width: 100%;
     overflow-x: hidden;
-    padding-bottom: calc(7rem + env(safe-area-inset-bottom, 0px));
+    padding-bottom: calc(6rem + env(safe-area-inset-bottom, 0px));
   }
 
   .mobile-bottom-nav {
     left: 50%;
     right: auto;
     transform: translateX(-50%);
-    width: min(calc(100% - 0.9rem), 460px);
+    width: min(calc(100% - 0.75rem), 480px);
   }
 
   .mobile-bottom-nav-inner {
-    border-radius: 26px;
+    border-radius: 20px;
     border: 1px solid var(--border-color);
-    background: color-mix(in srgb, var(--surface-color) 92%, transparent);
+    background: color-mix(in srgb, var(--surface-color) 94%, transparent);
+    backdrop-filter: blur(20px);
+    -webkit-backdrop-filter: blur(20px);
     box-shadow:
-      0 10px 24px rgba(0, 0, 0, 0.28),
-      inset 0 1px 0 rgba(255, 255, 255, 0.06);
+      0 8px 24px rgba(0, 0, 0, 0.12),
+      0 2px 6px rgba(0, 0, 0, 0.04);
   }
 }
 
@@ -1028,10 +1037,33 @@ body {
     animation: none;
   }
 
-  /* Mobile-first typography — scoped to dashboard/admin to avoid breaking auth pages */
-  .dashboard-mobile-shell h1, [data-dashboard] h1 { font-size: 1.5rem !important; line-height: 1.3 !important; }
-  .dashboard-mobile-shell h2, [data-dashboard] h2 { font-size: 1.25rem !important; line-height: 1.35 !important; }
-  .dashboard-mobile-shell h3, [data-dashboard] h3 { font-size: 1.1rem !important; line-height: 1.4 !important; }
+  /* Mobile-first typography — sleek, refined, compact */
+  .dashboard-mobile-shell h1, [data-dashboard] h1 { font-size: 1.25rem !important; line-height: 1.25 !important; font-weight: 600 !important; letter-spacing: -0.025em !important; }
+  .dashboard-mobile-shell h2, [data-dashboard] h2 { font-size: 1.05rem !important; line-height: 1.3 !important; font-weight: 600 !important; letter-spacing: -0.02em !important; }
+  .dashboard-mobile-shell h3, [data-dashboard] h3 { font-size: 0.925rem !important; line-height: 1.35 !important; font-weight: 600 !important; }
+}
+
+/* Dashboard Global Typography Refinement */
+.dashboard-pro,
+[data-dashboard] {
+  font-feature-settings: 'cv02', 'cv03', 'cv04', 'cv11';
+  letter-spacing: -0.011em;
+}
+
+/* Normalization: Transform heavy font-black and font-extrabold into crisp, modern font-semibold (600) */
+.dashboard-pro .font-black,
+[data-dashboard] .font-black,
+.dashboard-pro .font-extrabold,
+[data-dashboard] .font-extrabold {
+  font-weight: 600 !important;
+}
+
+/* Elegant and crisp table headers */
+.dashboard-pro table th,
+[data-dashboard] table th {
+  font-weight: 500 !important;
+  font-size: 0.72rem !important;
+  letter-spacing: 0.04em !important;
 }
 
 /* PWA standalone mode optimizations */

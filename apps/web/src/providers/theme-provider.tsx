@@ -56,12 +56,12 @@ export const radiusMap: Record<ThemeRadius, string> = {
 };
 
 export const fontMap: Record<ThemeFont, string> = {
-    'inter': "'Inter', system-ui, sans-serif",
-    'poppins': "'Poppins', system-ui, sans-serif",
-    'roboto': "'Roboto', system-ui, sans-serif",
-    'open-sans': "'Open Sans', system-ui, sans-serif",
-    'montserrat': "'Montserrat', system-ui, sans-serif",
-    'lato': "'Lato', system-ui, sans-serif",
+    'inter': "var(--font-inter), 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif",
+    'poppins': "'Poppins', -apple-system, BlinkMacSystemFont, sans-serif",
+    'roboto': "'Roboto', -apple-system, BlinkMacSystemFont, sans-serif",
+    'open-sans': "'Open Sans', -apple-system, BlinkMacSystemFont, sans-serif",
+    'montserrat': "'Montserrat', -apple-system, BlinkMacSystemFont, sans-serif",
+    'lato': "'Lato', -apple-system, BlinkMacSystemFont, sans-serif",
 };
 
 // ─── Context ──────────────────────────────────────────

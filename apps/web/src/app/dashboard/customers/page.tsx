@@ -227,26 +227,26 @@ export default function CustomersPage() {
 
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 animate-in fade-in duration-300 pb-20">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-foreground tracking-tight">Müşteriler</h1>
-                    <p className="text-slate-500 font-medium">Tüm pazaryerlerindeki müşteri tabanınızı analiz edin</p>
+                    <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">Müşteriler</h1>
+                    <p className="text-xs text-muted-foreground mt-1">Tüm pazaryerlerindeki müşteri tabanınızı analiz edin</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={handleExport}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-bold text-foreground hover:bg-surface/80 transition-all"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs"
                     >
-                        <Download size={16} /> Dışa Aktar
+                        <Download size={13} /> Dışa Aktar
                     </button>
                     <button
                         onClick={() => { fetchCustomers(); refetchStats(); }}
                         disabled={loading}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-bold text-foreground hover:bg-surface/80 transition-all disabled:opacity-50"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs disabled:opacity-50"
                     >
-                        <RefreshCw size={16} className={loading ? 'animate-spin' : ''} /> Senkronize Et
+                        <RefreshCw size={13} className={loading ? 'animate-spin' : ''} /> Senkronize Et
                     </button>
                 </div>
             </div>
@@ -255,74 +255,74 @@ export default function CustomersPage() {
             {loading && !stats ? (
                 <StatsSkeleton />
             ) : stats ? (
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-6 gap-4">
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} className="bg-surface p-5 rounded-2xl border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="p-2 rounded-xl bg-blue-500/10"><Users size={18} className="text-blue-500" /></div>
+                <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3 lg:gap-4">
+                    <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-muted-foreground">Toplam Müşteri</span>
+                            <div className="p-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400"><Users size={13} /></div>
                         </div>
-                        <div className="text-xl font-black text-foreground">{stats.totalCustomers.toLocaleString('tr-TR')}</div>
-                        <div className="text-xs text-slate-500">Toplam Müşteri</div>
-                    </motion.div>
+                        <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{stats.totalCustomers.toLocaleString('tr-TR')}</div>
+                    </div>
 
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.05 }} className="bg-surface p-5 rounded-2xl border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="p-2 rounded-xl bg-green-500/10"><UserPlus size={18} className="text-green-500" /></div>
+                    <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-muted-foreground">Bu Ay Yeni</span>
+                            <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><UserPlus size={13} /></div>
                         </div>
-                        <div className="text-xl font-black text-foreground">{stats.newCustomersThisMonth}</div>
-                        <div className="text-xs text-slate-500">Bu Ay Yeni</div>
-                    </motion.div>
+                        <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{stats.newCustomersThisMonth}</div>
+                    </div>
 
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.1 }} className="bg-gradient-to-br from-yellow-500/10 to-amber-500/5 p-5 rounded-2xl border border-yellow-500/20">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="p-2 rounded-xl bg-yellow-500/10"><Award size={18} className="text-yellow-500" /></div>
+                    <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">VIP Müşteri</span>
+                            <div className="p-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400"><Award size={13} /></div>
                         </div>
-                        <div className="text-xl font-black text-foreground">{stats.vipCustomers}</div>
-                        <div className="text-xs text-yellow-600">VIP Müşteri</div>
-                    </motion.div>
+                        <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{stats.vipCustomers}</div>
+                    </div>
 
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.15 }} className="bg-surface p-5 rounded-2xl border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="p-2 rounded-xl bg-red-500/10"><UserX size={18} className="text-red-500" /></div>
+                    <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400">Risk Altında</span>
+                            <div className="p-1 rounded-md bg-rose-500/10 text-rose-600 dark:text-rose-400"><UserX size={13} /></div>
                         </div>
-                        <div className="text-xl font-black text-foreground">{stats.atRiskCustomers}</div>
-                        <div className="text-xs text-slate-500">Risk Altında</div>
-                    </motion.div>
+                        <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{stats.atRiskCustomers}</div>
+                    </div>
 
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.2 }} className="bg-surface p-5 rounded-2xl border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="p-2 rounded-xl bg-purple-500/10"><TrendingUp size={18} className="text-purple-500" /></div>
+                    <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-muted-foreground">Ort. Yaşam Değeri</span>
+                            <div className="p-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400"><TrendingUp size={13} /></div>
                         </div>
-                        <div className="text-xl font-black text-foreground">₺{(stats.avgLifetimeValue / 1000).toFixed(1)}K</div>
-                        <div className="text-xs text-slate-500">Ort. Yaşam Boyu Değer</div>
-                    </motion.div>
+                        <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">₺{(stats.avgLifetimeValue / 1000).toFixed(1)}K</div>
+                    </div>
 
-                    <motion.div initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: 0.25 }} className="bg-surface p-5 rounded-2xl border border-border">
-                        <div className="flex items-center justify-between mb-2">
-                            <div className="p-2 rounded-xl bg-emerald-500/10"><Percent size={18} className="text-emerald-500" /></div>
+                    <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs">
+                        <div className="flex items-center justify-between mb-1.5">
+                            <span className="text-[11px] font-medium text-muted-foreground">Elde Tutma</span>
+                            <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"><Percent size={13} /></div>
                         </div>
-                        <div className="text-xl font-black text-foreground">%{stats.retentionRate.toFixed(1)}</div>
-                        <div className="text-xs text-slate-500">Elde Tutma Oranı</div>
-                    </motion.div>
+                        <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">%{stats.retentionRate.toFixed(1)}</div>
+                    </div>
                 </div>
             ) : null}
 
             {/* Filters */}
-            <div className="bg-surface p-4 rounded-2xl border border-border flex flex-col lg:flex-row gap-4">
+            <div className="bg-card p-3 sm:p-3.5 rounded-xl border border-border/70 shadow-xs flex flex-col sm:flex-row gap-2.5">
                 <div className="flex-1 relative">
-                    <Search size={18} className="absolute left-3 top-1/2 -translate-y-1/2 text-slate-500" />
+                    <Search size={15} className="absolute left-3 top-1/2 -translate-y-1/2 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder="Müşteri adı, e-posta veya şehir ara..."
                         value={searchTerm}
                         onChange={(e) => { setSearchTerm(e.target.value); setCurrentPage(1); }}
-                        className="w-full bg-background border border-border rounded-xl py-2.5 pl-10 pr-4 text-sm text-foreground placeholder:text-slate-500 focus:outline-none focus:border-primary/50"
+                        className="w-full bg-background border border-border/80 rounded-lg py-1.5 pl-9 pr-3 text-xs text-foreground placeholder:text-muted-foreground focus:outline-none focus:border-indigo-500"
                     />
                 </div>
-                <div className="flex flex-wrap gap-3">
+                <div className="flex items-center gap-2 flex-wrap">
                     <select
                         value={selectedSegment}
                         onChange={(e) => { setSelectedSegment(e.target.value); setCurrentPage(1); }}
-                        className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground focus:outline-none focus:border-primary/50"
+                        className="bg-background border border-border/80 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:border-indigo-500"
                     >
                         {segmentFilters.map(f => (
                             <option key={f.value} value={f.value}>{f.label}</option>
@@ -331,7 +331,7 @@ export default function CustomersPage() {
                     <select
                         value={sortBy}
                         onChange={(e) => { setSortBy(e.target.value); setCurrentPage(1); }}
-                        className="bg-background border border-border rounded-xl px-4 py-2.5 text-sm font-medium text-foreground focus:outline-none focus:border-primary/50"
+                        className="bg-background border border-border/80 rounded-lg px-2.5 py-1.5 text-xs font-medium text-foreground focus:outline-none focus:border-indigo-500"
                     >
                         {sortOptions.map(s => (
                             <option key={s.value} value={s.value}>{s.label}</option>
@@ -339,16 +339,17 @@ export default function CustomersPage() {
                     </select>
                     <button
                         onClick={() => { setSortDir(d => d === 'desc' ? 'asc' : 'desc'); setCurrentPage(1); }}
-                        className="flex items-center gap-1 px-3 py-2.5 bg-background border border-border rounded-xl text-sm font-medium text-foreground hover:bg-surface/80 transition-all"
+                        className="flex items-center gap-1 px-2.5 py-1.5 bg-background border border-border/80 rounded-lg text-xs font-medium text-foreground hover:bg-muted transition-colors"
+                        title={sortDir === 'desc' ? 'Azalan' : 'Artan'}
                     >
-                        {sortDir === 'desc' ? <ArrowDown size={14} /> : <ArrowUp size={14} />}
+                        {sortDir === 'desc' ? <ArrowDown size={13} /> : <ArrowUp size={13} />}
                     </button>
                 </div>
             </div>
 
             {/* Error */}
             {error && (
-                <div className="bg-red-500/10 border border-red-500/20 rounded-2xl p-4 text-red-500 text-sm font-medium">
+                <div className="bg-red-500/10 border border-red-500/20 rounded-xl p-3 text-red-500 text-xs font-medium">
                     Müşteri verileri yüklenirken hata oluştu. Yedek veriler gösteriliyor.
                 </div>
             )}
@@ -357,119 +358,177 @@ export default function CustomersPage() {
             {loading && customers.length === 0 ? (
                 <TableSkeleton />
             ) : (
-                <div className="bg-surface rounded-2xl border border-border overflow-hidden">
-                    <div className="overflow-x-auto">
-                        <table className="w-full">
+                <div className="bg-card rounded-xl border border-border/70 shadow-xs overflow-hidden">
+                    {/* Mobile Customer Cards */}
+                    <div className="md:hidden divide-y divide-border/60">
+                        {paginatedCustomers.length === 0 ? (
+                            <div className="px-4 py-12 text-center text-muted-foreground text-xs">
+                                Aramanızla eşleşen müşteri bulunamadı.
+                            </div>
+                        ) : (
+                            paginatedCustomers.map((customer) => (
+                                <div key={customer.id} className="p-3.5 space-y-2.5">
+                                    <div className="flex items-start justify-between gap-2">
+                                        <div className="flex items-center gap-2.5 min-w-0">
+                                            <div className="w-8 h-8 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-semibold text-xs shrink-0">
+                                                {customer.name[0]}
+                                            </div>
+                                            <div className="min-w-0">
+                                                <div className="font-semibold text-xs text-foreground truncate">{customer.name}</div>
+                                                <div className="text-[11px] text-muted-foreground truncate">{customer.email}</div>
+                                            </div>
+                                        </div>
+                                        <div className="shrink-0 flex items-center gap-1.5">
+                                            {getSegmentBadge(customer.segment)}
+                                            <button
+                                                onClick={() => handleAction('view', customer)}
+                                                className="p-1 rounded-md text-muted-foreground hover:text-foreground hover:bg-muted"
+                                            >
+                                                <Eye size={14} />
+                                            </button>
+                                        </div>
+                                    </div>
+
+                                    <div className="grid grid-cols-3 gap-2 p-2 rounded-lg bg-muted/40 border border-border/50 text-center">
+                                        <div>
+                                            <div className="text-[10px] text-muted-foreground">Sipariş</div>
+                                            <div className="text-xs font-semibold text-foreground tabular-nums">{customer.totalOrders}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-muted-foreground">Harcama</div>
+                                            <div className="text-xs font-semibold text-foreground tabular-nums">₺{customer.totalSpent.toLocaleString('tr-TR')}</div>
+                                        </div>
+                                        <div>
+                                            <div className="text-[10px] text-muted-foreground">Sadakat</div>
+                                            <div className="text-xs font-semibold text-foreground tabular-nums">%{customer.loyaltyScore}</div>
+                                        </div>
+                                    </div>
+
+                                    <div className="flex items-center justify-between text-[11px] text-muted-foreground pt-1">
+                                        <span>Son Sipariş: {new Date(customer.lastOrderDate).toLocaleDateString('tr-TR')}</span>
+                                        <div className="flex gap-1">
+                                            {customer.platforms.map(p => (
+                                                <span key={p} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted text-muted-foreground border border-border/50">
+                                                    {p.slice(0, 2).toUpperCase()}
+                                                </span>
+                                            ))}
+                                        </div>
+                                    </div>
+                                </div>
+                            ))
+                        )}
+                    </div>
+
+                    {/* Desktop Table View */}
+                    <div className="hidden md:block overflow-x-auto">
+                        <table className="w-full text-xs">
                             <thead>
-                                <tr className="bg-background/50 border-b border-border">
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Müşteri</th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">E-posta</th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Segment</th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('totalOrders')}>
+                                <tr className="bg-muted/40 border-b border-border/70 text-[11px] font-semibold text-muted-foreground uppercase tracking-wider">
+                                    <th className="px-3.5 py-2.5 text-left">Müşteri</th>
+                                    <th className="px-3.5 py-2.5 text-left">E-posta</th>
+                                    <th className="px-3.5 py-2.5 text-left">Segment</th>
+                                    <th className="px-3.5 py-2.5 text-left cursor-pointer select-none" onClick={() => handleSort('totalOrders')}>
                                         <span className="inline-flex items-center gap-1">Siparişler <SortIcon field="totalOrders" sortBy={sortBy} sortDir={sortDir} /></span>
                                     </th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('totalSpent')}>
+                                    <th className="px-3.5 py-2.5 text-left cursor-pointer select-none" onClick={() => handleSort('totalSpent')}>
                                         <span className="inline-flex items-center gap-1">Toplam Harcama <SortIcon field="totalSpent" sortBy={sortBy} sortDir={sortDir} /></span>
                                     </th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('avgOrderValue')}>
+                                    <th className="px-3.5 py-2.5 text-left cursor-pointer select-none" onClick={() => handleSort('avgOrderValue')}>
                                         <span className="inline-flex items-center gap-1">Ort. Sipariş <SortIcon field="avgOrderValue" sortBy={sortBy} sortDir={sortDir} /></span>
                                     </th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('lastOrderDate')}>
+                                    <th className="px-3.5 py-2.5 text-left cursor-pointer select-none" onClick={() => handleSort('lastOrderDate')}>
                                         <span className="inline-flex items-center gap-1">Son Sipariş <SortIcon field="lastOrderDate" sortBy={sortBy} sortDir={sortDir} /></span>
                                     </th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider cursor-pointer select-none" onClick={() => handleSort('loyaltyScore')}>
+                                    <th className="px-3.5 py-2.5 text-left cursor-pointer select-none" onClick={() => handleSort('loyaltyScore')}>
                                         <span className="inline-flex items-center gap-1">Sadakat <SortIcon field="loyaltyScore" sortBy={sortBy} sortDir={sortDir} /></span>
                                     </th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">Platformlar</th>
-                                    <th className="px-4 py-4 text-left text-[10px] font-black text-slate-500 uppercase tracking-wider">İşlemler</th>
+                                    <th className="px-3.5 py-2.5 text-left">Platformlar</th>
+                                    <th className="px-3.5 py-2.5 text-right">İşlemler</th>
                                 </tr>
                             </thead>
-                            <tbody className="divide-y divide-border">
+                            <tbody className="divide-y divide-border/50">
                                 {paginatedCustomers.length === 0 ? (
                                     <tr>
-                                        <td colSpan={10} className="px-4 py-12 text-center text-slate-500 text-sm">
+                                        <td colSpan={10} className="px-4 py-12 text-center text-muted-foreground text-xs">
                                             Aramanızla eşleşen müşteri bulunamadı.
                                         </td>
                                     </tr>
                                 ) : (
                                     paginatedCustomers.map((customer, idx) => (
-                                        <motion.tr
+                                        <tr
                                             key={customer.id}
-                                            initial={{ opacity: 0 }}
-                                            animate={{ opacity: 1 }}
-                                            transition={{ delay: idx * 0.03 }}
-                                            className="hover:bg-background/50 transition-all group"
+                                            className="hover:bg-muted/30 transition-colors group"
                                         >
-                                            <td className="px-4 py-4">
-                                                <div className="flex items-center gap-3">
-                                                    <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary/20 to-purple-500/20 flex items-center justify-center shrink-0">
-                                                        <span className="text-sm font-bold text-primary">{customer.name[0]}</span>
+                                            <td className="px-3.5 py-2.5">
+                                                <div className="flex items-center gap-2.5">
+                                                    <div className="w-7 h-7 rounded-lg bg-indigo-500/10 text-indigo-600 dark:text-indigo-400 flex items-center justify-center font-semibold text-xs shrink-0">
+                                                        {customer.name[0]}
                                                     </div>
                                                     <div className="min-w-0">
                                                         <div className="font-medium text-foreground truncate">{customer.name}</div>
                                                         {customer.address?.city && (
-                                                            <div className="flex items-center gap-1 text-xs text-slate-500">
+                                                            <div className="flex items-center gap-1 text-[11px] text-muted-foreground">
                                                                 <MapPin size={10} /> {customer.address.city}
                                                             </div>
                                                         )}
                                                     </div>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="text-xs text-slate-500 flex items-center gap-1">
+                                            <td className="px-3.5 py-2.5">
+                                                <div className="text-[11px] text-muted-foreground flex items-center gap-1">
                                                     <Mail size={10} /> {customer.email}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-3.5 py-2.5">
                                                 {getSegmentBadge(customer.segment)}
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="text-lg font-black text-foreground">{customer.totalOrders}</div>
-                                                <div className="text-xs text-slate-500">sipariş</div>
+                                            <td className="px-3.5 py-2.5">
+                                                <div className="font-semibold text-foreground tabular-nums">{customer.totalOrders}</div>
+                                                <div className="text-[10px] text-muted-foreground">sipariş</div>
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="text-lg font-black text-foreground">₺{customer.totalSpent.toLocaleString('tr-TR')}</div>
+                                            <td className="px-3.5 py-2.5">
+                                                <div className="font-semibold text-foreground tabular-nums">₺{customer.totalSpent.toLocaleString('tr-TR')}</div>
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="text-sm font-bold text-foreground">₺{customer.avgOrderValue.toLocaleString('tr-TR')}</div>
+                                            <td className="px-3.5 py-2.5">
+                                                <div className="font-medium text-foreground tabular-nums">₺{customer.avgOrderValue.toLocaleString('tr-TR')}</div>
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="text-sm text-foreground">
+                                            <td className="px-3.5 py-2.5">
+                                                <div className="text-muted-foreground">
                                                     {new Date(customer.lastOrderDate).toLocaleDateString('tr-TR')}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-3.5 py-2.5">
                                                 <div className="flex items-center gap-2">
-                                                    <div className="w-16 h-1.5 rounded-full bg-border overflow-hidden">
+                                                    <div className="w-14 h-1.5 rounded-full bg-muted overflow-hidden">
                                                         <div
-                                                            className={`h-full rounded-full ${customer.loyaltyScore >= 70 ? 'bg-green-500' : customer.loyaltyScore >= 40 ? 'bg-yellow-500' : 'bg-red-500'}`}
+                                                            className={`h-full rounded-full ${customer.loyaltyScore >= 70 ? 'bg-emerald-500' : customer.loyaltyScore >= 40 ? 'bg-amber-500' : 'bg-rose-500'}`}
                                                             style={{ width: `${customer.loyaltyScore}%` }}
                                                         />
                                                     </div>
-                                                    <span className="text-xs font-bold text-foreground">{customer.loyaltyScore}</span>
+                                                    <span className="text-[11px] font-semibold text-foreground">{customer.loyaltyScore}</span>
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
+                                            <td className="px-3.5 py-2.5">
                                                 <div className="flex gap-1">
                                                     {customer.platforms.slice(0, 2).map(p => (
-                                                        <span key={p} className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-background border border-border text-slate-500">
+                                                        <span key={p} className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted border border-border/50 text-muted-foreground">
                                                             {p.slice(0, 2).toUpperCase()}
                                                         </span>
                                                     ))}
                                                     {customer.platforms.length > 2 && (
-                                                        <span className="text-[9px] font-bold px-1.5 py-0.5 rounded bg-background border border-border text-slate-500">
+                                                        <span className="text-[9px] font-medium px-1.5 py-0.5 rounded bg-muted border border-border/50 text-muted-foreground">
                                                             +{customer.platforms.length - 2}
                                                         </span>
                                                     )}
                                                 </div>
                                             </td>
-                                            <td className="px-4 py-4">
-                                                <div className="relative" ref={actionMenuId === customer.id ? actionMenuRef : undefined}>
+                                            <td className="px-3.5 py-2.5 text-right">
+                                                <div className="relative inline-block" ref={actionMenuId === customer.id ? actionMenuRef : undefined}>
                                                     <button
                                                         onClick={() => setActionMenuId(actionMenuId === customer.id ? null : customer.id)}
-                                                        className="p-2 rounded-lg hover:bg-background text-slate-400 hover:text-foreground transition-all"
+                                                        className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                                                     >
-                                                        <MoreVertical size={16} />
+                                                        <MoreVertical size={14} />
                                                     </button>
                                                     <AnimatePresence>
                                                         {actionMenuId === customer.id && (
@@ -477,32 +536,32 @@ export default function CustomersPage() {
                                                                 initial={{ opacity: 0, scale: 0.95, y: -4 }}
                                                                 animate={{ opacity: 1, scale: 1, y: 0 }}
                                                                 exit={{ opacity: 0, scale: 0.95, y: -4 }}
-                                                                className="absolute right-0 top-10 z-50 w-48 bg-surface border border-border rounded-xl shadow-xl overflow-hidden"
+                                                                className="absolute right-0 top-8 z-50 w-44 bg-card border border-border rounded-xl shadow-xl overflow-hidden py-1 text-left"
                                                             >
-                                                                <button onClick={() => handleAction('view', customer)} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-background transition-all">
-                                                                    <Eye size={14} /> Detayları Gör
+                                                                <button onClick={() => handleAction('view', customer)} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
+                                                                    <Eye size={13} /> Detayları Gör
                                                                 </button>
-                                                                <button onClick={() => handleAction('email', customer)} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-background transition-all">
-                                                                    <Mail size={14} /> E-posta Gönder
+                                                                <button onClick={() => handleAction('email', customer)} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
+                                                                    <Mail size={13} /> E-posta Gönder
                                                                 </button>
-                                                                <button onClick={() => handleAction('note', customer)} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-foreground hover:bg-background transition-all">
-                                                                    <StickyNote size={14} /> Not Ekle
+                                                                <button onClick={() => handleAction('note', customer)} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-foreground hover:bg-muted transition-colors">
+                                                                    <StickyNote size={13} /> Not Ekle
                                                                 </button>
                                                                 {customer.segment !== 'vip' && (
-                                                                    <button onClick={() => handleAction('mark-vip', customer)} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-yellow-600 hover:bg-background transition-all">
-                                                                        <Award size={14} /> VIP Olarak İşaretle
+                                                                    <button onClick={() => handleAction('mark-vip', customer)} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-amber-600 hover:bg-muted transition-colors">
+                                                                        <Award size={13} /> VIP Olarak İşaretle
                                                                     </button>
                                                                 )}
-                                                                <div className="border-t border-border" />
-                                                                <button onClick={() => handleAction('delete', customer)} className="flex items-center gap-2 w-full px-4 py-2.5 text-sm text-red-500 hover:bg-red-500/10 transition-all">
-                                                                    <Trash2 size={14} /> Sil
+                                                                <div className="border-t border-border/60 my-1" />
+                                                                <button onClick={() => handleAction('delete', customer)} className="flex items-center gap-2 w-full px-3 py-2 text-xs text-rose-500 hover:bg-rose-500/10 transition-colors">
+                                                                    <Trash2 size={13} /> Sil
                                                                 </button>
                                                             </motion.div>
                                                         )}
                                                     </AnimatePresence>
                                                 </div>
                                             </td>
-                                        </motion.tr>
+                                        </tr>
                                     ))
                                 )}
                             </tbody>
@@ -511,28 +570,28 @@ export default function CustomersPage() {
 
                     {/* Pagination */}
                     {totalPages > 1 && (
-                        <div className="flex items-center justify-between px-4 py-4 border-t border-border">
-                            <div className="text-xs text-slate-500">
-                                {pagination?.total || 0} müşteriden {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, pagination?.total || 0)} arası gösteriliyor
+                        <div className="flex items-center justify-between px-4 py-3 border-t border-border/70 text-xs text-muted-foreground">
+                            <div>
+                                {pagination?.total || 0} müşteriden {(currentPage - 1) * ITEMS_PER_PAGE + 1}-{Math.min(currentPage * ITEMS_PER_PAGE, pagination?.total || 0)} arası
                             </div>
                             <div className="flex items-center gap-1">
                                 <button
                                     onClick={() => setCurrentPage(p => Math.max(1, p - 1))}
                                     disabled={currentPage === 1}
-                                    className="p-2 rounded-lg hover:bg-background text-slate-400 hover:text-foreground transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
-                                    <ChevronLeft size={16} />
+                                    <ChevronLeft size={15} />
                                 </button>
                                 {Array.from({ length: totalPages }, (_, i) => i + 1)
                                     .filter(p => p === 1 || p === totalPages || Math.abs(p - currentPage) <= 1)
                                     .map((page, idx, arr) => (
                                         <React.Fragment key={page}>
                                             {idx > 0 && arr[idx - 1]! < page - 1 && (
-                                                <span className="px-1 text-slate-400 text-xs">…</span>
+                                                <span className="px-1 text-muted-foreground text-xs">…</span>
                                             )}
                                             <button
                                                 onClick={() => setCurrentPage(page)}
-                                                className={`w-8 h-8 rounded-lg text-xs font-bold transition-all ${currentPage === page ? 'bg-primary text-white' : 'hover:bg-background text-slate-500'}`}
+                                                className={`w-7 h-7 rounded-lg text-xs font-medium transition-colors ${currentPage === page ? 'bg-indigo-600 text-white font-semibold' : 'hover:bg-muted text-muted-foreground hover:text-foreground'}`}
                                             >
                                                 {page}
                                             </button>
@@ -542,9 +601,9 @@ export default function CustomersPage() {
                                 <button
                                     onClick={() => setCurrentPage(p => Math.min(totalPages, p + 1))}
                                     disabled={currentPage === totalPages}
-                                    className="p-2 rounded-lg hover:bg-background text-slate-400 hover:text-foreground transition-all disabled:opacity-30 disabled:cursor-not-allowed"
+                                    className="p-1 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors disabled:opacity-30 disabled:cursor-not-allowed"
                                 >
-                                    <ChevronRight size={16} />
+                                    <ChevronRight size={15} />
                                 </button>
                             </div>
                         </div>

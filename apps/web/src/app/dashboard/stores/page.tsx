@@ -266,96 +266,79 @@ export default function StoresPage() {
             </AnimatePresence>
 
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-foreground tracking-tight">Mağazalarım</h1>
-                    <p className="text-slate-500 font-medium">Bağlı pazaryerlerini ve performanslarını yönetin</p>
+                    <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">Mağazalarım</h1>
+                    <p className="text-xs text-muted-foreground mt-1">Bağlı pazaryerlerini ve performanslarını yönetin</p>
                 </div>
-                <div className="flex items-center gap-3">
+                <div className="flex items-center gap-2">
                     <button
                         onClick={handleSyncAll}
                         disabled={!!syncingStoreId || connectedStores.length === 0}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-surface border border-border rounded-xl text-sm font-bold text-foreground hover:bg-surface/80 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                     >
-                        <RefreshCw size={16} className={syncingStoreId ? 'animate-spin' : ''} /> Tümünü Senkronize Et
+                        <RefreshCw size={13} className={syncingStoreId ? 'animate-spin' : ''} />
+                        <span>Tümünü Senkronize Et</span>
                     </button>
                     <button
                         onClick={() => router.push('/dashboard/settings/integrations')}
-                        className="flex items-center gap-2 px-4 py-2.5 bg-primary text-white rounded-xl text-sm font-bold hover:bg-primary/90 transition-all shadow-lg shadow-primary/20"
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white transition-colors shadow-xs"
                     >
-                        <Plus size={16} /> Pazaryeri Bağla
+                        <Plus size={13} />
+                        <span>Pazaryeri Bağla</span>
                     </button>
                 </div>
             </div>
 
             {/* Summary Stats */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-primary/10 to-purple-500/5 p-6 rounded-2xl border border-primary/20"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 rounded-xl bg-primary/10">
-                            <StoreIcon size={20} className="text-primary" />
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
+                <div className="bg-card p-3.5 sm:p-4 rounded-xl border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Toplam Mağaza</span>
+                        <div className="p-1 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
+                            <StoreIcon size={14} />
                         </div>
-                        <span className="text-xs font-bold text-primary">{connectedStores.length} Aktif</span>
                     </div>
-                    <div className="text-2xl font-black text-foreground">{displayStores.length}</div>
-                    <div className="text-xs text-slate-500 mt-1">Toplam Mağaza</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{displayStores.length}</div>
+                    <div className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400 mt-0.5">{connectedStores.length} Aktif</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-surface p-6 rounded-2xl border border-border"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 rounded-xl bg-green-500/10">
-                            <PlugZap size={20} className="text-green-500" />
+                <div className="bg-card p-3.5 sm:p-4 rounded-xl border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Aktif Entegrasyon</span>
+                        <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <PlugZap size={14} />
                         </div>
                     </div>
-                    <div className="text-2xl font-black text-foreground">{connectedStores.length}</div>
-                    <div className="text-xs text-slate-500 mt-1">Aktif Entegrasyon</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{connectedStores.length}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">bağlı kanal</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-surface p-6 rounded-2xl border border-border"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 rounded-xl bg-blue-500/10">
-                            <Package size={20} className="text-blue-500" />
+                <div className="bg-card p-3.5 sm:p-4 rounded-xl border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Senkron Ürün</span>
+                        <div className="p-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <Package size={14} />
                         </div>
                     </div>
-                    <div className="text-2xl font-black text-foreground">{totalProducts.toLocaleString('tr-TR')}</div>
-                    <div className="text-xs text-slate-500 mt-1">Senkronize Edilen Ürün</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{totalProducts.toLocaleString('tr-TR')}</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">ürün senkronize</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-surface p-6 rounded-2xl border border-border"
-                >
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2.5 rounded-xl bg-green-500/10">
-                            <DollarSign size={20} className="text-green-500" />
-                        </div>
-                        <div className="flex items-center gap-1 text-xs font-bold text-green-500">
-                            <TrendingUp size={12} />
+                <div className="bg-card p-3.5 sm:p-4 rounded-xl border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Toplam Ciro</span>
+                        <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <DollarSign size={14} />
                         </div>
                     </div>
-                    <div className="text-2xl font-black text-foreground">₺{(totalRevenue / 1000).toFixed(0)}K</div>
-                    <div className="text-xs text-slate-500 mt-1">Toplam Ciro</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">₺{(totalRevenue / 1000).toFixed(0)}K</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">tüm pazaryerleri</div>
+                </div>
             </div>
 
             {/* Platform Cards */}
-            <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+            <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 {displayStores.map((store, idx) => {
                     const visuals = getPlatformVisuals(store.platform);
                     const isSyncing = syncingStoreId === store.id || store.status === 'syncing';
@@ -430,42 +413,42 @@ export default function StoresPage() {
                             {store.status === 'connected' || store.status === 'syncing' ? (
                                 <div className="p-5">
                                     {/* Stats Grid */}
-                                    <div className="grid grid-cols-3 gap-3 mb-3">
-                                        <div className="bg-background p-3 rounded-xl">
-                                            <div className="text-[10px] text-slate-500 mb-1">Ciro</div>
-                                            <div className="text-sm font-black text-foreground">
+                                    <div className="grid grid-cols-3 gap-2.5 mb-3">
+                                        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/50">
+                                            <div className="text-[10px] text-muted-foreground mb-0.5">Ciro</div>
+                                            <div className="text-xs sm:text-sm font-semibold text-foreground tabular-nums">
                                                 ₺{store.revenue >= 1000 ? `${(store.revenue / 1000).toFixed(0)}K` : store.revenue}
                                             </div>
                                         </div>
-                                        <div className="bg-background p-3 rounded-xl">
-                                            <div className="text-[10px] text-slate-500 mb-1">Ürün</div>
-                                            <div className="text-sm font-black text-foreground">{store.totalProducts.toLocaleString('tr-TR')}</div>
+                                        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/50">
+                                            <div className="text-[10px] text-muted-foreground mb-0.5">Ürün</div>
+                                            <div className="text-xs sm:text-sm font-semibold text-foreground tabular-nums">{store.totalProducts.toLocaleString('tr-TR')}</div>
                                         </div>
-                                        <div className="bg-background p-3 rounded-xl">
-                                            <div className="text-[10px] text-slate-500 mb-1">Sipariş</div>
-                                            <div className="text-sm font-black text-foreground">{store.totalOrders}</div>
+                                        <div className="bg-muted/40 p-2.5 rounded-lg border border-border/50">
+                                            <div className="text-[10px] text-muted-foreground mb-0.5">Sipariş</div>
+                                            <div className="text-xs sm:text-sm font-semibold text-foreground tabular-nums">{store.totalOrders}</div>
                                         </div>
                                     </div>
 
                                     {/* Telemetry Breakdown: Eklenen / Güncellenen / Hatalı / Sipariş */}
-                                    <div className="grid grid-cols-4 gap-2 mb-4 bg-background/50 p-2.5 rounded-xl border border-border/60">
+                                    <div className="grid grid-cols-4 gap-2 mb-3.5 bg-muted/20 p-2 rounded-lg border border-border/50">
                                         <div className="text-center">
-                                            <div className="text-[10px] text-slate-500 font-medium">Eklenen</div>
-                                            <div className="text-xs font-black text-green-500">+{store.productsAdded ?? 0}</div>
+                                            <div className="text-[10px] text-muted-foreground font-medium">Eklenen</div>
+                                            <div className="text-xs font-semibold text-emerald-600 dark:text-emerald-400 tabular-nums">+{store.productsAdded ?? 0}</div>
                                         </div>
                                         <div className="text-center border-l border-border/40">
-                                            <div className="text-[10px] text-slate-500 font-medium">Güncellenen</div>
-                                            <div className="text-xs font-black text-blue-500">{store.productsUpdated ?? 0}</div>
+                                            <div className="text-[10px] text-muted-foreground font-medium">Güncellenen</div>
+                                            <div className="text-xs font-semibold text-blue-600 dark:text-blue-400 tabular-nums">{store.productsUpdated ?? 0}</div>
                                         </div>
                                         <div className="text-center border-l border-border/40">
-                                            <div className="text-[10px] text-slate-500 font-medium">Hatalı</div>
-                                            <div className={`text-xs font-black ${(store.productsFailed ?? 0) > 0 ? 'text-red-500' : 'text-slate-400'}`}>
+                                            <div className="text-[10px] text-muted-foreground font-medium">Hatalı</div>
+                                            <div className={`text-xs font-semibold tabular-nums ${(store.productsFailed ?? 0) > 0 ? 'text-rose-600 dark:text-rose-400' : 'text-muted-foreground'}`}>
                                                 {store.productsFailed ?? 0}
                                             </div>
                                         </div>
                                         <div className="text-center border-l border-border/40">
-                                            <div className="text-[10px] text-slate-500 font-medium">Sipariş</div>
-                                            <div className="text-xs font-black text-foreground">{store.ordersSynced ?? store.totalOrders ?? 0}</div>
+                                            <div className="text-[10px] text-muted-foreground font-medium">Sipariş</div>
+                                            <div className="text-xs font-semibold text-foreground tabular-nums">{store.ordersSynced ?? store.totalOrders ?? 0}</div>
                                         </div>
                                     </div>
 

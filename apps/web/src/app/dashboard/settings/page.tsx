@@ -138,154 +138,134 @@ const settingsCategories = [
 
 export default function SettingsPage() {
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 animate-in fade-in duration-300 pb-20">
             {/* Page Header */}
             <div>
-                <div className="flex items-center gap-3 mb-2">
-                    <h1 className="text-3xl font-black text-foreground tracking-tight">Ayarlar</h1>
-                </div>
-                <p className="text-slate-500 font-medium">Hesabınızı ve entegrasyonlarınızı yönetin</p>
+                <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">Ayarlar</h1>
+                <p className="text-xs text-muted-foreground mt-1">Hesabınızı, ekibinizi ve entegrasyonlarınızı yönetin</p>
             </div>
 
             {/* Featured Section - Integrations */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-            >
+            <div>
                 <Link href="/dashboard/settings/integrations">
-                    <div className="relative overflow-hidden p-8 bg-gradient-to-br from-primary/10 via-blue-500/5 to-cyan-500/10 rounded-[28px] border border-primary/20 hover:border-primary/40 transition-all group cursor-pointer">
-                        {/* Background decoration */}
-                        <div className="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-primary/20 to-transparent rounded-full blur-3xl -translate-y-1/2 translate-x-1/2" />
-
-                        <div className="relative flex items-center gap-6">
-                            <div className="p-4 rounded-2xl bg-gradient-to-br from-blue-500 to-cyan-500 text-white shadow-lg shadow-blue-500/30">
-                                <Link2 size={32} />
+                    <div className="relative overflow-hidden p-5 sm:p-6 bg-gradient-to-br from-indigo-500/10 via-blue-500/5 to-cyan-500/10 rounded-xl border border-indigo-500/20 hover:border-indigo-500/40 transition-colors group cursor-pointer shadow-xs">
+                        <div className="relative flex flex-col sm:flex-row sm:items-center gap-4 sm:gap-6">
+                            <div className="w-12 h-12 rounded-xl bg-indigo-600 text-white flex items-center justify-center shrink-0 shadow-xs">
+                                <Link2 size={24} />
                             </div>
 
-                            <div className="flex-1">
-                                <div className="flex items-center gap-3 mb-1">
-                                    <h2 className="text-2xl font-bold text-foreground">Pazaryeri Entegrasyonları</h2>
-                                    <span className="px-3 py-1 text-xs font-bold rounded-full bg-primary text-white">
+                            <div className="flex-1 min-w-0">
+                                <div className="flex items-center gap-2 mb-1 flex-wrap">
+                                    <h2 className="text-base font-semibold text-foreground">Pazaryeri Entegrasyonları</h2>
+                                    <span className="px-2 py-0.5 text-[10px] font-medium rounded-full bg-indigo-600 text-white">
                                         40+ Platform
                                     </span>
                                 </div>
-                                <p className="text-slate-500">
+                                <p className="text-xs text-muted-foreground leading-relaxed">
                                     Trendyol, Hepsiburada, Amazon, eBay, Etsy ve dünya çapında 40'tan fazla pazaryerine bağlanın
                                 </p>
                             </div>
 
-                            <div className="flex items-center gap-2 text-primary font-bold group-hover:gap-4 transition-all">
-                                Entegrasyonları Yönet
-                                <ArrowRight size={20} />
+                            <div className="flex items-center gap-1.5 text-xs font-semibold text-indigo-600 dark:text-indigo-400 group-hover:gap-2 transition-all self-end sm:self-auto shrink-0">
+                                <span>Entegrasyonları Yönet</span>
+                                <ArrowRight size={14} />
                             </div>
                         </div>
 
                         {/* Mini logos preview */}
-                        <div className="mt-6 flex items-center gap-4">
-                            <span className="text-xs text-slate-500">Popüler:</span>
-                            <div className="flex items-center -space-x-2">
+                        <div className="mt-4 pt-3 border-t border-border/40 flex items-center gap-3">
+                            <span className="text-[11px] font-medium text-muted-foreground">Popüler:</span>
+                            <div className="flex items-center -space-x-1.5">
                                 {['T', 'H', 'N', 'A', 'E', 'S'].map((letter, idx) => (
                                     <div
                                         key={idx}
-                                        className="w-8 h-8 rounded-lg bg-gradient-to-br from-slate-100 to-slate-200 dark:from-slate-700 dark:to-slate-800 border-2 border-white dark:border-slate-900 flex items-center justify-center text-xs font-bold text-foreground"
+                                        className="w-6 h-6 rounded-md bg-card border border-border/80 flex items-center justify-center text-[10px] font-semibold text-foreground shadow-2xs"
                                     >
                                         {letter}
                                     </div>
                                 ))}
                             </div>
-                            <span className="text-xs text-slate-400">+34 daha fazla</span>
+                            <span className="text-[11px] text-muted-foreground">+34 platform daha</span>
                         </div>
                     </div>
                 </Link>
-            </motion.div>
+            </div>
 
             {/* Settings Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-                {settingsCategories.filter(c => c.id !== 'integrations').map((category, idx) => (
-                    <motion.div
-                        key={category.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: idx * 0.05 }}
-                    >
-                        <Link href={category.href}>
-                            <div className={`p-6 bg-surface rounded-[20px] border ${category.borderColor} hover:shadow-lg transition-all group cursor-pointer h-full`}>
-                                <div className="flex items-start gap-4">
-                                    <div className={`p-3 rounded-xl ${category.bgColor}`}>
-                                        <category.icon className={`bg-gradient-to-br ${category.color} bg-clip-text`} size={24} style={{ color: 'inherit' }} />
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 lg:gap-4">
+                {settingsCategories.filter(c => c.id !== 'integrations').map((category) => (
+                    <Link key={category.id} href={category.href}>
+                        <div className="p-4 bg-card rounded-xl border border-border/70 hover:border-border hover:shadow-xs transition-all group cursor-pointer h-full">
+                            <div className="flex items-start gap-3">
+                                <div className={`p-2 rounded-lg ${category.bgColor} shrink-0`}>
+                                    <category.icon className={`bg-gradient-to-br ${category.color} bg-clip-text`} size={18} style={{ color: 'inherit' }} />
+                                </div>
+                                <div className="flex-1 min-w-0">
+                                    <div className="flex items-center justify-between mb-0.5">
+                                        <h3 className="text-xs font-semibold text-foreground truncate">{category.title}</h3>
+                                        <ChevronRight size={14} className="text-muted-foreground/60 group-hover:text-indigo-600 group-hover:translate-x-0.5 transition-all shrink-0 ml-1" />
                                     </div>
-                                    <div className="flex-1">
-                                        <div className="flex items-center justify-between mb-1">
-                                            <h3 className="font-bold text-foreground">{category.title}</h3>
-                                            <ChevronRight size={18} className="text-slate-400 group-hover:text-primary group-hover:translate-x-1 transition-all" />
-                                        </div>
-                                        <p className="text-sm text-slate-500">{category.description}</p>
-                                    </div>
+                                    <p className="text-[11px] text-muted-foreground leading-snug line-clamp-2">{category.description}</p>
                                 </div>
                             </div>
-                        </Link>
-                    </motion.div>
+                        </div>
+                    </Link>
                 ))}
             </div>
 
             {/* Quick Actions */}
-            <motion.div
-                initial={{ opacity: 0, y: 20 }}
-                animate={{ opacity: 1, y: 0 }}
-                transition={{ delay: 0.3 }}
-                className="p-6 bg-surface rounded-[24px] border border-border"
-            >
-                <h3 className="text-lg font-bold text-foreground mb-4">Hızlı İşlemler</h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
+            <div className="p-4 sm:p-5 bg-card rounded-xl border border-border/70 shadow-xs">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3">Hızlı İşlemler</h3>
+                <div className="grid grid-cols-2 sm:grid-cols-2 lg:grid-cols-4 gap-2.5">
                     <Link href="/dashboard/settings/integrations">
-                        <button className="w-full flex items-center gap-3 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-all text-left group">
-                            <div className="p-2 rounded-lg bg-green-500/10">
-                                <Zap className="text-green-500" size={18} />
+                        <div className="flex items-center gap-2.5 p-3 bg-muted/30 rounded-lg border border-border/60 hover:bg-muted/60 transition-colors text-left group">
+                            <div className="p-1.5 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 shrink-0">
+                                <Zap size={14} />
                             </div>
-                            <div>
-                                <div className="text-sm font-bold text-foreground">Yeni Entegrasyon</div>
-                                <div className="text-xs text-slate-500">Pazaryeri bağla</div>
+                            <div className="min-w-0">
+                                <div className="text-xs font-medium text-foreground truncate">Yeni Entegrasyon</div>
+                                <div className="text-[10px] text-muted-foreground truncate">Pazaryeri bağla</div>
                             </div>
-                        </button>
+                        </div>
                     </Link>
 
                     <Link href="/dashboard/settings/team">
-                        <button className="w-full flex items-center gap-3 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-all text-left group">
-                            <div className="p-2 rounded-lg bg-blue-500/10">
-                                <Users className="text-blue-500" size={18} />
+                        <div className="flex items-center gap-2.5 p-3 bg-muted/30 rounded-lg border border-border/60 hover:bg-muted/60 transition-colors text-left group">
+                            <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400 shrink-0">
+                                <Users size={14} />
                             </div>
-                            <div>
-                                <div className="text-sm font-bold text-foreground">Üye Ekle</div>
-                                <div className="text-xs text-slate-500">Ekibe davet gönder</div>
+                            <div className="min-w-0">
+                                <div className="text-xs font-medium text-foreground truncate">Üye Ekle</div>
+                                <div className="text-[10px] text-muted-foreground truncate">Ekibe davet gönder</div>
                             </div>
-                        </button>
+                        </div>
                     </Link>
 
                     <Link href="/dashboard/upgrade">
-                        <button className="w-full flex items-center gap-3 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-all text-left group">
-                            <div className="p-2 rounded-lg bg-purple-500/10">
-                                <CreditCard className="text-purple-500" size={18} />
+                        <div className="flex items-center gap-2.5 p-3 bg-muted/30 rounded-lg border border-border/60 hover:bg-muted/60 transition-colors text-left group">
+                            <div className="p-1.5 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400 shrink-0">
+                                <CreditCard size={14} />
                             </div>
-                            <div>
-                                <div className="text-sm font-bold text-foreground">Plan Yükselt</div>
-                                <div className="text-xs text-slate-500">Daha fazla özellik</div>
+                            <div className="min-w-0">
+                                <div className="text-xs font-medium text-foreground truncate">Plan Yükselt</div>
+                                <div className="text-[10px] text-muted-foreground truncate">Daha fazla özellik</div>
                             </div>
-                        </button>
+                        </div>
                     </Link>
 
                     <Link href="/dashboard/reports">
-                        <button className="w-full flex items-center gap-3 p-4 bg-background rounded-xl border border-border hover:border-primary/30 transition-all text-left group">
-                            <div className="p-2 rounded-lg bg-orange-500/10">
-                                <FileText className="text-orange-500" size={18} />
+                        <div className="flex items-center gap-2.5 p-3 bg-muted/30 rounded-lg border border-border/60 hover:bg-muted/60 transition-colors text-left group">
+                            <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400 shrink-0">
+                                <FileText size={14} />
                             </div>
-                            <div>
-                                <div className="text-sm font-bold text-foreground">Raporlar</div>
-                                <div className="text-xs text-slate-500">Raporları indir</div>
+                            <div className="min-w-0">
+                                <div className="text-xs font-medium text-foreground truncate">Raporlar</div>
+                                <div className="text-[10px] text-muted-foreground truncate">Raporları indir</div>
                             </div>
-                        </button>
+                        </div>
                     </Link>
                 </div>
-            </motion.div>
+            </div>
         </div>
     );
 }

@@ -43,30 +43,33 @@ export default function LiveFeed({ isOpen, onToggle }: LiveFeedProps) {
                     animate={{ width: 320, opacity: 1, x: 0 }}
                     exit={{ width: 0, opacity: 0, x: 20 }}
                     transition={{ type: "spring", damping: 25, stiffness: 200 }}
-                    className="border-l border-border bg-surface/30 backdrop-blur-md sticky top-20 h-[calc(100vh-80px)] overflow-y-auto hidden xl:flex flex-col p-6 z-30"
+                    className="border-l border-border bg-card/60 backdrop-blur-md sticky top-16 h-[calc(100vh-4rem)] overflow-y-auto hidden xl:flex flex-col p-4 sm:p-5 z-30"
                 >
-                    <div className="flex items-center justify-between mb-8">
+                    <div className="flex items-center justify-between mb-6 pb-3 border-b border-border/60">
                         <div className="flex items-center gap-2">
-                            <Activity size={18} className="text-primary animate-pulse" />
-                            <h3 className="text-sm font-black uppercase tracking-widest text-foreground">Canlı Akış</h3>
+                            <Activity size={15} className="text-indigo-600 dark:text-indigo-400 animate-pulse" />
+                            <h3 className="text-xs font-semibold uppercase tracking-wider text-foreground">Canlı Akış</h3>
                         </div>
-                        <div className="flex items-center gap-3">
-                            <div className="w-2 h-2 rounded-full bg-green-500 animate-pulse" />
+                        <div className="flex items-center gap-2">
+                            <span className="flex h-2 w-2 relative">
+                                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75" />
+                                <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500" />
+                            </span>
                             <button
                                 onClick={onToggle}
-                                className="p-1.5 hover:bg-white/5 rounded-lg text-slate-400 hover:text-foreground transition-all"
+                                className="p-1 hover:bg-muted rounded-md text-muted-foreground hover:text-foreground transition-colors"
                                 title="Kapat"
                             >
-                                <X size={16} />
+                                <X size={14} />
                             </button>
                         </div>
                     </div>
 
-            <div className="space-y-6 flex-1">
+            <div className="space-y-4 flex-1">
                 {feedLoading ? (
-                    <div className="flex flex-col items-center justify-center py-20 gap-3 opacity-50">
-                        <Loader2 className="w-6 h-6 animate-spin text-primary" />
-                        <span className="text-[10px] font-bold uppercase tracking-widest text-slate-500">Yükleniyor...</span>
+                    <div className="flex flex-col items-center justify-center py-16 gap-2.5 opacity-60">
+                        <Loader2 className="w-5 h-5 animate-spin text-indigo-600 dark:text-indigo-400" />
+                        <span className="text-[11px] font-medium text-muted-foreground">Yükleniyor…</span>
                     </div>
                 ) : activities && activities.length > 0 ? (
                     activities.map((activity, idx) => {
@@ -75,54 +78,56 @@ export default function LiveFeed({ isOpen, onToggle }: LiveFeedProps) {
 
                         return (
                             <motion.div
-                                initial={{ opacity: 0, x: 20 }}
+                                initial={{ opacity: 0, x: 12 }}
                                 animate={{ opacity: 1, x: 0 }}
-                                transition={{ delay: idx * 0.05 }}
+                                transition={{ delay: idx * 0.04 }}
                                 key={activity.id}
                                 className="relative pl-6 group"
                             >
                                 {/* Line */}
                                 {idx !== activities.length - 1 && (
-                                    <div className="absolute left-[11px] top-6 bottom-[-24px] w-px bg-border group-hover:bg-primary/30 transition-colors" />
+                                    <div className="absolute left-[11px] top-5 bottom-[-20px] w-px bg-border group-hover:bg-indigo-500/30 transition-colors" />
                                 )}
 
-                                <div className={`absolute left-0 top-1 w-6 h-6 rounded-lg ${config.bg} flex items-center justify-center border border-white/5`}>
-                                    <Icon size={12} className={config.color} />
+                                <div className={`absolute left-0 top-0.5 w-5 h-5 rounded-md ${config.bg} flex items-center justify-center border border-border/40`}>
+                                    <Icon size={11} className={config.color} />
                                 </div>
 
-                                <div className="space-y-1">
-                                    <p className="text-xs font-bold text-foreground leading-tight">
+                                <div className="space-y-0.5">
+                                    <p className="text-xs font-medium text-foreground leading-snug">
                                         {activity.title}
-                                        {activity.value && <span className="ml-1 text-primary">({activity.value})</span>}
+                                        {activity.value && <span className="ml-1 text-indigo-600 dark:text-indigo-400">({activity.value})</span>}
                                     </p>
-                                    <p className="text-[10px] text-slate-500 line-clamp-1">{activity.description}</p>
-                                    <span className="text-[9px] font-bold text-slate-600 uppercase tracking-tighter">{formatTime(activity.time)}</span>
+                                    <p className="text-[11px] text-muted-foreground line-clamp-1">{activity.description}</p>
+                                    <span className="text-[10px] font-normal text-muted-foreground/80">{formatTime(activity.time)}</span>
                                 </div>
                             </motion.div>
                         );
                     })
                 ) : (
-                    <div className="text-center py-10">
-                        <p className="text-xs text-slate-500 italic">Henüz aktivite bulunmuyor.</p>
+                    <div className="text-center py-12 px-2 border border-dashed border-border/70 rounded-xl bg-muted/20">
+                        <Activity className="w-5 h-5 text-muted-foreground/50 mx-auto mb-2" />
+                        <p className="text-xs font-medium text-foreground">Henüz aktivite bulunmuyor</p>
+                        <p className="text-[11px] text-muted-foreground mt-0.5">Yeni sipariş ve işlemler burada listelenir</p>
                     </div>
                 )}
             </div>
 
-            <div className="mt-auto pt-8">
+            <div className="mt-auto pt-6">
                 <AnimatePresence mode="wait">
                     {summaryLoading ? (
-                        <div className="h-20 bg-white/5 rounded-2xl animate-pulse" />
+                        <div className="h-16 bg-muted/40 rounded-xl animate-pulse" />
                     ) : aiSummary?.predictionText && (
                         <motion.div
-                            initial={{ opacity: 0, y: 10 }}
+                            initial={{ opacity: 0, y: 8 }}
                             animate={{ opacity: 1, y: 0 }}
-                            className="bg-gradient-to-br from-blue-600/10 to-purple-600/10 border border-blue-500/20 rounded-2xl p-4"
+                            className="bg-indigo-500/5 border border-indigo-500/20 rounded-xl p-3"
                         >
-                            <div className="flex items-center gap-2 mb-2">
-                                <Zap className="w-3 h-3 text-blue-400" />
-                                <p className="text-[10px] font-bold text-blue-400 uppercase tracking-widest">AI İÇGÖRÜSÜ</p>
+                            <div className="flex items-center gap-1.5 mb-1">
+                                <Zap className="w-3 h-3 text-indigo-600 dark:text-indigo-400" />
+                                <p className="text-[10px] font-semibold text-indigo-600 dark:text-indigo-400 uppercase tracking-wider">AI İçgörüsü</p>
                             </div>
-                            <p className="text-xs font-medium text-slate-300 leading-relaxed italic">
+                            <p className="text-xs text-muted-foreground leading-relaxed italic">
                                 "{aiSummary.predictionText}"
                             </p>
                         </motion.div>

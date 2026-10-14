@@ -1,7 +1,14 @@
 import type { Metadata, Viewport } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import { Inter, Geist, Geist_Mono } from "next/font/google";
 import { SessionProvider } from "next-auth/react";
 import "./globals.css";
+
+const inter = Inter({
+  variable: "--font-inter",
+  subsets: ["latin", "latin-ext"],
+  display: "swap",
+  weight: ["300", "400", "500", "600", "700"],
+});
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -181,7 +188,7 @@ export default function RootLayout({
         <meta name="distribution" content="global" />
       </head>
       <body
-        className={`${geistSans.variable} ${geistMono.variable} antialiased`}
+        className={`${inter.variable} ${geistSans.variable} ${geistMono.variable} antialiased`}
         suppressHydrationWarning
       >
         {/* Skip to main content - Accessibility */}

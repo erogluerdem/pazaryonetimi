@@ -128,246 +128,213 @@ export default function PricingPage() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 animate-in fade-in duration-300 pb-20">
             {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                            <Tag className="w-8 h-8 text-emerald-500" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <Tag className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+                        <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">
                             Fiyat Yönetimi
                         </h1>
-                        <p className="text-slate-500 dark:text-slate-400 mt-1">
-                            Akıllı fiyatlama ve rekabet analizi
-                        </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setShowRules(!showRules)}
-                            className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl text-slate-600 dark:text-slate-300 hover:text-foreground transition-colors"
-                        >
-                            <Settings className="w-4 h-4" />
-                            Fiyat Kuralları
-                        </motion.button>
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center gap-2 px-4 py-2 bg-emerald-600 rounded-lg text-white hover:bg-emerald-700 transition-colors"
-                        >
-                            <Sparkles className="w-4 h-4" />
-                            AI Fiyat Önerisi
-                        </motion.button>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Akıllı fiyatlama ve rekabet analizi
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        onClick={() => setShowRules(!showRules)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs"
+                    >
+                        <Settings className="w-3.5 h-3.5" />
+                        Fiyat Kuralları
+                    </button>
+                    <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-600 hover:bg-emerald-500 rounded-lg text-xs font-medium text-white transition-colors shadow-xs"
+                    >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        AI Fiyat Önerisi
+                    </button>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-5 gap-4 mb-8">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-900/40 dark:to-emerald-800/20 rounded-2xl p-4 border border-emerald-500/20"
-                >
-                    <div className="flex items-center gap-2 text-emerald-600 dark:text-emerald-400 text-sm mb-2">
-                        <CheckCircle2 className="w-4 h-4" />
-                        Optimal Fiyat
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-3 lg:gap-4">
+                <div className="bg-card rounded-xl p-3 sm:p-3.5 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-[11px] font-medium text-emerald-600 dark:text-emerald-400">Optimal Fiyat</span>
+                        <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
                     </div>
-                    <div className="text-2xl font-black text-foreground">42</div>
-                    <div className="text-xs text-slate-500 mt-1">ürün</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">42</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">ürün</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 dark:from-blue-900/40 dark:to-blue-800/20 rounded-2xl p-4 border border-blue-500/20"
-                >
-                    <div className="flex items-center gap-2 text-blue-600 dark:text-blue-400 text-sm mb-2">
-                        <Target className="w-4 h-4" />
-                        Buy Box
+                <div className="bg-card rounded-xl p-3 sm:p-3.5 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-[11px] font-medium text-blue-600 dark:text-blue-400">Buy Box</span>
+                        <Target className="w-3.5 h-3.5 text-blue-600 dark:text-blue-400" />
                     </div>
-                    <div className="text-2xl font-black text-foreground">78%</div>
-                    <div className="text-xs text-slate-500 mt-1">kazanım oranı</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">%78</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">kazanım oranı</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-gradient-to-br from-yellow-500/10 to-yellow-600/5 dark:from-yellow-900/40 dark:to-yellow-800/20 rounded-2xl p-4 border border-yellow-500/20"
-                >
-                    <div className="flex items-center gap-2 text-yellow-600 dark:text-yellow-400 text-sm mb-2">
-                        <AlertTriangle className="w-4 h-4" />
-                        Yüksek Fiyat
+                <div className="bg-card rounded-xl p-3 sm:p-3.5 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-[11px] font-medium text-amber-600 dark:text-amber-400">Yüksek Fiyat</span>
+                        <AlertTriangle className="w-3.5 h-3.5 text-amber-600 dark:text-amber-400" />
                     </div>
-                    <div className="text-2xl font-black text-foreground">15</div>
-                    <div className="text-xs text-slate-500 mt-1">ürün</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">15</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">ürün</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-gradient-to-br from-red-500/10 to-red-600/5 dark:from-red-900/40 dark:to-red-800/20 rounded-2xl p-4 border border-red-500/20"
-                >
-                    <div className="flex items-center gap-2 text-red-600 dark:text-red-400 text-sm mb-2">
-                        <TrendingDown className="w-4 h-4" />
-                        Alt Fiyatlı
+                <div className="bg-card rounded-xl p-3 sm:p-3.5 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-[11px] font-medium text-rose-600 dark:text-rose-400">Alt Fiyatlı</span>
+                        <TrendingDown className="w-3.5 h-3.5 text-rose-600 dark:text-rose-400" />
                     </div>
-                    <div className="text-2xl font-black text-foreground">8</div>
-                    <div className="text-xs text-slate-500 mt-1">rakip var</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">8</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">rakip var</div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.4 }}
-                    className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 dark:from-purple-900/40 dark:to-purple-800/20 rounded-2xl p-4 border border-purple-500/20"
-                >
-                    <div className="flex items-center gap-2 text-purple-600 dark:text-purple-400 text-sm mb-2">
-                        <BarChart3 className="w-4 h-4" />
-                        Ort. Kar Marjı
+                <div className="bg-card rounded-xl p-3 sm:p-3.5 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between text-xs mb-1.5">
+                        <span className="text-[11px] font-medium text-purple-600 dark:text-purple-400">Ort. Kâr Marjı</span>
+                        <BarChart3 className="w-3.5 h-3.5 text-purple-600 dark:text-purple-400" />
                     </div>
-                    <div className="text-2xl font-black text-foreground">67.4%</div>
-                    <div className="text-xs text-slate-500 mt-1">ortalama</div>
-                </motion.div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">%67.4</div>
+                    <div className="text-[11px] text-muted-foreground mt-0.5">ortalama</div>
+                </div>
             </div>
 
             {/* Pricing Rules Panel */}
             {showRules && (
-                <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="mb-8 bg-surface rounded-2xl border border-border p-6"
-                >
-                    <h2 className="text-lg font-bold text-foreground mb-4 flex items-center gap-2">
-                        <Zap className="w-5 h-5 text-yellow-500" />
+                <div className="bg-card rounded-xl border border-border/70 p-4 shadow-xs">
+                    <h2 className="text-xs font-semibold uppercase tracking-wider text-muted-foreground mb-3 flex items-center gap-1.5">
+                        <Zap className="w-3.5 h-3.5 text-amber-500" />
                         Aktif Fiyatlama Kuralları
                     </h2>
-                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
                         {activePricingRules.map((rule) => (
-                            <div key={rule.id} className="flex items-center justify-between p-4 bg-background rounded-xl border border-border">
-                                <div className="flex items-center gap-3">
-                                    <div className={`w-3 h-3 rounded-full ${rule.active ? 'bg-green-500' : 'bg-slate-400 dark:bg-slate-600'}`} />
-                                    <div>
-                                        <h3 className="text-sm font-medium text-foreground">{rule.name}</h3>
-                                        <p className="text-xs text-slate-500">{rule.description}</p>
+                            <div key={rule.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg border border-border/60">
+                                <div className="flex items-center gap-2.5 min-w-0">
+                                    <div className={`w-2 h-2 rounded-full shrink-0 ${rule.active ? 'bg-emerald-500' : 'bg-muted-foreground/40'}`} />
+                                    <div className="min-w-0">
+                                        <h3 className="text-xs font-medium text-foreground truncate">{rule.name}</h3>
+                                        <p className="text-[11px] text-muted-foreground truncate">{rule.description}</p>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className="text-xs text-slate-500">{rule.products} ürün</span>
-                                                <div 
-                                                    className={`w-10 h-6 rounded-full transition-colors p-1 cursor-pointer ${rule.active ? 'bg-primary' : 'bg-muted'}`}
-                                                    onClick={() => handleRuleToggle(rule.id, rule.active)}
-                                                >
-                                                    <div className={`w-4 h-4 rounded-full bg-white transition-transform ${rule.active ? 'translate-x-4' : 'translate-x-0'}`} />
-                                                </div>
+                                <div className="flex items-center gap-2.5 shrink-0">
+                                    <span className="text-[11px] text-muted-foreground">{rule.products} ürün</span>
+                                    <div 
+                                        className={`w-8 h-4.5 rounded-full transition-colors p-0.5 cursor-pointer ${rule.active ? 'bg-emerald-600' : 'bg-muted'}`}
+                                        onClick={() => handleRuleToggle(rule.id, rule.active)}
+                                    >
+                                        <div className={`w-3.5 h-3.5 rounded-full bg-white transition-transform ${rule.active ? 'translate-x-3.5' : 'translate-x-0'}`} />
+                                    </div>
                                 </div>
                             </div>
                         ))}
                     </div>
-                </motion.div>
+                </div>
             )}
 
             {/* Search and Filters */}
-            <div className="flex items-center gap-4 mb-6">
+            <div className="bg-card p-3 rounded-xl border border-border/70 shadow-xs flex flex-col sm:flex-row items-stretch sm:items-center gap-2.5">
                 <div className="flex-1 relative">
-                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-500" />
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                     <input
                         type="text"
                         placeholder="Ürün veya SKU ara..."
                         value={searchQuery}
                         onChange={(e) => setSearchQuery(e.target.value)}
-                        className="w-full pl-10 pr-4 py-2 bg-background rounded-xl text-foreground placeholder-slate-500 border border-border focus:border-emerald-500 focus:outline-none"
+                        className="w-full pl-9 pr-3 py-1.5 bg-background rounded-lg text-xs text-foreground placeholder:text-muted-foreground border border-border/80 focus:border-emerald-500 focus:outline-none"
                     />
                 </div>
-                <select
-                    value={selectedPlatform}
-                    onChange={(e) => setSelectedPlatform(e.target.value)}
-                    className="px-4 py-2 bg-background rounded-xl text-foreground border border-border focus:border-emerald-500 focus:outline-none"
-                >
-                    <option value="all">Tüm Platformlar</option>
-                    <option value="trendyol">Trendyol</option>
-                    <option value="hepsiburada">Hepsiburada</option>
-                    <option value="amazon">Amazon</option>
-                    <option value="n11">N11</option>
-                </select>
-                <button className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl text-slate-600 dark:text-slate-300 hover:text-foreground transition-colors">
-                    <RefreshCw className="w-4 h-4" />
-                    Fiyat Tara
-                </button>
+                <div className="flex items-center gap-2">
+                    <select
+                        value={selectedPlatform}
+                        onChange={(e) => setSelectedPlatform(e.target.value)}
+                        className="px-2.5 py-1.5 bg-background rounded-lg text-xs font-medium text-foreground border border-border/80 focus:border-emerald-500 focus:outline-none"
+                    >
+                        <option value="all">Tüm Platformlar</option>
+                        <option value="trendyol">Trendyol</option>
+                        <option value="hepsiburada">Hepsiburada</option>
+                        <option value="amazon">Amazon</option>
+                        <option value="n11">N11</option>
+                    </select>
+                    <button className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs">
+                        <RefreshCw className="w-3.5 h-3.5" />
+                        <span>Fiyat Tara</span>
+                    </button>
+                </div>
             </div>
 
             {/* Products Grid */}
-            <div className="space-y-4">
-                {filteredProducts.map((product, index: number) => (
-                    <motion.div
+            <div className="space-y-3">
+                {filteredProducts.map((product) => (
+                    <div
                         key={product.id}
-                        initial={{ opacity: 0, y: 20 }}
-                        animate={{ opacity: 1, y: 0 }}
-                        transition={{ delay: index * 0.05 }}
-                        className="bg-surface rounded-2xl border border-border overflow-hidden"
+                        className="bg-card rounded-xl border border-border/70 shadow-xs overflow-hidden"
                     >
-                        <div className="p-4">
-                            <div className="flex items-start justify-between">
-                                <div className="flex items-start gap-4">
-                                    <div className="text-4xl">{product.image}</div>
-                                    <div>
-                                        <h3 className="text-lg font-bold text-foreground">{product.name}</h3>
-                                        <p className="text-sm text-slate-500 font-mono">{product.sku}</p>
-                                        <div className="flex items-center gap-4 mt-2">
-                                            <div className="text-sm">
-                                                <span className="text-slate-500">Maliyet:</span>
-                                                <span className="text-slate-600 dark:text-slate-300 ml-1">₺{product.cost}</span>
+                        <div className="p-3.5 sm:p-4">
+                            <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
+                                <div className="flex items-start gap-3 min-w-0">
+                                    <div className="text-3xl shrink-0 p-1.5 rounded-lg bg-muted/40 border border-border/50">{product.image}</div>
+                                    <div className="min-w-0">
+                                        <h3 className="text-sm font-semibold text-foreground truncate">{product.name}</h3>
+                                        <p className="text-xs text-muted-foreground font-mono mt-0.5">{product.sku}</p>
+                                        <div className="flex items-center gap-3 mt-2 flex-wrap text-xs">
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-muted-foreground">Maliyet:</span>
+                                                <span className="font-medium text-foreground">₺{product.cost}</span>
                                             </div>
-                                            <div className="text-sm">
-                                                <span className="text-slate-500">Benim Fiyatım:</span>
-                                                <span className="text-emerald-400 font-bold ml-1">₺{product.myPrice}</span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-muted-foreground">Satış:</span>
+                                                <span className="font-semibold text-emerald-600 dark:text-emerald-400">₺{product.myPrice}</span>
                                             </div>
-                                            <div className="text-sm">
-                                                <span className="text-slate-500">Marj:</span>
-                                                <span className="text-purple-400 ml-1">%{product.margin}</span>
+                                            <div className="flex items-center gap-1">
+                                                <span className="text-muted-foreground">Marj:</span>
+                                                <span className="font-medium text-purple-600 dark:text-purple-400">%{product.margin}</span>
                                             </div>
                                         </div>
                                     </div>
                                 </div>
-                                <div className="flex items-center gap-3">
-                                    <span className={`px-3 py-1 rounded-full text-xs font-medium border ${getStatusColor(product.status)}`}>
+                                <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                                    <span className={`px-2 py-0.5 rounded-md text-[11px] font-medium border ${getStatusColor(product.status)}`}>
                                         {getStatusText(product.status)}
                                     </span>
-                                    <button className="p-2 text-slate-500 hover:text-foreground hover:bg-background rounded-lg transition-colors">
-                                        <Edit3 className="w-4 h-4" />
+                                    <button className="p-1.5 text-muted-foreground hover:text-foreground hover:bg-muted rounded-lg transition-colors">
+                                        <Edit3 className="w-3.5 h-3.5" />
                                     </button>
                                 </div>
                             </div>
 
                             {/* Platform Prices */}
-                            <div className="mt-4 grid grid-cols-1 md:grid-cols-3 gap-4">
+                            <div className="mt-3.5 grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
                                 {Object.entries(product.platforms).map(([platform, data]) => (
                                     <div
                                         key={platform}
-                                        className={`p-3 rounded-lg ${data.buyBox ? 'bg-emerald-900/20 border border-emerald-500/30' : 'bg-background rounded-xl border border-border'}`}
+                                        className={`p-2.5 rounded-lg border ${data.buyBox ? 'bg-emerald-500/5 border-emerald-500/30' : 'bg-muted/30 border-border/60'}`}
                                     >
-                                        <div className="flex items-center justify-between mb-2">
-                                            <span className="text-sm font-medium text-foreground capitalize">{platform}</span>
+                                        <div className="flex items-center justify-between mb-1">
+                                            <span className="text-xs font-medium text-foreground capitalize">{platform}</span>
                                             {data.buyBox && (
-                                                <span className="px-2 py-0.5 bg-emerald-500/30 text-emerald-400 text-xs rounded-full">
+                                                <span className="px-1.5 py-0.2 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 text-[10px] font-medium rounded">
                                                     Buy Box ✓
                                                 </span>
                                             )}
                                         </div>
-                                        <div className="text-lg font-bold text-foreground">₺{data.price}</div>
-                                        <div className="mt-2">
-                                            <span className="text-xs text-slate-500">Rakip fiyatları:</span>
-                                            <div className="flex items-center gap-2 mt-1 flex-wrap">
+                                        <div className="text-sm font-semibold text-foreground tabular-nums">₺{data.price}</div>
+                                        <div className="mt-1.5 pt-1.5 border-t border-border/40">
+                                            <span className="text-[10px] text-muted-foreground">Rakipler:</span>
+                                            <div className="flex items-center gap-1 mt-0.5 flex-wrap">
                                                 {data.competitors.map((price: number, i: number) => (
                                                     <span
                                                         key={i}
-                                                        className={`text-xs px-2 py-0.5 rounded ${price < data.price
-                                                            ? 'bg-red-500/20 text-red-600 dark:text-red-400'
-                                                            : 'bg-slate-200 dark:bg-slate-700 text-slate-600 dark:text-slate-400'
+                                                        className={`text-[10px] px-1 py-0.2 rounded font-medium ${price < data.price
+                                                            ? 'bg-rose-500/10 text-rose-600 dark:text-rose-400'
+                                                            : 'bg-muted text-muted-foreground'
                                                             }`}
                                                     >
                                                         ₺{price}
@@ -379,24 +346,24 @@ export default function PricingPage() {
                                 ))}
                             </div>
 
-                            <div className="mt-3 flex items-center justify-between text-xs text-slate-500">
+                            <div className="mt-3 pt-2.5 border-t border-border/50 flex items-center justify-between text-[11px] text-muted-foreground">
                                 <div className="flex items-center gap-1">
                                     <Clock className="w-3 h-3" />
-                                    Son güncelleme: {product.lastUpdate}
+                                    <span>Son güncelleme: {product.lastUpdate}</span>
                                 </div>
                                 <div className="flex items-center gap-3">
-                                    <button className="text-emerald-400 hover:text-emerald-300 flex items-center gap-1">
+                                    <button className="text-emerald-600 dark:text-emerald-400 hover:underline flex items-center gap-1 font-medium">
                                         <Zap className="w-3 h-3" />
                                         Otomatik Fiyatla
                                     </button>
-                                    <button className="text-blue-400 hover:text-blue-300 flex items-center gap-1">
+                                    <button className="text-indigo-600 dark:text-indigo-400 hover:underline flex items-center gap-1 font-medium">
                                         <Eye className="w-3 h-3" />
                                         Detay
                                     </button>
                                 </div>
                             </div>
                         </div>
-                    </motion.div>
+                    </div>
                 ))}
             </div>
         </div>

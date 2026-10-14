@@ -114,117 +114,94 @@ export default function ReportsPage() {
     }
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 animate-in fade-in duration-300 pb-20">
             {/* Header */}
-            <div className="mb-8">
-                <div className="flex items-center justify-between">
-                    <div>
-                        <h1 className="text-3xl font-bold text-foreground flex items-center gap-3">
-                            <BarChart3 className="w-8 h-8 text-violet-500" />
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                    <div className="flex items-center gap-2">
+                        <BarChart3 className="w-5 h-5 text-indigo-600 dark:text-indigo-400" />
+                        <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">
                             Finansal Raporlar
                         </h1>
-                        <p className="text-slate-500 dark:text-slate-400 mt-1">
-                            Detaylı analiz ve raporlar
-                        </p>
                     </div>
-                    <div className="flex items-center gap-3">
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            className="flex items-center gap-2 px-4 py-2 bg-surface border border-border rounded-xl text-slate-600 dark:text-slate-300 hover:text-foreground transition-colors"
-                        >
-                            <Calendar className="w-4 h-4" />
-                            Dönem Seç
-                        </motion.button>
-                        <motion.button
-                            whileHover={{ scale: 1.02 }}
-                            whileTap={{ scale: 0.98 }}
-                            onClick={() => setShowExportModal(true)}
-                            className="flex items-center gap-2 px-4 py-2 bg-violet-600 rounded-lg text-white hover:bg-violet-700 transition-colors"
-                        >
-                            <Download className="w-4 h-4" />
-                            Rapor Oluştur
-                        </motion.button>
-                    </div>
+                    <p className="text-xs text-muted-foreground mt-1">
+                        Detaylı finansal analiz ve dışa aktarma raporları
+                    </p>
+                </div>
+                <div className="flex items-center gap-2">
+                    <button
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-card hover:bg-muted border border-border/80 rounded-lg text-xs font-medium text-muted-foreground hover:text-foreground transition-colors shadow-xs"
+                    >
+                        <Calendar className="w-3.5 h-3.5" />
+                        <span>Dönem Seç</span>
+                    </button>
+                    <button
+                        onClick={() => setShowExportModal(true)}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-500 rounded-lg text-xs font-medium text-white transition-colors shadow-xs"
+                    >
+                        <Download className="w-3.5 h-3.5" />
+                        <span>Rapor Oluştur</span>
+                    </button>
                 </div>
             </div>
 
             {/* Stats */}
-            <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8">
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    className="bg-gradient-to-br from-emerald-500/10 to-emerald-600/5 dark:from-emerald-900/40 dark:to-emerald-800/20 rounded-2xl p-5 border border-emerald-500/20"
-                >
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-emerald-500/20 rounded-xl">
-                            <DollarSign className="w-5 h-5 text-emerald-600 dark:text-emerald-400" />
+            <div className="grid grid-cols-2 md:grid-cols-4 gap-3 lg:gap-4">
+                <div className="bg-card rounded-xl p-3.5 sm:p-4 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Toplam Gelir (6 Ay)</span>
+                        <div className="p-1 rounded-md bg-emerald-500/10 text-emerald-600 dark:text-emerald-400">
+                            <DollarSign className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">Toplam Gelir (6 Ay)</span>
                     </div>
-                    <div className="text-2xl font-black text-foreground">₺{(totalRevenue / 1000).toFixed(0)}K</div>
-                    <div className="flex items-center gap-1 mt-2 text-green-400 text-sm">
-                        <ArrowUpRight className="w-4 h-4" />
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">₺{(totalRevenue / 1000).toFixed(0)}K</div>
+                    <div className="flex items-center gap-1 mt-1 text-emerald-600 dark:text-emerald-400 text-[11px] font-medium">
+                        <ArrowUpRight className="w-3.5 h-3.5" />
                         <span>+18.5% önceki döneme göre</span>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.1 }}
-                    className="bg-gradient-to-br from-blue-500/10 to-blue-600/5 dark:from-blue-900/40 dark:to-blue-800/20 rounded-2xl p-5 border border-blue-500/20"
-                >
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-blue-500/20 rounded-xl">
-                            <ShoppingCart className="w-5 h-5 text-blue-600 dark:text-blue-400" />
+                <div className="bg-card rounded-xl p-3.5 sm:p-4 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Toplam Sipariş</span>
+                        <div className="p-1 rounded-md bg-blue-500/10 text-blue-600 dark:text-blue-400">
+                            <ShoppingCart className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">Toplam Sipariş</span>
                     </div>
-                    <div className="text-2xl font-black text-foreground">{totalOrders.toLocaleString('tr-TR')}</div>
-                    <div className="flex items-center gap-1 mt-2 text-blue-400 text-sm">
-                        <ArrowUpRight className="w-4 h-4" />
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{totalOrders.toLocaleString('tr-TR')}</div>
+                    <div className="flex items-center gap-1 mt-1 text-blue-600 dark:text-blue-400 text-[11px] font-medium">
+                        <ArrowUpRight className="w-3.5 h-3.5" />
                         <span>+12.3% artış</span>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.2 }}
-                    className="bg-gradient-to-br from-purple-500/10 to-purple-600/5 dark:from-purple-900/40 dark:to-purple-800/20 rounded-2xl p-5 border border-purple-500/20"
-                >
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-purple-500/20 rounded-xl">
-                            <TrendingUp className="w-5 h-5 text-purple-600 dark:text-purple-400" />
+                <div className="bg-card rounded-xl p-3.5 sm:p-4 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Toplam Kâr</span>
+                        <div className="p-1 rounded-md bg-purple-500/10 text-purple-600 dark:text-purple-400">
+                            <TrendingUp className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">Toplam Kar</span>
                     </div>
-                    <div className="text-2xl font-black text-foreground">₺{(totalProfit / 1000).toFixed(0)}K</div>
-                    <div className="flex items-center gap-1 mt-2 text-purple-400 text-sm">
-                        <ArrowUpRight className="w-4 h-4" />
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">₺{(totalProfit / 1000).toFixed(0)}K</div>
+                    <div className="flex items-center gap-1 mt-1 text-purple-600 dark:text-purple-400 text-[11px] font-medium">
+                        <ArrowUpRight className="w-3.5 h-3.5" />
                         <span>+21.7% artış</span>
                     </div>
-                </motion.div>
+                </div>
 
-                <motion.div
-                    initial={{ opacity: 0, y: 20 }}
-                    animate={{ opacity: 1, y: 0 }}
-                    transition={{ delay: 0.3 }}
-                    className="bg-gradient-to-br from-orange-500/10 to-orange-600/5 dark:from-orange-900/40 dark:to-orange-800/20 rounded-2xl p-5 border border-orange-500/20"
-                >
-                    <div className="flex items-center gap-3 mb-3">
-                        <div className="p-2 bg-orange-500/20 rounded-xl">
-                            <Percent className="w-5 h-5 text-orange-600 dark:text-orange-400" />
+                <div className="bg-card rounded-xl p-3.5 sm:p-4 border border-border/70 shadow-xs">
+                    <div className="flex items-center justify-between mb-2">
+                        <span className="text-[11px] font-medium text-muted-foreground">Kâr Marjı</span>
+                        <div className="p-1 rounded-md bg-amber-500/10 text-amber-600 dark:text-amber-400">
+                            <Percent className="w-3.5 h-3.5" />
                         </div>
-                        <span className="text-slate-600 dark:text-slate-400 text-sm font-medium">Kar Marjı</span>
                     </div>
-                    <div className="text-2xl font-black text-foreground">%{avgProfitMargin}</div>
-                    <div className="flex items-center gap-1 mt-2 text-orange-400 text-sm">
-                        <Target className="w-4 h-4" />
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">%{avgProfitMargin}</div>
+                    <div className="flex items-center gap-1 mt-1 text-amber-600 dark:text-amber-400 text-[11px] font-medium">
+                        <Target className="w-3.5 h-3.5" />
                         <span>Hedef: %40</span>
                     </div>
-                </motion.div>
+                </div>
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-8">

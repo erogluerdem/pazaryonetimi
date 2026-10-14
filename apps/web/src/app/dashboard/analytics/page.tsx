@@ -58,33 +58,31 @@ const MetricCard = ({
     };
 
     return (
-        <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            className="bg-surface p-5 rounded-2xl border border-border"
+        <div
+            className="bg-card p-3.5 sm:p-4 rounded-xl border border-border/70 shadow-xs"
         >
             {loading ? (
                 <div className="animate-pulse">
-                    <div className="h-8 w-8 bg-slate-200 dark:bg-slate-700 rounded-xl mb-3"></div>
-                    <div className="h-6 w-16 bg-slate-200 dark:bg-slate-700 rounded mb-2"></div>
-                    <div className="h-4 w-24 bg-slate-200 dark:bg-slate-700 rounded"></div>
+                    <div className="h-7 w-7 bg-muted rounded-lg mb-2"></div>
+                    <div className="h-5 w-16 bg-muted rounded mb-1.5"></div>
+                    <div className="h-3 w-20 bg-muted rounded"></div>
                 </div>
             ) : (
                 <>
-                    <div className="flex items-center justify-between mb-3">
-                        <div className="p-2 rounded-xl bg-primary/10">
+                    <div className="flex items-center justify-between mb-2">
+                        <div className="p-1 rounded-md bg-indigo-500/10 text-indigo-600 dark:text-indigo-400">
                             {icon}
                         </div>
-                        <div className={`flex items-center gap-1 text-xs font-bold ${change >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        <div className={`flex items-center gap-1 text-[11px] font-medium ${change >= 0 ? 'text-emerald-600 dark:text-emerald-400' : 'text-rose-600 dark:text-rose-400'}`}>
                             {change >= 0 ? <TrendingUp size={12} /> : <TrendingDown size={12} />}
                             {change >= 0 ? '+' : ''}{change.toFixed(1)}%
                         </div>
                     </div>
-                    <div className="text-2xl font-black text-foreground">{formatValue(value)}</div>
-                    <div className="text-xs text-slate-500 mt-1">{title}</div>
+                    <div className="text-lg sm:text-xl font-semibold text-foreground tabular-nums">{formatValue(value)}</div>
+                    <div className="text-[11px] font-medium text-muted-foreground mt-0.5">{title}</div>
                 </>
             )}
-        </motion.div>
+        </div>
     );
 };
 
@@ -108,21 +106,21 @@ export default function AnalyticsPage() {
     const maxTrendValue = trendData ? Math.max(...trendData.map((d: TrendData) => d.value || 0), 1) : 0;
 
     return (
-        <div className="space-y-8 animate-in fade-in duration-500 pb-20">
+        <div className="space-y-6 animate-in fade-in duration-300 pb-20">
             {/* Header */}
-            <div className="flex flex-col lg:flex-row lg:items-center justify-between gap-4">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
                 <div>
-                    <h1 className="text-3xl font-black text-foreground tracking-tight">Performans Analizi</h1>
-                    <p className="text-slate-500 font-medium">Detaylı satış ve trafik analizlerinizi inceleyin</p>
+                    <h1 className="text-xl lg:text-2xl font-semibold text-foreground tracking-tight">Performans Analizi</h1>
+                    <p className="text-xs text-muted-foreground mt-1">Detaylı satış ve trafik analizlerinizi inceleyin</p>
                 </div>
-                <div className="flex items-center gap-2 bg-surface p-1 rounded-xl border border-border">
+                <div className="flex items-center gap-1 bg-card p-1 rounded-lg border border-border/80 shadow-xs self-start sm:self-auto">
                     {periods.map((p) => (
                         <button
                             key={p.id}
                             onClick={() => setSelectedPeriod(p.id)}
-                            className={`px-4 py-2 rounded-lg text-xs font-bold transition-all ${selectedPeriod === p.id
-                                ? 'bg-primary text-primary-foreground shadow-lg shadow-primary/20'
-                                : 'text-slate-500 hover:text-foreground hover:bg-slate-100 dark:hover:bg-white/5'
+                            className={`px-2.5 py-1 rounded-md text-xs font-medium transition-colors ${selectedPeriod === p.id
+                                ? 'bg-indigo-600 text-white font-semibold shadow-xs'
+                                : 'text-muted-foreground hover:text-foreground hover:bg-muted'
                                 }`}
                         >
                             {p.label}
@@ -132,7 +130,7 @@ export default function AnalyticsPage() {
             </div>
 
             {/* Metrics Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+            <div className="grid grid-cols-2 lg:grid-cols-4 gap-3 lg:gap-4">
                 <MetricCard
                     title="Toplam Gelir"
                     value={stats?.totalRevenue || 0}
