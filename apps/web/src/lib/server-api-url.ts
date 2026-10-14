@@ -6,7 +6,7 @@ export function getServerApiBaseUrl(): string {
     process.env.API_INTERNAL_URL,
     process.env.API_URL,
     process.env.NEXT_PUBLIC_API_URL,
-    'http://localhost:3001',
+    process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001',
   ];
 
   for (const raw of candidates) {
@@ -22,7 +22,7 @@ export function getServerApiBaseUrl(): string {
     return `https://${value}`.replace(/\/$/, '');
   }
 
-  return 'http://localhost:3001';
+  return process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001';
 }
 
 /** Nest global prefix + opsiyonel sürüm için olası tam URL'ler. */

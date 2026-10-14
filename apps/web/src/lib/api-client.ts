@@ -20,7 +20,7 @@ function normalizeApiBaseUrl(raw?: string): string {
 
 const API_BASE_URL = typeof window !== 'undefined'
   ? ''
-  : (normalizeApiBaseUrl(process.env.API_INTERNAL_URL || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) || 'http://localhost:3001');
+  : (normalizeApiBaseUrl(process.env.API_INTERNAL_URL || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) || (process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001'));
 
 // ─── Retry Configuration ──────────────────────────
 interface RetryConfig {

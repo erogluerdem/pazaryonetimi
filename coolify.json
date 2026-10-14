@@ -63,6 +63,8 @@
       "environment": [
         "DATABASE_URL=${DATABASE_URL}",
         "NEXT_PUBLIC_API_URL=${NEXT_PUBLIC_API_URL}",
+        "API_INTERNAL_URL=${API_INTERNAL_URL:-http://api:3001}",
+        "API_URL=${API_URL:-http://api:3001}",
         "NEXTAUTH_URL=${NEXTAUTH_URL}",
         "NEXTAUTH_SECRET=${NEXTAUTH_SECRET}",
         "AUTH_URL=${AUTH_URL}",

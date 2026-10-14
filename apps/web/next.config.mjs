@@ -61,7 +61,8 @@ const nextConfig = {
     const apiBase = (
       process.env.API_INTERNAL_URL ||
       process.env.API_URL ||
-      'http://localhost:3001'
+      (process.env.NEXT_PUBLIC_API_URL && !process.env.NEXT_PUBLIC_API_URL.startsWith('/') && !process.env.NEXT_PUBLIC_API_URL.includes('localhost') ? process.env.NEXT_PUBLIC_API_URL : '') ||
+      (process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001')
     ).replace(/\/$/, '');
 
     return [
