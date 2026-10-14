@@ -16,6 +16,8 @@ import { IntegrationStats, MiniStatsRow } from '@/components/integrations/Integr
 import { MarketplaceCard } from '@/components/integrations/MarketplaceCard';
 import { ConnectionWizard } from '@/components/integrations/ConnectionWizard';
 import { RealTimeStatusPanel } from '@/components/integrations/RealTimeStatusPanel';
+import { ContractTestPanel } from '@/components/integrations/ContractTestPanel';
+import { ShieldCheck } from 'lucide-react';
 import { useSession } from 'next-auth/react';
 import apiClient from '@/lib/api-client';
 import {
@@ -467,7 +469,7 @@ const MARKETPLACES: MarketplaceConfig[] = [
 
 function iStatus(integration: { apiExtra?: unknown }) { return (integration.apiExtra as { connectionStatus?: string } | undefined)?.connectionStatus === 'verified'; }
 
-type ViewType = 'grid' | 'list' | 'status';
+type ViewType = 'grid' | 'list' | 'status' | 'contract-test';
 
 const OAUTH_MARKETPLACE_IDS = new Set([
   'amazon-tr',

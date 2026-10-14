@@ -40,17 +40,93 @@ export class XmlJobWorkerService {
         if (!locked.length) throw new Error('Aktarım kilidi değişti');
         const counts = await this.feeds.persistProductsInTransaction(tx, job.tenantId, batch, payload);
         const cursor = job.cursor + batch.length;
-        const done = cursor >= payload.products!.length;
-        const created = job.created + counts.created; const updated = job.updated + counts.updated;
-        const result = { created, updated, importedCount: cursor };
-        await tx.dataOperation.update({ where: { id: job.id }, data: { cursor, total: payload.products!.length, created, updated, attempts: 0, error: null, status: done ? 'completed' : 'queued', availableAt: new Date(Date.now() + 50), leaseToken: null, leaseUntil: null, completedAt: done ? new Date() : null, result } });
+        const total = payload.products!.length;
+        const done = cursor >= total;
+        const created = job.created + counts.created;
+        const updated = job.updated + counts.updated;
+
+        const priorResult = (job.result as Record<string, any>) || {};
+        const priorFailedItems: any[] = Array.isArray(priorResult.failedItems) ? priorResult.failedItems : [];
+        const newFailedItems = counts.failedItems || [];
+        const combinedFailedItems = [...priorFailedItems, ...newFailedItems].slice(0, 500);
+        const failedCount = (priorResult.failedCount || 0) + (counts.failed || 0);
+        const percentage = Math.min(100, Math.round((cursor / total) * 100));
+
+        const resultData = {
+          created,
+          updated,
+          failedCount,
+          failedItems: combinedFailedItems,
+          importedCount: cursor,
+          totalCount: total,
+          percentage,
+        };
+
+        await tx.dataOperation.update({
+          where: { id: job.id },
+          data: {
+            cursor,
+            total,
+            created,
+            updated,
+            attempts: 0,
+            error: null,
+            status: done ? 'completed' : 'queued',
+            availableAt: new Date(Date.now() + 50),
+            leaseToken: null,
+            leaseUntil: null,
+            completedAt: done ? new Date() : null,
+            result: resultData,
+          },
+        });
+
         if (done) {
-          await tx.activityLog.create({ data: { tenantId: job.tenantId, resource: 'xml_import', resourceId: job.id, action: 'xml.imported', details: result } });
-          if (job.sourceId) await tx.xmlSupplier.updateMany({ where: { id: job.sourceId, tenantId: job.tenantId }, data: { status: 'active', productsCount: cursor, lastSyncAt: new Date() } });
+          await tx.activityLog.create({
+            data: {
+              tenantId: job.tenantId,
+              resource: 'xml_import',
+              resourceId: job.id,
+              action: 'xml.imported',
+              details: resultData,
+            },
+          });
+          if (job.sourceId) {
+            await tx.xmlSupplier.updateMany({
+              where: { id: job.sourceId, tenantId: job.tenantId },
+              data: { status: 'active', productsCount: cursor, lastSyncAt: new Date() },
+            });
+          }
         }
-        return { done, result };
+        return { done, result: resultData };
       }, { timeout: 90000, maxWait: 10000 });
-      if (result.done) await this.alerts.report(job.tenantId, 'xml-job:' + job.id, 'XML aktarımı tamamlandı', result.result.created + ' ürün eklendi, ' + result.result.updated + ' ürün güncellendi.', '/dashboard/xml-import', 'success');
+
+      if (result.done) {
+        if (result.result.failedCount > 0) {
+          await this.alerts.report(
+            job.tenantId,
+            'xml-job:' + job.id,
+            'XML aktarımı tamamlandı (Hatalı ürünler var)',
+            `${result.result.created} ürün eklendi, ${result.result.updated} ürün güncellendi. ${result.result.failedCount} ürün format/veri hatası nedeniyle atlandı.`,
+            '/dashboard/xml-import',
+            'warning',
+            {
+              errorCode: 'XML_PARTIAL_SUCCESS',
+              rootReason: `${result.result.failedCount} ürün eksik SKU/barkod veya geçersiz fiyat nedeniyle aktarılamadı.`,
+              suggestedAction: 'Hatalı ürünler listesini kontrol edin.',
+              jobId: job.id,
+            },
+          );
+        } else {
+          await this.alerts.report(
+            job.tenantId,
+            'xml-job:' + job.id,
+            'XML aktarımı tamamlandı',
+            result.result.created + ' ürün eklendi, ' + result.result.updated + ' ürün güncellendi.',
+            '/dashboard/xml-import',
+            'success',
+          );
+        }
+      }
       return result;
     } catch (error) {
       const message = error instanceof Error ? error.message : 'XML aktarımı başarısız';

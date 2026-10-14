@@ -69,69 +69,107 @@ export class XmlFeedsService {
   async persistProductsInTransaction(tx: any, tenantId: string, products: ParsedXmlProduct[], options: { markupPercent?: number; fixedFee?: number; supplierId?: string } = {}) {
     const markup = Number(options.markupPercent ?? 0); const fee = Number(options.fixedFee ?? 0);
     if (!Number.isFinite(markup) || markup < 0 || markup > 1000 || !Number.isFinite(fee) || fee < 0) throw new BadRequestException('Fiyat kuralı geçersiz');
-      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', `xml-import:${tenantId}`);
-      let created = 0; let updated = 0;
-      const processedSkus = new Map<string, string>();
-      const processedBarcodes = new Map<string, string>();
+    await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', `xml-import:${tenantId}`);
+    let created = 0; let updated = 0;
+    const failedItems: Array<{ sku?: string; barcode?: string; title?: string; reason: string }> = [];
+    const processedSkus = new Map<string, string>();
+    const processedBarcodes = new Map<string, string>();
 
-      for (const product of products) {
-        const cleanSku = (product.sku || '').trim();
-        const cleanBarcode = product.barcode ? String(product.barcode).trim() : null;
-        if (!cleanSku && !cleanBarcode) continue;
+    for (const product of products) {
+      const cleanSku = (product.sku || '').trim();
+      const cleanBarcode = product.barcode ? String(product.barcode).trim() : null;
+      const title = (product.title || '').trim();
 
-        const price = markup || fee ? Math.round((product.costPrice * (1 + markup / 100) + fee) * 100) / 100 : product.price;
-        const { images, ...fields } = product;
-        const data = { ...fields, sku: cleanSku || undefined, barcode: cleanBarcode, price, status: product.stock > 0 ? 'active' : 'out-of-stock' };
+      if (!cleanSku && !cleanBarcode) {
+        failedItems.push({
+          title: title || 'İsimsiz Ürün',
+          reason: 'Üründe benzersiz tanımlayıcı (SKU veya Barkod) bulunamadı.',
+        });
+        continue;
+      }
 
-        const targetId = (cleanSku && processedSkus.get(cleanSku)) || (cleanBarcode && processedBarcodes.get(cleanBarcode));
-        let existingId = targetId;
+      if (!title) {
+        failedItems.push({
+          sku: cleanSku,
+          barcode: cleanBarcode || undefined,
+          reason: 'Ürün başlığı (title) boş olamaz.',
+        });
+        continue;
+      }
 
-        if (!existingId) {
-          const existing = await tx.product.findFirst({
-            where: {
-              tenantId,
-              OR: [
-                ...(cleanSku ? [{ sku: cleanSku }] : []),
-                ...(cleanBarcode ? [{ barcode: cleanBarcode }] : []),
-              ],
-            },
-            select: { id: true, sku: true, barcode: true },
-          });
-          if (existing) {
-            existingId = existing.id;
-          }
-        }
+      if (!Number.isFinite(product.price) || product.price < 0) {
+        failedItems.push({
+          sku: cleanSku,
+          barcode: cleanBarcode || undefined,
+          title,
+          reason: `Geçersiz ürün fiyatı: ${product.price}`,
+        });
+        continue;
+      }
 
-        if (existingId) {
-          await tx.product.update({
-            where: { id: existingId },
-            data: {
-              ...data,
-              updatedAt: new Date(),
-              ...(images.length ? { images: { deleteMany: {}, create: images.map((url, index) => ({ url, isMain: index === 0 })) } } : {}),
-            },
-          });
-          if (cleanSku) processedSkus.set(cleanSku, existingId);
-          if (cleanBarcode) processedBarcodes.set(cleanBarcode, existingId);
-          updated++;
-        } else {
-          const finalSku = cleanSku || `XML-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
-          const createdProduct = await tx.product.create({
-            data: {
-              ...data,
-              sku: finalSku,
-              barcode: cleanBarcode,
-              tenantId,
-              tags: { source: 'xml', supplierId: options.supplierId || null },
-              images: { create: images.map((url, index) => ({ url, isMain: index === 0 })) },
-            },
-          });
-          if (cleanSku) processedSkus.set(cleanSku, createdProduct.id);
-          if (cleanBarcode) processedBarcodes.set(cleanBarcode, createdProduct.id);
-          created++;
+      if (!Number.isFinite(product.stock) || product.stock < 0) {
+        failedItems.push({
+          sku: cleanSku,
+          barcode: cleanBarcode || undefined,
+          title,
+          reason: `Geçersiz stok miktarı: ${product.stock}`,
+        });
+        continue;
+      }
+
+      const price = markup || fee ? Math.round((product.costPrice * (1 + markup / 100) + fee) * 100) / 100 : product.price;
+      const { images, ...fields } = product;
+      const data = { ...fields, title, sku: cleanSku || undefined, barcode: cleanBarcode, price, status: product.stock > 0 ? 'active' : 'out-of-stock' };
+
+      const targetId = (cleanSku && processedSkus.get(cleanSku)) || (cleanBarcode && processedBarcodes.get(cleanBarcode));
+      let existingId = targetId;
+
+      if (!existingId) {
+        const existing = await tx.product.findFirst({
+          where: {
+            tenantId,
+            OR: [
+              ...(cleanSku ? [{ sku: cleanSku }] : []),
+              ...(cleanBarcode ? [{ barcode: cleanBarcode }] : []),
+            ],
+          },
+          select: { id: true, sku: true, barcode: true },
+        });
+        if (existing) {
+          existingId = existing.id;
         }
       }
-      return { created, updated, importedCount: products.length };
+
+      if (existingId) {
+        await tx.product.update({
+          where: { id: existingId },
+          data: {
+            ...data,
+            updatedAt: new Date(),
+            ...(images.length ? { images: { deleteMany: {}, create: images.map((url, index) => ({ url, isMain: index === 0 })) } } : {}),
+          },
+        });
+        if (cleanSku) processedSkus.set(cleanSku, existingId);
+        if (cleanBarcode) processedBarcodes.set(cleanBarcode, existingId);
+        updated++;
+      } else {
+        const finalSku = cleanSku || `XML-${Date.now()}-${Math.random().toString(36).slice(2, 7)}`;
+        const createdProduct = await tx.product.create({
+          data: {
+            ...data,
+            sku: finalSku,
+            barcode: cleanBarcode,
+            tenantId,
+            tags: { source: 'xml', supplierId: options.supplierId || null },
+            images: { create: images.map((url, index) => ({ url, isMain: index === 0 })) },
+          },
+        });
+        if (cleanSku) processedSkus.set(cleanSku, createdProduct.id);
+        if (cleanBarcode) processedBarcodes.set(cleanBarcode, createdProduct.id);
+        created++;
+      }
+    }
+    return { created, updated, failed: failedItems.length, failedItems, importedCount: products.length };
   }
 
   async importXml(tenantId: string, body: { xml?: string; url?: string; mapping?: XmlFieldMapping; markupPercent?: number; fixedFee?: number }) {

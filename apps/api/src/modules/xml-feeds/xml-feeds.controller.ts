@@ -14,6 +14,17 @@ export class XmlFeedsController {
   @Post('preview') preview(@Req() req: any, @Body() body: { xml?: string; url?: string; mapping?: XmlFieldMapping }) { return this.feeds.preview(this.tenant(req), body); }
   @Get('jobs') jobsList(@Req() req: any) { return this.jobs.list(this.tenant(req)); }
   @Get('jobs/:id') job(@Req() req: any, @Param('id') id: string) { return this.jobs.get(this.tenant(req), id); }
+  @Get('jobs/:id/errors') async jobErrors(@Req() req: any, @Param('id') id: string) {
+    const job = await this.jobs.get(this.tenant(req), id);
+    const result = (job.result as Record<string, any>) || {};
+    return {
+      jobId: id,
+      status: job.status,
+      failedCount: result.failedCount || 0,
+      failedItems: result.failedItems || [],
+      error: job.error,
+    };
+  }
   @Post('jobs/:id/retry') retry(@Req() req: any, @Param('id') id: string) { return this.jobs.retry(this.tenant(req), id); }
   @Post('import') import(@Req() req: any, @Body() body: { xml?: string; url?: string; mapping?: XmlFieldMapping; markupPercent?: number; fixedFee?: number }) { return this.jobs.enqueue(this.tenant(req), { xml: body.xml, url: body.url, mapping: body.mapping, markupPercent: body.markupPercent, fixedFee: body.fixedFee }, req.headers['idempotency-key']); }
   @Post('export') export(@Req() req: any, @Body() body: { productIds?: string[] }) { return this.feeds.exportXml(this.tenant(req), body.productIds); }

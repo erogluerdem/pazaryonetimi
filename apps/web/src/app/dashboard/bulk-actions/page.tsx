@@ -50,6 +50,44 @@ export default function BulkActionsPage() {
     const { data: apiProducts, loading: productsLoading } = useProducts();
     const [rollingBackId, setRollingBackId] = useState<string | null>(null);
     const [rollbackMessage, setRollbackMessage] = useState<string | null>(null);
+    const [selectedBatchAction, setSelectedBatchAction] = useState<any | null>(null);
+    const [batchModalOpen, setBatchModalOpen] = useState(false);
+    const [batchDetails, setBatchDetails] = useState<any | null>(null);
+    const [batchLoading, setBatchLoading] = useState(false);
+
+    const openBatchModal = async (item: any) => {
+        setSelectedBatchAction(item);
+        setBatchModalOpen(true);
+        setBatchLoading(true);
+        try {
+            const res = await fetch(`/api/products/bulk-action/${item.id}/marketplace-status`);
+            const data = await res.json();
+            setBatchDetails(data);
+        } catch (err) {
+            console.error('Batch status error:', err);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
+
+    const refreshBatchStatus = async (bulkActionId: string) => {
+        setBatchLoading(true);
+        try {
+            const res = await fetch(`/api/products/bulk-action/${bulkActionId}/marketplace-status/refresh`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: '{}',
+            });
+            const data = await res.json();
+            // Re-fetch
+            const fullRes = await fetch(`/api/products/bulk-action/${bulkActionId}/marketplace-status`);
+            setBatchDetails(await fullRes.json());
+        } catch (err) {
+            console.error('Batch refresh error:', err);
+        } finally {
+            setBatchLoading(false);
+        }
+    };
 
     const handleRollback = async (id: string) => {
         if (!confirm('Bu toplu işlemi geri alarak ürünlerin fiyat ve stoklarını önceki değerlerine döndürmek istediğinize emin misiniz?')) {
@@ -487,6 +525,7 @@ export default function BulkActionsPage() {
                                         <th className="p-4">İşlem</th>
                                         <th className="p-4">Etkilenen Ürün</th>
                                         <th className="p-4">Durum</th>
+                                        <th className="p-4">Pazaryeri İki Aşamalı Takip</th>
                                         <th className="p-4">Yedek (Snapshot)</th>
                                         <th className="p-4">Tarih</th>
                                         <th className="p-4">Yapan</th>
@@ -651,7 +690,140 @@ export default function BulkActionsPage() {
                                 {bulkLoading || previewing ? 'İşleniyor…' : ['price-update','stock-update','discount'].includes(selectedAction || '') ? preview ? 'Önizlemeyi uygula' : 'Değişiklikleri önizle' : 'Uygula'}
                             </button>
                         </div>
-                    </motion.div>
+                    
+            {/* Marketplace Batch Tracking Modal */}
+            {batchModalOpen && selectedBatchAction && (
+                <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+                    <div className="bg-slate-900 border border-slate-800 rounded-2xl max-w-2xl w-full p-6 space-y-5 shadow-2xl overflow-hidden max-h-[90vh] flex flex-col">
+                        <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+                            <div>
+                                <h3 className="text-lg font-bold text-white flex items-center gap-2">
+                                    <Tag className="text-indigo-400" size={18} />
+                                    Pazaryeri İki Aşamalı Doğrulama & Uygulama Durumu
+                                </h3>
+                                <p className="text-xs text-slate-400 mt-1">
+                                    Toplu İşlem: <span className="font-mono text-slate-300">{selectedBatchAction.id}</span>
+                                </p>
+                            </div>
+                            <button
+                                onClick={() => setBatchModalOpen(false)}
+                                className="p-1.5 rounded-lg hover:bg-white/10 text-slate-400 hover:text-white"
+                            >
+                                <X size={18} />
+                            </button>
+                        </div>
+
+                        <div className="space-y-4 overflow-y-auto flex-1 pr-1">
+                            {/* Explanatory banner */}
+                            <div className="p-3.5 rounded-xl bg-indigo-500/10 border border-indigo-500/20 text-xs text-indigo-300">
+                                <span className="font-semibold text-white">İki Aşamalı Güvenlik: </span>
+                                Pazaryerinin kuyruğa kabul ettiği (Aşama 1: Accepted) güncelleme paketi ile mağaza kataloğuna fiilen uyguladığı (Aşama 2: Applied) sonuçlar ayrı ayrı doğrulanır.
+                            </div>
+
+                            {batchLoading ? (
+                                <div className="p-12 text-center text-slate-400 space-y-3">
+                                    <RefreshCw className="animate-spin mx-auto text-indigo-400" size={24} />
+                                    <p className="text-sm">Pazaryeri durumları sorgulanıyor...</p>
+                                </div>
+                            ) : !batchDetails?.marketplaceBatches?.length ? (
+                                <div className="p-8 text-center text-slate-400 border border-dashed border-slate-800 rounded-xl">
+                                    <Package className="mx-auto text-slate-600 mb-2" size={28} />
+                                    <p className="text-sm font-medium">Bu işlem için pazaryeri gönderim kaydı bulunamadı.</p>
+                                    <p className="text-xs text-slate-500 mt-1">İşlem yalnızca yerel ürün veritabanında çalıştırılmış olabilir.</p>
+                                </div>
+                            ) : (
+                                <div className="space-y-3">
+                                    {batchDetails.marketplaceBatches.map((b: any, idx: number) => {
+                                        const isApplied = b.phase === 'APPLIED';
+                                        const isPartial = b.phase === 'PARTIALLY_APPLIED';
+                                        const isAccepted = b.phase === 'ACCEPTED_BY_MARKETPLACE';
+                                        const isRejected = b.phase === 'REJECTED';
+
+                                        return (
+                                            <div key={idx} className="p-4 rounded-xl border border-slate-800 bg-slate-950/60 space-y-3">
+                                                <div className="flex items-center justify-between">
+                                                    <div className="flex items-center gap-2">
+                                                        <span className="font-bold text-sm text-white">{b.platform}</span>
+                                                        <span className="text-[10px] font-mono text-slate-500">ID: {b.batchRequestId}</span>
+                                                    </div>
+                                                    <span className={`text-xs font-bold px-2.5 py-0.5 rounded-full border ${
+                                                        isApplied
+                                                            ? 'border-emerald-500/30 text-emerald-400 bg-emerald-500/10'
+                                                            : isPartial
+                                                            ? 'border-amber-500/30 text-amber-400 bg-amber-500/10'
+                                                            : isRejected
+                                                            ? 'border-red-500/30 text-red-400 bg-red-500/10'
+                                                            : 'border-blue-500/30 text-blue-400 bg-blue-500/10'
+                                                    }`}>
+                                                        {b.phaseLabel || b.phase}
+                                                    </span>
+                                                </div>
+
+                                                {/* Phase flow steps */}
+                                                <div className="grid grid-cols-2 gap-3 text-xs pt-1">
+                                                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                                                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Aşama 1: Pazaryeri Kabulü</p>
+                                                        <p className="mt-1 font-bold text-emerald-400 flex items-center gap-1">
+                                                            <CheckCircle2 size={12} /> Kabul Edildi (Kuyrukta)
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500 mt-0.5">{new Date(b.acceptedAt).toLocaleString('tr-TR')}</p>
+                                                    </div>
+
+                                                    <div className="p-2.5 rounded-lg bg-slate-900 border border-slate-800">
+                                                        <p className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider">Aşama 2: Fiili Uygulama</p>
+                                                        <p className={`mt-1 font-bold flex items-center gap-1 ${
+                                                            isApplied ? 'text-emerald-400' : isPartial ? 'text-amber-400' : isRejected ? 'text-red-400' : 'text-blue-400'
+                                                        }`}>
+                                                            {isApplied ? 'Katalogda Güncellendi' : isPartial ? `Kısmen (${b.appliedCount}/${b.totalItems})` : isRejected ? 'Reddedildi' : 'Kuyrukta İşleniyor'}
+                                                        </p>
+                                                        <p className="text-[10px] text-slate-500 mt-0.5">
+                                                            {b.appliedAt ? new Date(b.appliedAt).toLocaleString('tr-TR') : 'API yanıtı bekleniyor'}
+                                                        </p>
+                                                    </div>
+                                                </div>
+
+                                                {/* Item errors */}
+                                                {Boolean(b.itemErrors?.length) && (
+                                                    <div className="mt-2 p-3 rounded-lg bg-red-500/10 border border-red-500/20 space-y-1.5">
+                                                        <p className="text-xs font-bold text-red-300">Pazaryerinin Uygulayamadığı Ürünler ({b.itemErrors.length}):</p>
+                                                        <div className="max-h-36 overflow-y-auto space-y-1 pr-1">
+                                                            {b.itemErrors.map((err: any, eIdx: number) => (
+                                                                <div key={eIdx} className="text-[11px] text-red-200/90 flex items-start gap-1">
+                                                                    <span className="font-mono text-red-400 shrink-0">{err.sku || err.barcode || '#'}:</span>
+                                                                    <span>{err.reason}</span>
+                                                                </div>
+                                                            ))}
+                                                        </div>
+                                                    </div>
+                                                )}
+                                            </div>
+                                        );
+                                    })}
+                                </div>
+                            )}
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-800 pt-4">
+                            <button
+                                onClick={() => refreshBatchStatus(selectedBatchAction.id)}
+                                disabled={batchLoading}
+                                className="inline-flex items-center gap-1.5 px-3 py-2 text-xs font-semibold rounded-xl bg-slate-800 hover:bg-slate-700 text-white transition-all disabled:opacity-50"
+                            >
+                                <RefreshCw size={13} className={batchLoading ? 'animate-spin' : ''} />
+                                Pazaryerinden Durumu Güncelle
+                            </button>
+                            <button
+                                onClick={() => setBatchModalOpen(false)}
+                                className="px-4 py-2 text-xs font-bold text-slate-300 hover:text-white rounded-xl bg-white/5 hover:bg-white/10 transition-all"
+                            >
+                                Kapat
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            )}
+
+</motion.div>
                 </div>
             )}
 

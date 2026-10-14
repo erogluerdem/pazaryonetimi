@@ -79,13 +79,17 @@ export class OperationsAlertsService {
       // Realtime websocket broadcast if gateway is active
       try {
         if (this.notificationsGateway) {
-          this.notificationsGateway.broadcastToTenant(tenantId, 'notification:alert', {
+          const mappedSeverity =
+            severity === 'CRITICAL' ? 'error' : severity === 'WARNING' ? 'warning' : 'info';
+          this.notificationsGateway.broadcastToTenant(tenantId, {
             id: notification.id,
+            type: 'system',
             title,
             message,
-            severity,
-            actionUrl,
-            data: payloadData,
+            severity: mappedSeverity,
+            timestamp: new Date().toISOString(),
+            data: { ...payloadData, actionUrl },
+            tenantId,
           });
         }
       } catch {

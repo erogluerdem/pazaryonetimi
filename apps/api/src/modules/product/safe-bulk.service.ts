@@ -1,9 +1,15 @@
-import { Injectable, BadRequestException, ConflictException, NotFoundException } from '@nestjs/common';
+import { Injectable, BadRequestException, ConflictException, NotFoundException, Optional } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
 import { Prisma } from '@pazaryonetimi/database';
+import { MarketplaceBatchTrackerService } from '../marketplace/marketplace-batch-tracker.service';
+
 @Injectable()
 export class SafeBulkService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    @Optional()
+    private readonly batchTracker?: MarketplaceBatchTrackerService,
+  ) {}
   supports(action: string) { return ['price-update','price_update','stock-update','stock_update','discount'].includes(action); }
   private next(row: any, input: any) {
     if (input.action.startsWith('stock')) {
@@ -34,11 +40,11 @@ export class SafeBulkService {
   }
   async execute(tenantId: string, userId: string, previewId: string) {
     if (!previewId) throw new BadRequestException('Önce değişiklik önizlemesi oluşturun');
-    return this.prisma.$transaction(async tx => {
+    const executionResult = await this.prisma.$transaction(async tx => {
       await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', 'bulk:' + tenantId);
       const record = await tx.bulkAction.findFirst({ where: { id: previewId, tenantId, userId } });
       if (!record) throw new NotFoundException('Önizleme bulunamadı');
-      if (record.status === 'completed') return { bulkActionId: record.id, success: record.succeeded, failed: 0, canRollback: true, repeated: true };
+      if (record.status === 'completed') return { bulkActionId: record.id, success: record.succeeded, failed: 0, canRollback: true, repeated: true, changes: [] };
       if (record.status !== 'preview') throw new ConflictException('Önizleme artık uygulanamaz');
       const payload = record.data as any;
       if (Date.parse(payload.expiresAt) < Date.now()) throw new ConflictException('Önizlemenin süresi doldu; yeniden oluşturun');
@@ -49,8 +55,37 @@ export class SafeBulkService {
       }
       await tx.bulkAction.update({ where: { id: record.id }, data: { status: 'completed', processed: payload.changes.length, succeeded: payload.changes.length, failed: 0, startedAt: version, completedAt: version, data: { ...payload, appliedAt: version.toISOString() } } });
       await tx.activityLog.create({ data: { tenantId, userId, action: 'product.bulk.applied', resource: 'bulk_action', resourceId: record.id, details: { count: payload.changes.length, action: record.action } } });
-      return { bulkActionId: record.id, success: payload.changes.length, failed: 0, canRollback: true };
+      return { bulkActionId: record.id, success: payload.changes.length, failed: 0, canRollback: true, changes: payload.changes };
     }, { timeout: 120000 });
+
+    const tracker = this.batchTracker;
+    if (tracker && executionResult?.bulkActionId && !(executionResult as any).repeated) {
+      try {
+        const activeIntegrations = await this.prisma.integration.findMany({
+          where: { tenantId, isActive: true },
+          select: { id: true, platform: true },
+        });
+        for (const integration of activeIntegrations) {
+          const batchRequestId = `req-${Date.now()}-${Math.random().toString(36).slice(2, 6)}`;
+          await tracker.recordBatchDispatch(tenantId, executionResult.bulkActionId, {
+            platform: integration.platform,
+            providerId: integration.platform.toLowerCase(),
+            batchRequestId,
+            totalItems: executionResult.changes?.length || executionResult.success,
+            items: executionResult.changes?.map((c: any) => ({
+              sku: c.sku,
+              price: c.after?.price,
+              stock: c.after?.stock,
+            })),
+          });
+        }
+      } catch {
+        // Non-blocking marketplace dispatch
+      }
+    }
+
+    const { changes, ...clientResult } = executionResult as any;
+    return clientResult;
   }
   async rollback(tenantId: string, id: string, userId?: string) {
     return this.prisma.$transaction(async tx => {

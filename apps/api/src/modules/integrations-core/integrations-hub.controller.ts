@@ -8,6 +8,7 @@ import {
   Query,
 } from '@nestjs/common';
 import { IntegrationsHubService } from './integrations-hub.service';
+import { ProviderContractTestService } from './contract-test/provider-contract-test.service';
 import { IntegrationCategory } from './enums/integration-category.enum';
 import { IntegrationSyncType } from './enums/integration-category.enum';
 
@@ -17,7 +18,10 @@ import { IntegrationSyncType } from './enums/integration-category.enum';
  */
 @Controller('integrations-hub')
 export class IntegrationsHubController {
-  constructor(private readonly hub: IntegrationsHubService) {}
+  constructor(
+    private readonly hub: IntegrationsHubService,
+    private readonly contractTest: ProviderContractTestService,
+  ) {}
 
   private resolveTenantId(header?: string, query?: string): string {
     return header || query || '';
@@ -114,5 +118,32 @@ export class IntegrationsHubController {
         price: body.price,
       },
     );
+  }
+
+  /** GET /integrations-hub/contract-test/gate — Temel pazaryeri doğrulama ve Tier 2 açma kuralı */
+  @Get('contract-test/gate')
+  getContractGate(
+    @Headers('x-tenant-id') tenantId: string,
+    @Query('tenantId') queryTenantId?: string,
+  ) {
+    return this.contractTest.evaluateCoreGate(this.resolveTenantId(tenantId, queryTenantId));
+  }
+
+  /** POST /integrations-hub/contract-test/run — Sağlayıcı sözleşme testi (Auth, Ürün, Sipariş, Stok) */
+  @Post('contract-test/run')
+  runContractTest(
+    @Headers('x-tenant-id') tenantId: string,
+    @Body()
+    body: {
+      providerId?: string;
+      integrationId?: string;
+      tenantId?: string;
+    },
+  ) {
+    const resolved = this.resolveTenantId(tenantId, body.tenantId);
+    if (body.providerId) {
+      return this.contractTest.runContractTest(resolved, body.providerId, body.integrationId);
+    }
+    return this.contractTest.runAllActiveContractTests(resolved);
   }
 }

@@ -18,6 +18,7 @@ import {
   Trash2,
   Wifi,
   WifiOff,
+  RotateCw,
 } from 'lucide-react';
 import { useWebSocket, RealtimeNotification } from '@/providers/websocket-provider';
 import { useToast } from '@/providers/toast-provider';
@@ -55,6 +56,44 @@ export default function NotificationBell() {
   const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
+  const [retryingId, setRetryingId] = useState<string | null>(null);
+
+  const handleRetry = async (e: React.MouseEvent, n: any) => {
+    e.stopPropagation();
+    const data = (n.data as Record<string, any>) || {};
+    const retryUrl = data.retryUrl || (data.jobId ? `/api/operations/jobs/${data.jobId}/retry` : (data.integrationId ? `/api/operations/integrations/${data.integrationId}/retry` : null));
+    if (!retryUrl) return;
+
+    setRetryingId(n.id);
+    try {
+      const res = await fetch(retryUrl, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
+      const result = await res.json();
+      if (res.ok) {
+        toast.addToast({
+          type: 'success',
+          title: 'İşlem Yeniden Başlatıldı',
+          message: result.message || 'Görev kuyruğa tekrar alındı.',
+          duration: 5000,
+        });
+      } else {
+        toast.addToast({
+          type: 'error',
+          title: 'Yeniden Deneme Başarısız',
+          message: result.message || 'İşlem yeniden başlatılamadı.',
+          duration: 5000,
+        });
+      }
+    } catch {
+      toast.addToast({
+        type: 'error',
+        title: 'Hata',
+        message: 'Sunucuya ulaşılamadı.',
+        duration: 4000,
+      });
+    } finally {
+      setRetryingId(null);
+    }
+  };
 
   // Animate bell on new notification
   useEffect(() => {
@@ -226,6 +265,33 @@ export default function NotificationBell() {
                               {notification.message}
                             </p>
                             <p className="text-[10px] text-slate-600 mt-1">{timeAgo(notification.timestamp)}</p>
+                            {Boolean(notification.data?.rootReason) && (
+                              <div className="mt-1.5 p-1.5 rounded-lg bg-red-500/10 border border-red-500/20 text-[10px] text-red-300">
+                                <span className="font-semibold text-red-200">Hata Nedeni: </span>
+                                {String(notification.data?.rootReason)}
+                                {Boolean(notification.data?.suggestedAction) && (
+                                  <p className="mt-0.5 text-slate-300">
+                                    <span className="font-semibold text-slate-200">Öneri: </span>
+                                    {String(notification.data?.suggestedAction)}
+                                  </p>
+                                )}
+                              </div>
+                            )}
+                            {Boolean(notification.data?.canRetry || notification.data?.jobId || notification.data?.integrationId) && (
+                              <div className="mt-2 flex items-center justify-between">
+                                <span className="text-[10px] text-slate-500 font-mono">
+                                  {notification.data?.jobId ? `İş: ${String(notification.data.jobId).slice(0, 8)}...` : 'Mağaza Görevi'}
+                                </span>
+                                <button
+                                  onClick={(e) => handleRetry(e, notification)}
+                                  disabled={retryingId === notification.id}
+                                  className="inline-flex items-center gap-1 px-2.5 py-1 text-[11px] font-semibold text-emerald-400 bg-emerald-500/10 hover:bg-emerald-500/20 border border-emerald-500/30 rounded-lg transition-all disabled:opacity-50"
+                                >
+                                  <RotateCw size={11} className={retryingId === notification.id ? 'animate-spin' : ''} />
+                                  {retryingId === notification.id ? 'Başlatılıyor...' : 'Yeniden Dene'}
+                                </button>
+                              </div>
+                            )}
                           </div>
                         </div>
                       </motion.div>

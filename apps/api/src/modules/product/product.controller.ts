@@ -1,4 +1,5 @@
 import { SafeBulkService } from './safe-bulk.service';
+import { MarketplaceBatchTrackerService } from '../marketplace/marketplace-batch-tracker.service';
 import {
   Controller,
   Get,
@@ -24,7 +25,11 @@ import { Permission } from '../rbac/rbac.service';
 @Controller('products')
 @UseGuards(PermissionsGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService, private readonly safeBulk: SafeBulkService) {}
+  constructor(
+    private readonly productService: ProductService,
+    private readonly safeBulk: SafeBulkService,
+    private readonly batchTracker?: MarketplaceBatchTrackerService,
+  ) {}
 
   @Post('bulk-action/preview')
   @RequirePermission(Permission.PRODUCT_EDIT)
@@ -55,6 +60,28 @@ export class ProductController {
   @Get('bulk-action-history')
   async getBulkActionHistory(@Headers('x-tenant-id') tenantId: string) {
     return this.productService.getBulkActionHistory(tenantId);
+  }
+
+  @Get('bulk-action/:id/marketplace-status')
+  async getBulkActionMarketplaceStatus(
+    @Headers('x-tenant-id') tenantId: string,
+    @Param('id') bulkActionId: string,
+    @Req() req: any,
+  ) {
+    const resolvedTenant = tenantId || req.user?.tenantId;
+    if (!this.batchTracker) return { marketplaceBatches: [] };
+    return this.batchTracker.getBulkActionMarketplaceStatus(resolvedTenant, bulkActionId);
+  }
+
+  @Post('bulk-action/:id/marketplace-status/refresh')
+  async refreshBulkActionMarketplaceStatus(
+    @Headers('x-tenant-id') tenantId: string,
+    @Param('id') bulkActionId: string,
+    @Req() req: any,
+  ) {
+    const resolvedTenant = tenantId || req.user?.tenantId;
+    if (!this.batchTracker) return { bulkActionId, batches: [] };
+    return this.batchTracker.refreshAllBatches(resolvedTenant, bulkActionId);
   }
 
   @Get('stats')

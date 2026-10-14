@@ -9,7 +9,7 @@ import {
   HttpCode,
   HttpStatus,
 } from '@nestjs/common';
-import { JwtAuthGuard } from '../auth/guards/jwt-auth.guard';
+import { JwtAuthGuard } from '../auth/jwt-auth.guard';
 import { OperationsAlertsService } from './operations-alerts.service';
 import { XmlJobQueueService } from './xml-job-queue.service';
 
@@ -51,6 +51,20 @@ export class OperationsController {
   getJob(@Req() req: any, @Param('id') id: string) {
     const user = this.user(req);
     return this.xmlQueue.get(user.tenantId, id);
+  }
+
+  @Get('jobs/:id/errors')
+  async getJobErrors(@Req() req: any, @Param('id') id: string) {
+    const user = this.user(req);
+    const job = await this.xmlQueue.get(user.tenantId, id);
+    const result = (job.result as Record<string, any>) || {};
+    return {
+      jobId: id,
+      status: job.status,
+      failedCount: result.failedCount || 0,
+      failedItems: result.failedItems || [],
+      error: job.error,
+    };
   }
 
   @Post('jobs/:id/retry')

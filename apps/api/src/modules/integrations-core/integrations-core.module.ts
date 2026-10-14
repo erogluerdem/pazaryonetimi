@@ -36,6 +36,8 @@ import { MarketplaceInventoryStrategy } from './strategies/marketplace-inventory
 import { MarketplaceBridgeResolver } from './factory/marketplace-bridge.resolver';
 import { IntegrationAdapterFactory } from './factory/integration-adapter.factory';
 import { IntegrationMonitorService } from './health/integration-monitor.service';
+import { OperationsModule } from '../operations/operations.module';
+import { ProviderContractTestService } from './contract-test/provider-contract-test.service';
 
 const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
 
@@ -46,6 +48,7 @@ const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
     ScrapingModule,
     MarketplaceModule,
     IntegrationSyncQueueModule,
+    OperationsModule,
     ...(schedulerEnabled
       ? [BullModule.registerQueue({ name: INTEGRATION_SYNC_QUEUE })]
       : []),
@@ -78,6 +81,7 @@ const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
     MarketplaceInventoryStrategy,
     IntegrationsHubService,
     IntegrationMonitorService,
+    ProviderContractTestService,
     ...(schedulerEnabled ? [IntegrationSyncProcessor] : []),
     {
       provide: APP_INTERCEPTOR,
@@ -91,6 +95,7 @@ const schedulerEnabled = process.env.ENABLE_SCHEDULER === 'true';
     IntegrationsHubService,
     MarketplaceInventoryStrategy,
     IntegrationMonitorService,
+    ProviderContractTestService,
   ],
 })
 export class IntegrationsCoreModule {}
