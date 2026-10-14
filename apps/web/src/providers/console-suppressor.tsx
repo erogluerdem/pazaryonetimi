@@ -46,14 +46,37 @@ export function ConsoleSuppressor() {
         return;
       }
 
+      // Suppress PWA beforeinstallpromptevent banner warnings
+      if (
+        warnMsg.includes('beforeinstallpromptevent.preventDefault') ||
+        warnMsg.includes('Banner not shown') ||
+        warnMsg.includes('beforeinstallprompt')
+      ) {
+        return;
+      }
+
       // Call original console.warn for other messages
       originalWarn.apply(console, args);
+    };
+
+    const originalInfo = console.info;
+    console.info = function(...args: any[]) {
+      const msg = args[0]?.toString() || '';
+      if (
+        msg.includes('beforeinstallpromptevent.preventDefault') ||
+        msg.includes('Banner not shown') ||
+        msg.includes('beforeinstallprompt')
+      ) {
+        return;
+      }
+      originalInfo.apply(console, args);
     };
 
     // Cleanup on unmount (restore original methods)
     return () => {
       console.error = originalError;
       console.warn = originalWarn;
+      console.info = originalInfo;
     };
   }, []);
 
