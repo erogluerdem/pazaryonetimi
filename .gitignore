@@ -85,5 +85,5 @@ server_info.md
 
 # Agent cache
 .agent/
-backup/
+/backup/
 scratch/
