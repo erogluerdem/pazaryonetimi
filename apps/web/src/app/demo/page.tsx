@@ -8,7 +8,7 @@ import {
     Store, Shield, ArrowRight, CheckCircle2, Zap, BarChart3,
     Boxes, Receipt, Truck, Users, Activity, Sparkles,
     Lock, ExternalLink, Globe, Play, ChevronRight, Eye,
-    Check, ShoppingCart, Cpu, Server, CreditCard, ShieldCheck
+    Check, ShoppingCart, Cpu, Server, CreditCard, ShieldCheck, Calendar
 } from 'lucide-react';
 
 export default function DemoPortalPage() {
@@ -300,6 +300,29 @@ export default function DemoPortalPage() {
                             </p>
                         </div>
                     </div>
+                </div>
+
+                {/* 1-on-1 Demo Booking Callout */}
+                <div className="bg-gradient-to-r from-orange-500/10 via-amber-500/10 to-indigo-500/10 border border-orange-500/20 rounded-2xl p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 shadow-xs">
+                    <div className="space-y-1.5 text-center sm:text-left">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-0.5 rounded-full bg-orange-500/15 text-orange-600 dark:text-orange-400 font-semibold text-2xs">
+                            <Calendar className="w-3 h-3" />
+                            ÖZEL KURUMSAL SUNUM
+                        </span>
+                        <h4 className="text-base sm:text-lg font-semibold text-foreground">
+                            Uzman Ekibimizle Birebir Canlı Demo Planlayın
+                        </h4>
+                        <p className="text-xs text-muted-foreground max-w-xl">
+                            İşletmenizin ciro hedeflerine, pazaryeri mağazalarınıza ve ERP/muhasebe ihtiyaçlarınıza özel 30 dakikalık kişiselleştirilmiş demo randevusu oluşturun.
+                        </p>
+                    </div>
+                    <Link
+                        href="/demo-talep"
+                        className="shrink-0 inline-flex items-center gap-2 px-5 py-2.5 rounded-xl bg-orange-600 hover:bg-orange-700 text-white text-xs font-semibold shadow-sm transition-all hover:-translate-y-0.5 group"
+                    >
+                        <span>Demo Randevusu Al</span>
+                        <ArrowRight className="w-3.5 h-3.5 group-hover:translate-x-0.5 transition-transform" />
+                    </Link>
                 </div>
             </main>
         </div>

@@ -111,8 +111,7 @@ export default function DemoPage() {
         setIsSubmitting(true);
 
         try {
-            const apiBase = (typeof window !== 'undefined' && (!process.env.NEXT_PUBLIC_API_URL || process.env.NEXT_PUBLIC_API_URL.includes('localhost'))) ? '' : (process.env.NEXT_PUBLIC_API_URL || '').replace(/\/$/, '');
-            const response = await fetch(`${apiBase}/api/demo/request`, {
+            const response = await fetch('/api/demo/request', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
@@ -176,6 +175,10 @@ export default function DemoPage() {
                         </div>
 
                         <div className="flex flex-col sm:flex-row gap-4 justify-center">
+                            <Link href="/demo" className="px-6 py-3 bg-gradient-to-r from-orange-600 to-amber-600 text-white rounded-xl font-bold hover:shadow-lg hover:shadow-orange-600/20 transition-all flex items-center gap-2 justify-center">
+                                <Sparkles size={18} />
+                                Canlı Demoyu Şimdi İncele
+                            </Link>
                             <Link href="/" className="px-6 py-3 bg-slate-900 dark:bg-white text-white dark:text-slate-900 rounded-xl font-bold hover:opacity-90 transition-opacity">
                                 Ana Sayfaya Dön
                             </Link>
@@ -230,6 +233,14 @@ export default function DemoPage() {
                         30 dakikalık ücretsiz demo ile platformumuzu tanıyın.
                         <span className="text-orange-600 dark:text-orange-400 font-semibold"> Hiçbir taahhüt yok.</span>
                     </p>
+
+                    <div className="mt-5 inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-orange-500/10 border border-orange-500/20 text-xs sm:text-sm text-slate-700 dark:text-slate-300">
+                        <span>Randevu oluşturmadan hemen test etmek mi istiyorsunuz?</span>
+                        <Link href="/demo" className="font-semibold text-orange-600 dark:text-orange-400 hover:underline inline-flex items-center gap-1">
+                            <span>Canlı Demo Portalı</span>
+                            <ArrowRight size={14} />
+                        </Link>
+                    </div>
                 </motion.div>
 
                 <div className="grid lg:grid-cols-5 gap-12">

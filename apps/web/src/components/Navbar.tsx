@@ -247,7 +247,8 @@ const navLinks: MegaMenuItem[] = [
                     icon: MessageCircle,
                     items: [
                         { label: 'Bize Ulaşın', href: '/iletisim', description: 'Sorularınız için', icon: MessageCircle, color: 'cyan' },
-                        { label: 'Demo Talep', href: '/demo', description: 'Ürünü görün', icon: Play, color: 'red' },
+                        { label: 'Canlı Demo', href: '/demo', description: 'Kayıtsız anında test', icon: Play, color: 'emerald' },
+                        { label: 'Demo Talep', href: '/demo-talep', description: 'Birebir uzman görüşmesi', icon: Calendar, color: 'orange' },
                     ]
                 }
             ],

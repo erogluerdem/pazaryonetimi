@@ -22,6 +22,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     { url: `${SITE_URL}/destek`, priority: 0.7, changeFrequency: 'weekly', lastModified: buildDate },
     { url: `${SITE_URL}/destek/makaleler`, priority: 0.7, changeFrequency: 'weekly', lastModified: buildDate },
     { url: `${SITE_URL}/demo`, priority: 0.8, changeFrequency: 'monthly', lastModified: buildDate },
+    { url: `${SITE_URL}/demo-talep`, priority: 0.8, changeFrequency: 'monthly', lastModified: buildDate },
     { url: `${SITE_URL}/signup`, priority: 0.8, changeFrequency: 'monthly', lastModified: buildDate },
     { url: `${SITE_URL}/comparison`, priority: 0.7, changeFrequency: 'weekly', lastModified: buildDate },
     { url: `${SITE_URL}/iletisim`, priority: 0.6, changeFrequency: 'monthly', lastModified: buildDate },

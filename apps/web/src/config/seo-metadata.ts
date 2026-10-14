@@ -41,6 +41,12 @@ export const pageMetadata: Record<string, Metadata> = {
         keywords: ['pazaryonetimi demo', 'e-ticaret yazılımı demo', 'ücretsiz deneme'],
         alternates: { canonical: 'https://pazaryonetimi.com/demo' },
     },
+    '/demo-talep': {
+        title: 'Demo Talep Edin — Birebir Canlı Tanıtım',
+        description: 'Pazaryonetimi uzman ekibinden 30 dakikalık birebir canlı demo randevusu alın. İşletmenize özel e-ticaret çözümlerini keşfedin.',
+        keywords: ['pazaryonetimi demo talep', 'birebir demo randevu', 'e-ticaret demo görüşmesi'],
+        alternates: { canonical: 'https://pazaryonetimi.com/demo-talep' },
+    },
     '/security': {
         title: 'Güvenlik — Verileriniz Güvende',
         description: 'Pazaryonetimi güvenlik önlemleri. SSL şifreleme, KVKK uyumluluğu, iki faktörlü kimlik doğrulama, veri yedekleme ve SOC 2 sertifikası ile verileriniz güvende.',
