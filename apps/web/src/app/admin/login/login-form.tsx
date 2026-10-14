@@ -182,6 +182,17 @@ export default function LoginForm() {
                                 </>
                             )}
                         </button>
+
+                        {/* Demo Access Button */}
+                        <div className="pt-2 border-t border-white/5">
+                            <a
+                                href="/admin?demo=true"
+                                className="w-full h-12 bg-white/[0.04] hover:bg-white/[0.08] border border-white/10 rounded-2xl flex items-center justify-center gap-2 text-xs font-semibold text-purple-300 hover:text-purple-200 transition-all"
+                            >
+                                <Shield className="w-4 h-4 text-purple-400" />
+                                <span>Admin Demosunu İncele (Kayıtsız) ➔</span>
+                            </a>
+                        </div>
                     </form>
                 </div>
 

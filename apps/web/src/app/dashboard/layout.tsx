@@ -5,7 +5,7 @@ import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { useSession } from 'next-auth/react';
-import { Package, Sparkles, ChevronRight, Zap, ChevronDown, Lock, Crown } from 'lucide-react';
+import { Package, Sparkles, ChevronRight, Zap, ChevronDown, Lock, Crown, Shield, Store, X } from 'lucide-react';
 import { getSidebarSections, getPageTitle } from '@/lib/navigation.config';
 import { filterNavSections } from '@/lib/rbac/nav-access';
 import { resolveNavIcon } from '@/lib/navigation-icons';
@@ -33,6 +33,50 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     const pathname = usePathname();
     const router = useRouter();
     const { data: session, status } = useSession();
+    const [isDemoMode, setIsDemoMode] = useState<boolean>(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('demo') === 'true') {
+                localStorage.setItem('pazaryonetimi_demo', 'true');
+                return true;
+            }
+            return localStorage.getItem('pazaryonetimi_demo') === 'true';
+        }
+        return false;
+    });
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const params = new URLSearchParams(window.location.search);
+            if (params.get('demo') === 'true') {
+                setIsDemoMode(true);
+                localStorage.setItem('pazaryonetimi_demo', 'true');
+            }
+        }
+    }, []);
+
+    const demoMockSession = useMemo(() => {
+        if (!isDemoMode) return null;
+        return {
+            user: {
+                id: 'demo-user-1',
+                name: 'Demo Mağaza Yöneticisi',
+                email: 'demo@pazaryonetimi.com',
+                role: 'ADMIN',
+                image: null,
+            },
+            expires: '2099-01-01',
+        };
+    }, [isDemoMode]);
+
+    const activeSession = session || demoMockSession;
+
+    const handleExitDemo = () => {
+        if (typeof window !== 'undefined') {
+            localStorage.removeItem('pazaryonetimi_demo');
+        }
+        router.push('/demo');
+    };
     const { hasModuleAccess, tenantPlan, enabledModules, allModules, panelRole, criticalStockCount } = useModules();
     const sidebarSections = useMemo(() => filterNavSections(getSidebarSections(), panelRole), [panelRole]);
     const [expandedSections, setExpandedSections] = useState<Set<string>>(() => new Set(['Günlük', 'Büyüme', 'Operasyon', 'Finans', 'Sistem', 'Kişisel']));
@@ -66,10 +110,10 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
     // Auth guard - redirect to login if not authenticated
     useEffect(() => {
-        if (status === 'unauthenticated') {
+        if (!isDemoMode && status === 'unauthenticated') {
             router.replace('/login?callbackUrl=' + encodeURIComponent(pathname ?? '/dashboard'));
         }
-    }, [status, router, pathname]);
+    }, [status, router, pathname, isDemoMode]);
 
     useEffect(() => {
         setExpandedSections((prev) => {
@@ -130,7 +174,7 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
     }, []);
 
     // Show loading skeleton while checking auth status
-    if (status !== 'authenticated' || !session) {
+    if (!isDemoMode && (status !== 'authenticated' || !session)) {
         return (
             <div className="min-h-screen bg-background flex items-center justify-center">
                 <div className="flex flex-col items-center gap-4">
@@ -297,10 +341,44 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
                 {theme.themeStyle === 'nexora' && (
                     <div className="nexora-dot-pattern fixed inset-0 pointer-events-none z-0" />
                 )}
+                {isDemoMode && (
+                    <div className="bg-gradient-to-r from-amber-500/15 via-indigo-600/15 to-purple-600/15 border-b border-amber-500/30 px-4 py-2 text-xs flex flex-wrap items-center justify-between gap-2 z-50 text-foreground sticky top-0 backdrop-blur-md">
+                        <div className="flex items-center gap-2">
+                            <span className="px-2 py-0.5 rounded-full bg-amber-500/20 text-amber-700 dark:text-amber-300 font-semibold text-2xs border border-amber-500/30 flex items-center gap-1">
+                                <Store className="w-3 h-3" /> CANLI MAĞAZA DEMOSU
+                            </span>
+                            <span className="text-muted-foreground font-medium">
+                                Pazaryeri entegrasyonları, canlı sipariş akışı ve Buy Box kalkanını inceliyorsunuz.
+                            </span>
+                        </div>
+                        <div className="flex items-center gap-2">
+                            <Link
+                                href="/admin?demo=true"
+                                className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-purple-500/20 text-purple-700 dark:text-purple-300 border border-purple-500/30 font-medium text-2xs hover:bg-purple-500/30 transition-colors"
+                            >
+                                <Shield className="w-3 h-3" />
+                                <span>Süper Admin Demosuna Geç ➔</span>
+                            </Link>
+                            <Link
+                                href="/demo"
+                                className="text-muted-foreground hover:text-foreground text-2xs underline"
+                            >
+                                Demo Merkezi
+                            </Link>
+                            <button
+                                onClick={handleExitDemo}
+                                className="p-1 text-muted-foreground hover:text-foreground rounded-md transition-colors"
+                                title="Demodan Çık"
+                            >
+                                <X className="w-3.5 h-3.5" />
+                            </button>
+                        </div>
+                    </div>
+                )}
                 <DashboardHeaderBar
                     currentPageTitle={currentPageTitle}
                     isCompactHeader={isCompactHeader}
-                    session={session}
+                    session={activeSession as any}
                     tenantPlan={tenantPlan}
                     creditMenuOpen={creditMenuOpen}
                     setCreditMenuOpen={setCreditMenuOpen}
@@ -355,6 +433,31 @@ function DashboardLayoutContent({ children }: { children: React.ReactNode }) {
 
             <KeyboardShortcutsHelp />
             <AICopilot />
+
+            {/* Floating Bottom Quick Switcher */}
+            {isDemoMode && (
+                <div className="fixed bottom-20 lg:bottom-4 right-4 z-50 flex items-center gap-2 px-3 py-2 rounded-xl bg-background/90 border border-amber-500/40 text-foreground shadow-xl backdrop-blur-md text-xs">
+                    <div className="flex items-center gap-1.5 font-semibold text-amber-600 dark:text-amber-400">
+                        <Store className="w-3.5 h-3.5" />
+                        <span>Mağaza Demo</span>
+                    </div>
+                    <span className="text-border">|</span>
+                    <Link
+                        href="/admin?demo=true"
+                        className="hover:text-purple-600 dark:hover:text-purple-400 flex items-center gap-1 font-medium transition-colors"
+                    >
+                        <Shield className="w-3 h-3" />
+                        <span>Admin Paneli ➔</span>
+                    </Link>
+                    <span className="text-border">|</span>
+                    <button
+                        onClick={handleExitDemo}
+                        className="text-muted-foreground hover:text-red-500 transition-colors"
+                    >
+                        Çıkış
+                    </button>
+                </div>
+            )}
         </div>
     );
 }

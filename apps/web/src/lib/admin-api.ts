@@ -1,20 +1,159 @@
-async function fetchLocalAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
-  const res = await fetch(endpoint, {
-    headers: { 'Content-Type': 'application/json', ...options?.headers },
-    credentials: 'include',
-    ...options,
-  });
-  if (!res.ok) {
-    const error = await res.json().catch(() => ({ message: 'API Hatası' }));
-    throw new Error(error.message || error.error || `HTTP ${res.status}`);
+function isDemoModeActive(): boolean {
+  if (typeof window === 'undefined') return false;
+  try {
+    const params = new URLSearchParams(window.location.search);
+    if (params.get('demo') === 'true') return true;
+    return (
+      localStorage.getItem('pazaryonetimi_admin_demo') === 'true' ||
+      localStorage.getItem('pazaryonetimi_demo') === 'true'
+    );
+  } catch {
+    return false;
   }
-  return res.json();
+}
+
+function getAdminMockFallback(endpoint: string): any {
+  const clean = endpoint.toLowerCase();
+  if (clean.includes('dashboard/stats')) {
+    return {
+      tenantCount: 148,
+      tenantGrowth: '+18.4%',
+      monthlyRevenue: 428900,
+      revenueGrowth: '+24.2%',
+      activeSessions: 342,
+      aiJobsCount: 1840,
+      serverStatus: 'HEALTHY',
+      uptimeSeconds: 842000,
+      cpuUsage: 24,
+      memoryUsage: 48,
+      dbConnections: 38,
+      recentTenants: [
+        { id: 't-1', name: 'Atlas Moda Tekstil A.Ş.', plan: 'ENTERPRISE', status: 'ACTIVE', createdAt: '2026-10-12T10:00:00Z', revenue: 145000 },
+        { id: 't-2', name: 'Nordic Kozmetik Ltd.', plan: 'PRO', status: 'ACTIVE', createdAt: '2026-10-11T14:30:00Z', revenue: 89000 },
+        { id: 't-3', name: 'TechTrend Elektronik', plan: 'PRO', status: 'ACTIVE', createdAt: '2026-10-10T09:15:00Z', revenue: 112000 },
+        { id: 't-4', name: 'Ege Organik Gıda', plan: 'GROWTH', status: 'ACTIVE', createdAt: '2026-10-09T18:20:00Z', revenue: 43000 },
+        { id: 't-5', name: 'Anadolu Zanaat Atölyesi', plan: 'FREE', status: 'PENDING', createdAt: '2026-10-14T08:00:00Z', revenue: 0 },
+      ],
+      revenueHistory: [
+        { month: 'Mayıs', amount: 280000 },
+        { month: 'Haziran', amount: 310000 },
+        { month: 'Temmuz', amount: 345000 },
+        { month: 'Ağustos', amount: 380000 },
+        { month: 'Eylül', amount: 405000 },
+        { month: 'Ekim', amount: 428900 },
+      ],
+    };
+  }
+
+  if (clean.includes('predictions')) {
+    return {
+      demandForecast: [
+        { period: '1-7 Gün', change: 14.2 },
+        { period: '8-14 Gün', change: 18.5 },
+        { period: '15-30 Gün', change: 11.8 },
+      ],
+      stockPredictions: [
+        { productName: 'Wireless Kulaklık Pro', daysUntilStockout: 4 },
+        { productName: 'Akıllı Saat X2', daysUntilStockout: 9 },
+        { productName: 'Type-C Hızlı Şarj Kiti', daysUntilStockout: 12 },
+        { productName: 'Termal Kargo Etiket Rulosu', daysUntilStockout: 3 },
+      ],
+      revenuePrediction: {
+        next30Days: 520000,
+        confidence: 94,
+        trend: 'up',
+      },
+      riskAnalysis: {
+        overallRisk: 'low',
+      },
+    };
+  }
+
+  if (clean.includes('ai-summary')) {
+    return {
+      predictionText:
+        'Son 30 günlük satış trendleri ve pazaryeri kampanya takvimine göre önümüzdeki ay ciroda %24.2 büyüme öngörülmektedir. Kritik stok uyarısı veren 4 ürün için tedarikçi siparişi önerilmektedir.',
+    };
+  }
+
+  if (clean.includes('tenants')) {
+    return {
+      items: [
+        { id: 't-1', name: 'Atlas Moda Tekstil A.Ş.', plan: 'ENTERPRISE', status: 'ACTIVE', createdAt: '2026-02-10T10:00:00Z', userCount: 12, orderCount: 3410 },
+        { id: 't-2', name: 'Nordic Kozmetik Pazarlama', plan: 'PRO', status: 'ACTIVE', createdAt: '2026-04-15T14:30:00Z', userCount: 4, orderCount: 1280 },
+        { id: 't-3', name: 'TechTrend Elektronik Aletler', plan: 'PRO', status: 'ACTIVE', createdAt: '2026-05-20T09:15:00Z', userCount: 6, orderCount: 1940 },
+        { id: 't-4', name: 'Ege Organik Çiftlik Ürünleri', plan: 'GROWTH', status: 'ACTIVE', createdAt: '2026-06-01T18:20:00Z', userCount: 2, orderCount: 620 },
+        { id: 't-5', name: 'Anadolu Zanaat ve Hediyelik', plan: 'FREE', status: 'ACTIVE', createdAt: '2026-07-12T08:00:00Z', userCount: 1, orderCount: 84 },
+      ],
+      total: 148,
+      page: 1,
+      totalPages: 15,
+    };
+  }
+
+  if (clean.includes('users')) {
+    return {
+      items: [
+        { id: 'u-1', email: 'admin@pazaryonetimi.com', firstName: 'Sistem', lastName: 'Yöneticisi', type: 'SUPER_ADMIN', status: 'ACTIVE', createdAt: '2026-01-01T00:00:00Z' },
+        { id: 'u-2', email: 'destek@pazaryonetimi.com', firstName: 'Destek', lastName: 'Ekibi', type: 'SUPPORT', status: 'ACTIVE', createdAt: '2026-02-01T00:00:00Z' },
+        { id: 'u-3', email: 'atlas.yonetim@atlasmoda.com', firstName: 'Ahmet', lastName: 'Yılmaz', type: 'TENANT_ADMIN', status: 'ACTIVE', createdAt: '2026-03-10T00:00:00Z' },
+      ],
+      total: 842,
+      page: 1,
+      totalPages: 85,
+    };
+  }
+
+  if (clean.includes('audit-logs')) {
+    return {
+      items: [
+        { id: 'log-1', action: 'TENANT_UPGRADE', resource: 'Tenant:t-1', user: 'admin@pazaryonetimi.com', ip: '192.168.1.1', timestamp: new Date(Date.now() - 3600000).toISOString() },
+        { id: 'log-2', action: 'API_KEY_CREATED', resource: 'Integration:Trendyol', user: 'atlas.yonetim@atlasmoda.com', ip: '88.240.12.4', timestamp: new Date(Date.now() - 7200000).toISOString() },
+        { id: 'log-3', action: 'STOCK_SYNC_TRIGGERED', resource: 'SyncEngine', user: 'system', ip: '127.0.0.1', timestamp: new Date(Date.now() - 10800000).toISOString() },
+      ],
+      total: 1240,
+      page: 1,
+      totalPages: 124,
+    };
+  }
+
+  return { success: true, items: [], total: 0 };
+}
+
+async function fetchLocalAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
+  try {
+    const res = await fetch(endpoint, {
+      headers: { 'Content-Type': 'application/json', ...options?.headers },
+      credentials: 'include',
+      ...options,
+    });
+    if (!res.ok) {
+      if (isDemoModeActive()) {
+        return getAdminMockFallback(endpoint) as T;
+      }
+      const error = await res.json().catch(() => ({ message: 'API Hatası' }));
+      throw new Error(error.message || error.error || `HTTP ${res.status}`);
+    }
+    return res.json();
+  } catch (err) {
+    if (isDemoModeActive()) {
+      return getAdminMockFallback(endpoint) as T;
+    }
+    throw err;
+  }
 }
 
 /** NestJS admin API — oturum üzerinden BFF proxy */
 async function fetchAPI<T>(endpoint: string, options?: RequestInit): Promise<T> {
   const path = endpoint.replace(/^\//, '');
-  return fetchLocalAPI<T>(`/api/admin/proxy/${path}`, options);
+  try {
+    return await fetchLocalAPI<T>(`/api/admin/proxy/${path}`, options);
+  } catch (err) {
+    if (isDemoModeActive()) {
+      return getAdminMockFallback(path) as T;
+    }
+    throw err;
+  }
 }
 
 // ═══════════════════════════════════════════════════════════════════

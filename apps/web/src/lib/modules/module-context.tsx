@@ -135,6 +135,19 @@ export function ModuleProvider({ children }: { children: ReactNode }) {
   useEffect(() => {
     const loadData = async () => {
       if (!session?.user) {
+        const isDemo = typeof window !== 'undefined' && (
+          new URLSearchParams(window.location.search).get('demo') === 'true' ||
+          localStorage.getItem('pazaryonetimi_demo') === 'true'
+        );
+        if (isDemo) {
+          setTenantPlan('PRO');
+          setEnabledModules(DEFAULT_MODULES.map((m) => m.key));
+          setUserType('TENANT_ADMIN');
+          setRoleName('ADMIN');
+          setAiCredits({ used: 45, limit: 1000 });
+          setCriticalStockCount(3);
+          setOrderPipeline({ PENDING: 8, PROCESSING: 14, SHIPPED: 32, DELIVERED: 120 });
+        }
         setIsLoading(false);
         return;
       }

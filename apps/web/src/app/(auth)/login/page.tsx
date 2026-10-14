@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { signIn } from 'next-auth/react';
 import { motion, AnimatePresence } from 'framer-motion';
-import { Eye, EyeOff, Loader2, ArrowRight, Chrome, AlertCircle } from 'lucide-react';
+import { Eye, EyeOff, Loader2, ArrowRight, Chrome, AlertCircle, Sparkles } from 'lucide-react';
 import { AuthShell } from '@/components/auth/AuthShell';
 
 function LoginForm() {
@@ -192,6 +192,20 @@ function LoginForm() {
           )}
         </button>
       </form>
+
+      {/* Demo Access Banner */}
+      <div className="mt-4 p-3 rounded-xl bg-gradient-to-r from-amber-500/10 via-indigo-500/10 to-purple-500/10 border border-amber-500/20 text-center">
+        <p className="text-xs text-muted-foreground mb-2">
+          Kayıt olmadan veya şifre girmeden platformu hemen test edin:
+        </p>
+        <Link
+          href="/demo"
+          className="w-full inline-flex items-center justify-center gap-2 py-2 px-3 rounded-lg bg-background hover:bg-muted text-xs font-semibold text-foreground border border-border transition-all shadow-xs"
+        >
+          <Sparkles className="size-3.5 text-amber-500" />
+          <span>Canlı Demoyu İncele (Kayıtsız) ➔</span>
+        </Link>
+      </div>
 
       {/* 2FA Quick Link if already enabled */}
       <div className="mt-4 pt-3 border-t border-border/50 text-center">
