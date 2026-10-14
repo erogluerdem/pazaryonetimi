@@ -96,7 +96,7 @@ const DEFAULT_RETRY_CONFIG: RetryConfig = {
   maxRetries: 1,
   baseDelay: 400,
   maxDelay: 1500,
-  retryableStatuses: [408, 429, 502, 503, 504],
+  retryableStatuses: [408, 502, 503, 504],
 };
 
 // ─── API Error Class ──────────────────────────────
@@ -321,8 +321,19 @@ class ApiClient {
     throw lastError || new Error(`API request failed: ${endpoint}`);
   }
 
-  private addTenantParam(params: Record<string, string> = {}): string {
-    const searchParams = new URLSearchParams(params);
+  private addTenantParam(params: Record<string, any> = {}): string {
+    const searchParams = new URLSearchParams();
+    for (const [key, value] of Object.entries(params)) {
+      if (
+        value !== undefined &&
+        value !== null &&
+        value !== '' &&
+        value !== 'undefined' &&
+        value !== 'null'
+      ) {
+        searchParams.set(key, String(value));
+      }
+    }
     if (this.tenantId) {
       searchParams.set('tenantId', this.tenantId);
     }

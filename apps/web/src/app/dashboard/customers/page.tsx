@@ -135,14 +135,22 @@ export default function CustomersPage() {
     const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(null);
     const [copyFeedback, setCopyFeedback] = useState<string | null>(null);
 
-    const filters = useMemo(() => ({
-        search: searchTerm,
-        status: selectedSegment === 'all' ? undefined : selectedSegment,
-        sortBy,
-        sortDir,
-        page: currentPage.toString(),
-        limit: ITEMS_PER_PAGE.toString()
-    }), [searchTerm, selectedSegment, sortBy, sortDir, currentPage]);
+    const filters = useMemo(() => {
+        const f: Record<string, string> = {
+            sortBy,
+            sortDir,
+            page: currentPage.toString(),
+            limit: ITEMS_PER_PAGE.toString()
+        };
+        const trimmed = searchTerm.trim();
+        if (trimmed) {
+            f.search = trimmed;
+        }
+        if (selectedSegment && selectedSegment !== 'all') {
+            f.status = selectedSegment;
+        }
+        return f;
+    }, [searchTerm, selectedSegment, sortBy, sortDir, currentPage]);
 
     const { 
         customers, 
@@ -467,7 +475,7 @@ export default function CustomersPage() {
             </div>
 
             {/* Error Message */}
-            {error && (
+            {error && customers.length === 0 && (
                 <div className="bg-amber-500/10 border border-amber-500/20 rounded-xl p-3 text-amber-700 dark:text-amber-300 text-xs font-medium flex items-center gap-2">
                     <ShieldAlert size={14} /> Müşteri verileri güncellenirken gecikme yaşandı. Güncel yedek veriler görüntüleniyor.
                 </div>

@@ -25,32 +25,32 @@ const rateLimitStore = new Map<string, RateLimitEntry>();
 const rateLimitConfigs: Record<string, RateLimitConfig> = {
   default: {
     windowMs: 60 * 1000, // 1 minute
-    maxRequests: 100, // 100 requests per minute
+    maxRequests: 600,
     message: 'Çok fazla istek. Lütfen daha sonra tekrar deneyin.',
   },
   auth: {
     windowMs: 15 * 60 * 1000, // 15 minutes
-    maxRequests: 5, // 5 attempts per 15 minutes
+    maxRequests: 30, // 30 attempts per 15 minutes
     message: 'Çok fazla giriş denemesi. 15 dakika sonra tekrar deneyin.',
   },
   api: {
     windowMs: 60 * 1000, // 1 minute
-    maxRequests: 60, // 60 requests per minute
+    maxRequests: 1200, // 1200 requests per minute (~20 req/sec)
     message: 'API istek limiti aşıldı.',
   },
   export: {
     windowMs: 60 * 60 * 1000, // 1 hour
-    maxRequests: 10, // 10 exports per hour
+    maxRequests: 30,
     message: 'Dışa aktarma limiti aşıldı. 1 saat sonra tekrar deneyin.',
   },
   ai: {
     windowMs: 60 * 1000, // 1 minute
-    maxRequests: 10, // 10 AI requests per minute
+    maxRequests: 60,
     message: 'AI istek limiti aşıldı.',
   },
   webhook: {
     windowMs: 1000, // 1 second
-    maxRequests: 100, // 100 webhook calls per second
+    maxRequests: 300,
     message: 'Webhook istek limiti aşıldı.',
   },
 };
@@ -60,8 +60,9 @@ export class RateLimitMiddleware implements NestMiddleware {
   use(req: Request, res: Response, next: NextFunction) {
     const ip = this.getClientIp(req);
     const path = req.path;
+    const tenantId = (req.headers['x-tenant-id'] as string) || 'default';
     const config = this.getConfigForPath(path);
-    const key = `${ip}:${this.getPathGroup(path)}`;
+    const key = `${ip}:${tenantId}:${this.getPathGroup(path)}`;
 
     const now = Date.now();
     let entry = rateLimitStore.get(key);

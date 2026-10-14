@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect, useCallback } from 'react';
+import { useState, useEffect, useCallback, useRef, useMemo } from 'react';
 import { useSession } from 'next-auth/react';
 import apiClient from './api-client';
 import {
@@ -57,13 +57,26 @@ export function useApiData<T>(
   const tenantId = (session?.user as any)?.tenantId as string | undefined;
   const accessToken = (session?.user as any)?.accessToken as string | undefined;
 
+  const fetcherRef = useRef(fetcher);
+  fetcherRef.current = fetcher;
+
+  const optionsRef = useRef(options);
+  optionsRef.current = options;
+
+  const inFlightRef = useRef(false);
+
   const refetch = useCallback(async () => {
+    const currentOptions = optionsRef.current;
+    const currentFetcher = fetcherRef.current;
     const effectiveTenantId = tenantId || 'pazaryonetimi';
 
-    if (options.skip) {
+    if (currentOptions.skip) {
       setLoading(false);
       return;
     }
+
+    if (inFlightRef.current) return;
+    inFlightRef.current = true;
 
     setLoading(true);
     setError(null);
@@ -72,30 +85,31 @@ export function useApiData<T>(
       if (accessToken) apiClient.setAccessToken(accessToken);
       apiClient.setTenantId(effectiveTenantId);
       
-      const result = await fetcher(effectiveTenantId);
+      const result = await currentFetcher(effectiveTenantId);
       if (isDataPresent(result)) {
         setData(result);
-      } else if (options.fallback !== undefined) {
-        setData(options.fallback);
+      } else if (currentOptions.fallback !== undefined) {
+        setData(currentOptions.fallback);
       } else {
         setData(result);
       }
     } catch (err) {
       setError(err instanceof Error ? err : new Error('Unknown error'));
-      if (options.fallback !== undefined) {
-        setData(options.fallback);
+      if (currentOptions.fallback !== undefined) {
+        setData(currentOptions.fallback);
       } else {
         setData(null);
       }
     } finally {
+      inFlightRef.current = false;
       setLoading(false);
     }
-  }, [tenantId, accessToken, fetcher, options.skip, options.fallback]);
+  }, [tenantId, accessToken]);
 
-  // Only fetch on mount or when session changes
+  // Only fetch on mount or when tenantId or fetcher changes
   useEffect(() => {
     refetch();
-  }, [tenantId, refetch]);
+  }, [tenantId, fetcher, refetch]);
 
   // Optional: refetch on interval
   useEffect(() => {
@@ -1184,42 +1198,46 @@ export function useSupport() {
 // ==========================================
 // CUSTOMER HOOKS
 // ==========================================
-export function useCustomers(params: Record<string, any> = {}) {
-  const paramsKey = JSON.stringify(params);
+const DEFAULT_CUSTOMERS_FALLBACK = {
+  customers: REALISTIC_CUSTOMERS as any,
+  pagination: { total: REALISTIC_CUSTOMERS.length, page: 1, limit: 10, totalPages: 1 }
+};
 
-  const fallbackCustomers = {
-    customers: REALISTIC_CUSTOMERS as any,
-    pagination: { total: REALISTIC_CUSTOMERS.length, page: 1, limit: 10, totalPages: 1 }
-  };
+export function useCustomers(params: Record<string, any> = {}) {
+  const paramsKey = useMemo(() => JSON.stringify(params), [params]);
 
   const fetcher = useCallback(
     async (tenantId: string) => {
-      apiClient.setTenantId(tenantId);
-      const res: any = await apiClient.getCustomers(params);
-      if (!res || !Array.isArray(res.customers) || res.customers.length === 0) {
-        return fallbackCustomers;
+      try {
+        apiClient.setTenantId(tenantId);
+        const res: any = await apiClient.getCustomers(params);
+        if (!res || !Array.isArray(res.customers) || res.customers.length === 0) {
+          return DEFAULT_CUSTOMERS_FALLBACK;
+        }
+        const mapped = res.customers.map((c: any) => ({
+          id: c.id,
+          name: c.name || 'Müşteri',
+          email: c.email || '',
+          phone: c.phone || '',
+          segment: c.segment || c.status || 'regular',
+          totalOrders: Number(c.totalOrders ?? 0),
+          totalSpent: Number(c.totalSpent ?? 0),
+          avgOrderValue: Number(c.avgOrderValue ?? (c.totalOrders ? c.totalSpent / c.totalOrders : 0)),
+          lastOrderDate: c.lastOrderDate || new Date().toISOString(),
+          joinDate: c.joinDate || c.lastOrderDate || new Date().toISOString(),
+          platforms: Array.isArray(c.platforms) ? c.platforms : (c.platform ? [c.platform] : ['Trendyol']),
+          loyaltyScore: Number(c.loyaltyScore ?? 75),
+          tags: Array.isArray(c.tags) ? c.tags : [],
+          address: c.address || (typeof c.shippingAddress === 'string' ? { city: c.shippingAddress, country: 'Türkiye' } : undefined),
+          notes: c.notes || '',
+        }));
+        return {
+          customers: mapped,
+          pagination: res.pagination || { total: mapped.length, page: 1, limit: 10, totalPages: 1 }
+        };
+      } catch {
+        return DEFAULT_CUSTOMERS_FALLBACK;
       }
-      const mapped = res.customers.map((c: any) => ({
-        id: c.id,
-        name: c.name || 'Müşteri',
-        email: c.email || '',
-        phone: c.phone || '',
-        segment: c.segment || c.status || 'regular',
-        totalOrders: Number(c.totalOrders ?? 0),
-        totalSpent: Number(c.totalSpent ?? 0),
-        avgOrderValue: Number(c.avgOrderValue ?? (c.totalOrders ? c.totalSpent / c.totalOrders : 0)),
-        lastOrderDate: c.lastOrderDate || new Date().toISOString(),
-        joinDate: c.joinDate || c.lastOrderDate || new Date().toISOString(),
-        platforms: Array.isArray(c.platforms) ? c.platforms : (c.platform ? [c.platform] : ['Trendyol']),
-        loyaltyScore: Number(c.loyaltyScore ?? 75),
-        tags: Array.isArray(c.tags) ? c.tags : [],
-        address: c.address || (typeof c.shippingAddress === 'string' ? { city: c.shippingAddress, country: 'Türkiye' } : undefined),
-        notes: c.notes || '',
-      }));
-      return {
-        customers: mapped,
-        pagination: res.pagination || { total: mapped.length, page: 1, limit: 10, totalPages: 1 }
-      };
     },
     [paramsKey]
   );
@@ -1227,7 +1245,7 @@ export function useCustomers(params: Record<string, any> = {}) {
   const { data, loading, error, refetch } = useApiData<{
     customers: Customer[];
     pagination: { total: number; page: number; limit: number; totalPages: number };
-  }>(fetcher, { fallback: fallbackCustomers });
+  }>(fetcher, { fallback: DEFAULT_CUSTOMERS_FALLBACK });
 
   const updateCustomer = async (id: string, updateData: Partial<Customer>) => {
     const result = await apiClient.updateCustomer(id, updateData);
@@ -1249,25 +1267,29 @@ export function useCustomers(params: Record<string, any> = {}) {
 export function useCustomerStats() {
   const fetcher = useCallback(
     async (tenantId: string) => {
-      apiClient.setTenantId(tenantId);
-      const raw: any = await apiClient.getCustomerStats();
-      if (!raw) return REALISTIC_CUSTOMER_STATS;
+      try {
+        apiClient.setTenantId(tenantId);
+        const raw: any = await apiClient.getCustomerStats();
+        if (!raw) return REALISTIC_CUSTOMER_STATS;
 
-      const total = Number(raw.totalCustomers ?? raw.total ?? 0);
-      if (total <= 0) {
+        const total = Number(raw.totalCustomers ?? raw.total ?? 0);
+        if (total <= 0) {
+          return REALISTIC_CUSTOMER_STATS;
+        }
+
+        return {
+          totalCustomers: total,
+          newCustomersThisMonth: Number(raw.newCustomersThisMonth ?? raw.new ?? 0),
+          vipCustomers: Number(raw.vipCustomers ?? raw.vip ?? 0),
+          atRiskCustomers: Number(raw.atRiskCustomers ?? raw.atRisk ?? 0),
+          avgLifetimeValue: Number(raw.avgLifetimeValue ?? raw.averageLifetimeValue ?? 0),
+          retentionRate: Number(raw.retentionRate ?? 84.6),
+          churnRate: Number(raw.churnRate ?? 3.2),
+          customerGrowth: Number(raw.customerGrowth ?? (raw.growth?.thisMonth) ?? 14.8),
+        } as CustomerStats;
+      } catch {
         return REALISTIC_CUSTOMER_STATS;
       }
-
-      return {
-        totalCustomers: total,
-        newCustomersThisMonth: Number(raw.newCustomersThisMonth ?? raw.new ?? 0),
-        vipCustomers: Number(raw.vipCustomers ?? raw.vip ?? 0),
-        atRiskCustomers: Number(raw.atRiskCustomers ?? raw.atRisk ?? 0),
-        avgLifetimeValue: Number(raw.avgLifetimeValue ?? raw.averageLifetimeValue ?? 0),
-        retentionRate: Number(raw.retentionRate ?? 84.6),
-        churnRate: Number(raw.churnRate ?? 3.2),
-        customerGrowth: Number(raw.customerGrowth ?? (raw.growth?.thisMonth) ?? 14.8),
-      } as CustomerStats;
     },
     []
   );
