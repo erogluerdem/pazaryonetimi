@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../../../marketplace/marketplace-connection.service';
 import { Injectable } from '@nestjs/common';
 import { IntegrationCategory } from '../../enums/integration-category.enum';
 import { IntegrationSyncType } from '../../enums/integration-category.enum';
@@ -35,7 +36,7 @@ export class TrendyolAdapter
     const supplierId = String(
       credentials.extra.supplierId ?? credentials.apiKey,
     );
-    const isTestMode = credentials.extra.isTestMode === true;
+    const isTestMode = credentials.extra.isTestMode === true || credentials.extra.isTestMode === 'true';
     return new TrendyolBridge(
       credentials.apiKey,
       credentials.apiSecret,
@@ -50,19 +51,8 @@ export class TrendyolAdapter
     credentials: DecryptedCredentials,
   ) {
     this.assertContext(ctx);
-    try {
-      const bridge = this.buildBridge(credentials);
-      const products = await bridge.getStoreProducts(
-        String(credentials.extra.supplierId ?? ''),
-        1,
-      );
-      if (products.length >= 0) {
-        return this.ok('Trendyol API bağlantısı doğrulandı');
-      }
-      return this.fail('Trendyol API yanıt vermedi');
-    } catch (error) {
-      return this.fail('Trendyol bağlantı testi başarısız', error);
-    }
+    const result = await new MarketplaceConnectionService().test(this.providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    return result.success ? this.ok(result.message) : this.fail(result.message);
   }
 
   async syncProducts(

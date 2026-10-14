@@ -1,4 +1,5 @@
 'use client';
+import { useNotifications as usePersistentNotifications } from '@/providers/notification-provider';
 
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
@@ -49,14 +50,17 @@ const severityColors: Record<string, string> = {
 };
 
 export default function NotificationBell() {
-  const { status, notifications, unreadCount, markAllRead, clearNotifications, onEvent } = useWebSocket();
+  const { status, onEvent } = useWebSocket();
+  const { notifications, unreadCount, markAllAsRead: markAllRead, clearAll: clearNotifications } = usePersistentNotifications();
   const toast = useToast();
   const [isOpen, setIsOpen] = useState(false);
   const [isAnimating, setIsAnimating] = useState(false);
 
   // Animate bell on new notification
   useEffect(() => {
-    const cleanup = onEvent('notification', (notification: RealtimeNotification) => {
+    const cleanup = onEvent('notification', (data: unknown) => {
+      const notification = data as RealtimeNotification;
+      if (!notification?.title || !notification.message) return;
       const timer = setTimeout(() => {
         setIsAnimating(true);
       }, 0);

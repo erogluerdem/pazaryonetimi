@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../../../marketplace/marketplace-connection.service';
 import { Injectable } from '@nestjs/common';
 import { IntegrationCategory } from '../../enums/integration-category.enum';
 import { IntegrationSyncType } from '../../enums/integration-category.enum';
@@ -48,19 +49,8 @@ export class AmazonTrAdapter
 
   async testConnection(ctx: TenantIntegrationContext, credentials: DecryptedCredentials) {
     this.assertContext(ctx);
-    try {
-      const bridge = this.buildBridge(credentials);
-      if (bridge.hasSpApiEnabled()) {
-        return this.ok('Amazon SP-API kimlik bilgileri doğrulandı');
-      }
-      const sellerId = String(credentials.extra.sellerId ?? credentials.apiKey);
-      if (!sellerId) {
-        return this.fail('Seller ID zorunludur');
-      }
-      return this.ok('Amazon TR bağlantı bilgileri kayıtlı');
-    } catch (error) {
-      return this.fail('Amazon TR bağlantı testi başarısız', error);
-    }
+    const result = await new MarketplaceConnectionService().test(this.providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    return result.success ? this.ok(result.message) : this.fail(result.message);
   }
 
   async syncProducts(

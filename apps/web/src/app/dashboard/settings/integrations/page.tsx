@@ -59,8 +59,8 @@ const MARKETPLACES: MarketplaceConfig[] = [
     features: { productSync: true, orderSync: true, inventorySync: true, priceSync: true, shippingIntegration: true, returnManagement: true, analyticsApi: true, advertisingApi: true, fulfillmentService: true, multiWarehouse: true },
     requiredFields: [
       { key: 'merchantId', label: 'Merchant ID', type: 'text', required: true },
-      { key: 'apiKey', label: 'API Key', type: 'password', required: true },
-      { key: 'apiSecret', label: 'API Secret', type: 'password', required: true },
+      { key: 'username', label: 'API kullanıcı adı', type: 'text', required: true },
+      { key: 'serviceKey', label: 'Servis anahtarı', type: 'password', required: true },
     ],
     minimumPlan: 'FREE', status: 'ACTIVE', popularity: 95, commissionRange: '%4 - %20',
     brandColor: '#FF6000', monthlyVisitors: '150M+', sellerCount: '100K+',
@@ -474,7 +474,6 @@ const OAUTH_MARKETPLACE_IDS = new Set([
   'amazon-us',
   'amazon-uk',
   'amazon-de',
-  'hepsiburada',
 ]);
 
 function formatSyncResult(result: {
@@ -559,7 +558,7 @@ export default function IntegrationsPage() {
       alert(`${mp.name} senkronize edildi.${detail ? `\n${detail}` : ''}`);
     } catch (error) {
       console.error("Sync error:", error);
-      alert(`Senkronizasyon hatası oluştu.`);
+      alert(error instanceof Error ? error.message : 'Senkronizasyon hatası oluştu.');
     } finally {
       setIsSyncing(false);
     }

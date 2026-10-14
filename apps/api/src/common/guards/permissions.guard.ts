@@ -25,7 +25,7 @@ export class PermissionsGuard implements CanActivate {
 
     const request = context.switchToHttp().getRequest<Request & { user?: { id?: string; type?: string } }>();
     const user = request.user;
-    if (!user?.id) return true;
+    if (!user?.id) throw new ForbiddenException('Kullanıcı oturumu gerekli');
 
     if (user.type === 'SUPERADMIN' || user.type === 'ADMIN') {
       return true;

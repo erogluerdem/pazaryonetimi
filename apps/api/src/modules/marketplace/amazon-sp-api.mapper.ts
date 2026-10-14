@@ -97,18 +97,22 @@ export function mapAmazonListingProduct(
   const summaries = Array.isArray(listing.summaries) ? listing.summaries : [];
   const summary = (summaries[0] || {}) as Record<string, unknown>;
   const attributes = (listing.attributes || {}) as Record<string, unknown>;
-  const availability = Array.isArray(attributes.fulfillment_availability)
+  const stockRows = Array.isArray(listing.fulfillmentAvailability) ? listing.fulfillmentAvailability as Record<string, unknown>[] : [];
+  const offers = Array.isArray(listing.offers) ? listing.offers as Record<string, unknown>[] : [];
+  const offerPrice = offers.find(offer => offer.offerType === 'B2C')?.price || offers[0]?.price;
+  const price = Number((offerPrice as { amount?: unknown })?.amount ?? summary.mainOfferPrice ?? summary.price ?? 0);
+  const availability = stockRows[0] || (Array.isArray(attributes.fulfillment_availability)
     ? (attributes.fulfillment_availability[0] as Record<string, unknown>)
-    : undefined;
+    : undefined);
 
   return {
     productId: String(listing.sku || summary.asin || `AMZ-${index + 1}`),
     sku: String(listing.sku || ''),
     title: String(summary.itemName || summary.title || ''),
-    salePrice: Number(summary.mainOfferPrice || summary.price || 0),
-    price: Number(summary.mainOfferPrice || summary.price || 0),
+    salePrice: price,
+    price: price,
     stockCount: Number(availability?.quantity || 0),
-    images: [],
+    images: (summary.mainImage as { link?: string } | undefined)?.link ? [(summary.mainImage as { link: string }).link] : [],
     url: summary.asin ? `https://www.amazon.com/dp/${summary.asin}` : '',
   };
 }

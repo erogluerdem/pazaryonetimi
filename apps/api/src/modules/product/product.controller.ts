@@ -1,3 +1,4 @@
+import { SafeBulkService } from './safe-bulk.service';
 import {
   Controller,
   Get,
@@ -23,7 +24,11 @@ import { Permission } from '../rbac/rbac.service';
 @Controller('products')
 @UseGuards(PermissionsGuard)
 export class ProductController {
-  constructor(private readonly productService: ProductService) {}
+  constructor(private readonly productService: ProductService, private readonly safeBulk: SafeBulkService) {}
+
+  @Post('bulk-action/preview')
+  @RequirePermission(Permission.PRODUCT_EDIT)
+  previewBulk(@Req() req: any, @Body() body: any) { return this.safeBulk.preview(req.user.tenantId, req.user.id, body); }
 
   @Post('bulk-action')
   @RequirePermission(Permission.PRODUCT_EDIT)

@@ -1,3 +1,5 @@
+import { SafeBulkService } from './safe-bulk.service';
+import { Optional } from '@nestjs/common';
 import {
   BadRequestException,
   Injectable,
@@ -10,7 +12,7 @@ import { PrismaService } from '../../database/prisma.service';
 @Injectable()
 export class ProductService {
   private readonly logger = new Logger(ProductService.name);
-  constructor(private prisma: PrismaService) {}
+  constructor(private prisma: PrismaService, @Optional() private readonly safeBulk?: SafeBulkService) {}
 
   async create(tenantId: string, data: any) {
     const {
@@ -173,6 +175,7 @@ export class ProductService {
     [key: string]: any;
   }) {
     const { action, productIds, tenantId } = data;
+    if (this.safeBulk?.supports(action)) return this.safeBulk.execute(tenantId, data.userId!, data.previewId);
     if (!tenantId) throw new BadRequestException('tenantId zorunludur');
     if (!Array.isArray(productIds) || productIds.length === 0) {
       throw new BadRequestException('En az bir ürün seçilmelidir');
@@ -373,6 +376,9 @@ export class ProductService {
       throw new NotFoundException('Toplu işlem kaydı bulunamadı');
     }
 
+    if ((bulkAction.data as any)?.version === 2 && this.safeBulk) return this.safeBulk.rollback(tenantId, bulkActionId, userId);
+
+    if ((bulkAction.data as any)?.version !== 2) throw new BadRequestException('Eski işlemin değişiklik sürümü yok; güvenli otomatik geri alma yapılamaz');
     if (bulkAction.status === 'rolled_back') {
       throw new BadRequestException('Bu toplu işlem zaten geri alınmış');
     }
@@ -456,7 +462,7 @@ export class ProductService {
     });
     return bulkActions.map((ba) => {
       const data = ba.data as Record<string, any>;
-      const snapshotCount = Array.isArray(data?.snapshot) ? data.snapshot.length : 0;
+      const snapshotCount = data?.version === 2 ? data.changes?.length || 0 : Array.isArray(data?.snapshot) ? data.snapshot.length : 0;
       return {
         id: ba.id,
         action: ba.action,
@@ -469,7 +475,7 @@ export class ProductService {
           : 'Yönetici',
         executedAt: (ba.completedAt || ba.createdAt).toISOString(),
         status: ba.status,
-        canRollback: ba.status !== 'rolled_back' && snapshotCount > 0,
+        canRollback: ba.status === 'completed' && data?.version === 2 && snapshotCount > 0,
         isRolledBack: ba.status === 'rolled_back',
         snapshotCount,
       };

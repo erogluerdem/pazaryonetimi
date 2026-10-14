@@ -58,15 +58,18 @@ export function usePWA() {
     };
     window.addEventListener('pwa-prompt-captured', handlePromptCaptured);
 
-    // 3) Normal beforeinstallprompt (React mount sonrası gelirse)
-    const handleBeforeInstallPrompt = (e: Event) => {
-      e.preventDefault();
-      const promptEvent = e as BeforeInstallPromptEvent;
-      window.__pwaInstallPrompt = promptEvent;
-      setDeferredPrompt(promptEvent);
-      setIsInstallable(true);
-    };
-    window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+    // 3) Normal beforeinstallprompt (Layout script yoksa veya React mount sonrası gelirse)
+    let handleBeforeInstallPrompt: ((e: Event) => void) | null = null;
+    if (!window.__pwaInstallPrompt && !window.__pwaInstalled) {
+      handleBeforeInstallPrompt = (e: Event) => {
+        e.preventDefault();
+        const promptEvent = e as BeforeInstallPromptEvent;
+        window.__pwaInstallPrompt = promptEvent;
+        setDeferredPrompt(promptEvent);
+        setIsInstallable(true);
+      };
+      window.addEventListener('beforeinstallprompt', handleBeforeInstallPrompt, { once: true });
+    }
 
     // Kurulum tamamlandı
     const handleAppInstalled = () => {
@@ -105,7 +108,9 @@ export function usePWA() {
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       window.removeEventListener('pwa-prompt-captured', handlePromptCaptured);
-      window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      if (handleBeforeInstallPrompt) {
+        window.removeEventListener('beforeinstallprompt', handleBeforeInstallPrompt);
+      }
       window.removeEventListener('appinstalled', handleAppInstalled);
     };
   }, []);

@@ -48,7 +48,7 @@ export class HepsiburadaBridge implements MarketplaceBridge {
   private readonly logger = new Logger(HepsiburadaBridge.name);
   private readonly baseUrl: string;
   private readonly requestDelayMs = 300;
-  private readonly maxApiPages = SYNC_MAX_API_PAGES;
+  private readonly maxApiPages = 2000;
 
   constructor(
     private readonly apiKey: string,
@@ -180,6 +180,7 @@ export class HepsiburadaBridge implements MarketplaceBridge {
       await this.delay(this.requestDelayMs);
     }
 
+    if (unlimited && results.length >= this.maxApiPages * pageSize) throw new Error('Hepsiburada katalog sayfalaması tamamlanamadı');
     return results;
   }
 
@@ -207,7 +208,7 @@ export class HepsiburadaBridge implements MarketplaceBridge {
     const items = payload.items;
     if (Array.isArray(items)) return items as Record<string, unknown>[];
 
-    return [];
+    throw new Error('Hepsiburada liste yanıtı beklenen biçimde değil');
   }
 
   private mapApiProduct(
@@ -236,7 +237,7 @@ export class HepsiburadaBridge implements MarketplaceBridge {
 
     return {
       productId: String(
-        item.listingId ?? item.id ?? `HB-${storeId}-${Date.now()}`,
+        item.listingId ?? item.hepsiburadaSku ?? item.id ?? item.merchantSku ?? '',
       ),
       title: String(item.title ?? item.productName ?? 'İsimsiz Ürün'),
       salePrice: Number.isFinite(price) ? price : 0,

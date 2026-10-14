@@ -1,6 +1,10 @@
-import { mapAmazonOrder, mapAmazonOrderStatus } from './amazon-sp-api.mapper';
+import { mapAmazonOrder, mapAmazonOrderStatus, mapAmazonListingProduct } from './amazon-sp-api.mapper';
 
 describe('amazon-sp-api.mapper', () => {
+  it('reads listing price and stock from SP-API offers and availability', () => {
+    const mapped = mapAmazonListingProduct({ sku: 'SKU-01', summaries: [{ itemName: 'Çanta', mainImage: { link: 'https://example.com/image.jpg' } }], offers: [{ offerType: 'B2C', price: { amount: '249.90', currencyCode: 'TRY' } }], fulfillmentAvailability: [{ fulfillmentChannelCode: 'DEFAULT', quantity: 7 }] }, 0);
+    expect(mapped).toMatchObject({ sku: 'SKU-01', salePrice: 249.9, stockCount: 7, images: ['https://example.com/image.jpg'] });
+  });
   it('maps shipped amazon order status', () => {
     expect(mapAmazonOrderStatus('Shipped')).toBe('SHIPPED');
     expect(mapAmazonOrderStatus('Canceled')).toBe('CANCELLED');

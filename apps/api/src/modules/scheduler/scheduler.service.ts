@@ -172,7 +172,7 @@ export class SchedulerService implements OnModuleInit {
     const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000);
 
     const deleted = await this.prisma.activityLog.deleteMany({
-      where: { createdAt: { lt: thirtyDaysAgo } },
+      where: { createdAt: { lt: thirtyDaysAgo }, NOT: { resource: 'xml_feed', action: 'xml.feed.config' } },
     });
 
     this.logger.log(`${deleted.count} eski log silindi`);

@@ -50,9 +50,9 @@ export class PricingOptimizationService {
     for (const product of products) {
       const currentPrice = Number(product.price);
       const competitorPrices = product.competitorProducts.map((cp) => ({
-        platform: cp.competitor.platform,
+        platform: cp.competitor?.platform || 'Bilinmiyor',
         price: Number(cp.price),
-        seller: cp.competitor.name,
+        seller: cp.competitor?.name || 'Bilinmeyen Satıcı',
       }));
 
       // Rakip fiyat analizi

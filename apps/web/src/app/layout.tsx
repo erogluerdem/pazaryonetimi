@@ -161,7 +161,7 @@ export default function RootLayout({
         {/* PWA: beforeinstallprompt event'ini React hydration'dan önce yakala */}
         <script
           dangerouslySetInnerHTML={{
-            __html: `(function(){window.__pwaInstallPrompt=null;window.__pwaInstalled=false;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaInstallPrompt=e;window.dispatchEvent(new CustomEvent('pwa-prompt-captured'))});window.addEventListener('appinstalled',function(){window.__pwaInstalled=true;window.__pwaInstallPrompt=null})})()`,
+            __html: `(function(){if(typeof window==='undefined'||window.__pwaInitialized)return;window.__pwaInitialized=true;window.__pwaInstallPrompt=null;window.__pwaInstalled=false;window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__pwaInstallPrompt=e;window.dispatchEvent(new CustomEvent('pwa-prompt-captured'))},{once:true});window.addEventListener('appinstalled',function(){window.__pwaInstalled=true;window.__pwaInstallPrompt=null})})()`,
           }}
         />
         {/* manifest.ts otomatik olarak Next.js tarafından yönetilir */}

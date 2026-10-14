@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../../../marketplace/marketplace-connection.service';
 import { Injectable } from '@nestjs/common';
 import { IntegrationCategory } from '../../enums/integration-category.enum';
 import { IntegrationSyncType } from '../../enums/integration-category.enum';
@@ -43,16 +44,8 @@ export class EtsyAdapter
     credentials: DecryptedCredentials,
   ) {
     this.assertContext(ctx);
-    try {
-      const bridge = this.buildBridge(credentials);
-      const products = await bridge.syncProducts();
-      if (products) {
-        return this.ok('Etsy bağlantısı doğrulandı');
-      }
-      return this.fail('Etsy yanıt vermedi');
-    } catch (error) {
-      return this.fail('Etsy bağlantı testi başarısız', error);
-    }
+    const result = await new MarketplaceConnectionService().test(this.providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    return result.success ? this.ok(result.message) : this.fail(result.message);
   }
 
   async syncProducts(

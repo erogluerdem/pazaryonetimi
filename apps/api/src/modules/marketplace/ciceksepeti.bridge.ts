@@ -44,49 +44,21 @@ export class CicekSepetiBridge implements MarketplaceBridge {
   }
 
   async syncOrders(): Promise<any> {
-    try {
-      const startDate = new Date(Date.now() - 7 * 86400000).toISOString();
-      const endDate = new Date().toISOString();
-
-      const response = await fetch(`${this.baseUrl}/Order/GetOrders`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-api-key': this.apiKey,
-        },
-        body: JSON.stringify({
-          startDate,
-          endDate,
-          pageSize: 50,
-          page: 1,
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`HTTP ${response.status}`);
-      }
-
-      const data = await response.json();
-      return {
-        success: true,
-        platform: 'CICEKSEPETI',
-        orders: data?.supplierOrderListDetailVO ?? [],
-      };
-    } catch (error) {
-      this.logger.warn(
-        `CicekSepeti syncOrders error: ${(error as Error).message}`,
-      );
-      return {
-        success: false,
-        platform: 'CICEKSEPETI',
-        error: (error as Error).message,
-      };
+    const orders: any[] = []; const endDate = new Date().toISOString(); const startDate = new Date(Date.now() - 13 * 86400000).toISOString();
+    for (let page = 0; page < 2000; page++) {
+      const data = await providerJson(this.baseUrl + '/Order/GetOrders', { method: 'POST', headers: { 'Content-Type': 'application/json', 'x-api-key': this.apiKey }, body: JSON.stringify({ startDate, endDate, pageSize: 100, page }) });
+      const rows = data.supplierOrderListWithBranch;
+      if (!Array.isArray(rows)) throw new Error('Çiçeksepeti sipariş yanıtı beklenen biçimde değil');
+      orders.push(...rows.map((row: any) => ({ ...row, orderId: String(row.orderItemId ?? row.orderId), orderNumber: String(row.orderItemId ?? row.orderId), customerName: row.receiverName, shippingAddress: row.receiverAddress, totalAmount: row.totalPrice, taxAmount: row.tax, status: ({ 1: 'PENDING', 2: 'CONFIRMED', 5: 'SHIPPED', 7: 'DELIVERED', 11: 'CONFIRMED' } as Record<number, string>)[row.orderItemStatusId] || 'PENDING' })));
+      if (rows.length < 100 || orders.length >= Number(data.orderListCount)) return { success: true, platform: 'CICEKSEPETI', orders };
+      await new Promise(resolve => setTimeout(resolve, 5_100));
     }
+    throw new Error('Çiçeksepeti sipariş sayfalaması tamamlanamadı');
   }
 
   async updateStock(sku: string, stock: number): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/Products/stock-or-price`, {
+      const response = await fetch(`${this.baseUrl}/Products/price-and-stock`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -102,7 +74,7 @@ export class CicekSepetiBridge implements MarketplaceBridge {
         }),
       });
 
-      if (response.status === 429 || response.status >= 500) {
+      if (!response.ok) {
         throw new Error(
           `CicekSepeti stock update failed: HTTP ${response.status}`,
         );
@@ -119,7 +91,7 @@ export class CicekSepetiBridge implements MarketplaceBridge {
 
   async updatePrice(sku: string, price: number): Promise<any> {
     try {
-      const response = await fetch(`${this.baseUrl}/Products/stock-or-price`, {
+      const response = await fetch(`${this.baseUrl}/Products/price-and-stock`, {
         method: 'PUT',
         headers: {
           'Content-Type': 'application/json',
@@ -135,7 +107,7 @@ export class CicekSepetiBridge implements MarketplaceBridge {
         }),
       });
 
-      if (response.status === 429 || response.status >= 500) {
+      if (!response.ok) {
         throw new Error(
           `CicekSepeti price update failed: HTTP ${response.status}`,
         );

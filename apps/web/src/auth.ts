@@ -1,3 +1,4 @@
+import { ensureUserTenant } from '@/lib/ensure-user-tenant';
 import NextAuth from "next-auth"
 import { prisma } from "@/lib/prisma"
 import { PrismaAdapter } from "@auth/prisma-adapter"
@@ -129,27 +130,17 @@ export const { handlers, signIn, signOut, auth } = NextAuth(async () => {
             signIn: "/login",
             error: "/login",
         },
+        events: {
+            async createUser({ user }: { user: any }) {
+                const tenantId = await ensureUserTenant(user.id, user.name);
+                if (tenantId) user.tenantId = tenantId;
+            },
+        },
         callbacks: {
             async signIn({ user, account }: { user: any; account: any }) {
-                if (account?.provider !== 'credentials') {
-                    // Check if user has a tenantId, if not, assign default or create one
-                    if (user.id && !(user as any).tenantId) {
-                        const existingUser = await prisma.user.findUnique({
-                            where: { id: user.id },
-                            select: { tenantId: true }
-                        });
-
-                        if (!existingUser?.tenantId) {
-                            const tenant = await prisma.tenant.create({ data: { name: user.name || 'Mağazam', plan: 'FREE' } });
-                            await prisma.user.update({
-                                where: { id: user.id },
-                                data: { tenantId: tenant.id }
-                            });
-                            (user as any).tenantId = tenant.id;
-                        } else {
-                            (user as any).tenantId = existingUser.tenantId;
-                        }
-                    }
+                if (account?.provider !== 'credentials' && user.id) {
+                    const tenantId = await ensureUserTenant(user.id, user.name);
+                    if (tenantId) user.tenantId = tenantId;
                 }
                 return true;
             },

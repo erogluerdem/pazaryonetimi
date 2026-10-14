@@ -243,7 +243,7 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
 }) => {
   const [currentStep, setCurrentStep] = useState(0);
   const [credentials, setCredentials] = useState<Record<string, string | boolean>>({});
-  const [errors, setErrors] = useState<Record<string, string | boolean>>({});
+  const [errors, setErrors] = useState<Record<string, string>>({});
   const [isLoading, setIsLoading] = useState(false);
   const [testResult, setTestResult] = useState<{
     success: boolean;
@@ -265,7 +265,7 @@ export const ConnectionWizard: React.FC<ConnectionWizardProps> = ({
   }, [isOpen, marketplace.id]);
 
   const validateStep = (): boolean => {
-    const newErrors: Record<string, string | boolean> = {};
+    const newErrors: Record<string, string> = {};
 
     if (currentStep === 1) {
       // Validate credentials

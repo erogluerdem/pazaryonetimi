@@ -22,9 +22,9 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
 
   async validate(payload: JwtPayload) {
     const user = await this.authService.validateUser(payload);
-    if (!user) {
+    if (!user || (user.tenantId || undefined) !== (payload.tenantId || undefined)) {
       throw new UnauthorizedException();
     }
-    return { ...user, tenantId: payload.tenantId };
+    return user;
   }
 }

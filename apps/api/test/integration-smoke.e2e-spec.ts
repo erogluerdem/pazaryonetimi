@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../src/modules/marketplace/marketplace-connection.service';
 import { INestApplication } from '@nestjs/common';
 import { Test, TestingModule } from '@nestjs/testing';
 import request from 'supertest';
@@ -161,6 +162,7 @@ describe('Integration Smoke (e2e)', () => {
       controllers: [MarketplaceController, ReportsController],
       providers: [
         { provide: MarketplaceService, useValue: marketplaceServiceMock },
+        { provide: MarketplaceConnectionService, useValue: { test: jest.fn().mockResolvedValue({ success: false, message: 'Invalid credentials' }) } },
         { provide: ReportsService, useValue: reportsServiceMock },
         { provide: EmailReportService, useValue: emailReportServiceMock },
         { provide: PrismaService, useValue: prismaServiceMock },

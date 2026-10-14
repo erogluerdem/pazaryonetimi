@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../../../marketplace/marketplace-connection.service';
 import { Injectable } from '@nestjs/common';
 import { IntegrationCategory } from '../../enums/integration-category.enum';
 import { IntegrationSyncType } from '../../enums/integration-category.enum';
@@ -39,13 +40,8 @@ export class N11Adapter
 
   async testConnection(ctx: TenantIntegrationContext, credentials: DecryptedCredentials) {
     this.assertContext(ctx);
-    try {
-      const bridge = this.buildBridge(credentials);
-      await bridge.syncProducts();
-      return this.ok('N11 API bağlantısı doğrulandı');
-    } catch (error) {
-      return this.fail('N11 bağlantı testi başarısız', error);
-    }
+    const result = await new MarketplaceConnectionService().test(this.providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    return result.success ? this.ok(result.message) : this.fail(result.message);
   }
 
   async syncProducts(

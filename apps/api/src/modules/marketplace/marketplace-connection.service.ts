@@ -7,7 +7,8 @@ import { parseAmazonSpApiCredentials } from './amazon-sp-api.config';
 @Injectable()
 export class MarketplaceConnectionService {
   async test(providerId: string, credentials: Record<string, unknown>) {
-    const provider = String(providerId || '').toLowerCase().replace(/_/g, '-');
+    const inputProvider = String(providerId || '').toLowerCase().replace(/_/g, '-');
+    const provider = inputProvider === 'amazon' ? 'amazon-tr' : inputProvider;
     const platform = resolvePlatformFromMarketplaceId(provider === 'amazon' ? 'amazon-tr' : provider);
     if (!platform) return { success: false, supported: false, message: 'Bu pazaryeri için bağlantı doğrulaması desteklenmiyor.' };
     try {

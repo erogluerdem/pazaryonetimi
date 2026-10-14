@@ -1,3 +1,5 @@
+import { BackupModule } from './modules/backup/backup.module';
+import { OperationsModule } from './modules/operations/operations.module';
 import { Module, MiddlewareConsumer, NestModule, RequestMethod } from '@nestjs/common';
 import { DiscoveryModule, APP_GUARD, Reflector } from '@nestjs/core';
 import { ConfigModule } from '@nestjs/config';
@@ -164,6 +166,8 @@ function getBullConnection() {
     GrowthAiModule,
     AiBlogGeneratorModule,
     XmlFeedsModule,
+    OperationsModule,
+    BackupModule,
   ],
   controllers: [AppController],
   providers: [

@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../../../marketplace/marketplace-connection.service';
 import { Injectable } from '@nestjs/common';
 import { IntegrationCategory } from '../../enums/integration-category.enum';
 import { IntegrationSyncType } from '../../enums/integration-category.enum';
@@ -54,14 +55,8 @@ export class HepsiburadaAdapter
     credentials: DecryptedCredentials,
   ) {
     this.assertContext(ctx);
-    try {
-      const bridge = this.buildBridge(credentials);
-      const merchantId = String(credentials.extra.merchantId ?? '');
-      await bridge.getStoreProducts(merchantId, 1);
-      return this.ok('Hepsiburada API bağlantısı doğrulandı');
-    } catch (error) {
-      return this.fail('Hepsiburada bağlantı testi başarısız', error);
-    }
+    const result = await new MarketplaceConnectionService().test(this.providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    return result.success ? this.ok(result.message) : this.fail(result.message);
   }
 
   async syncProducts(

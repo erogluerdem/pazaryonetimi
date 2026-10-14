@@ -206,6 +206,7 @@ model Tenant {
 
   // İleri Düzey Entegrasyon ve Sopyo Klon Modülleri
   digitalVaultPools       DigitalVaultPool[]
+  dataOperations          DataOperation[]
   xmlSuppliers            XmlSupplier[]
   subDealerGroups         SubDealerGroup[]
   subDealers              SubDealer[]
@@ -8400,3 +8401,34 @@ model BuyBoxSnapshot {
 }
 
 // ==================== FORUM SYSTEM (vBulletin/XenForo Style) ====================
+
+// Durable XML jobs. Checkpoints and product writes commit in the same transaction.
+model DataOperation {
+  id               String   @id @default(uuid())
+  tenantId         String
+  tenant           Tenant   @relation(fields: [tenantId], references: [id], onDelete: Cascade)
+  kind             String
+  status           String   @default("queued")
+  payloadEncrypted String
+  idempotencyKey   String
+  sourceId         String?
+  cursor           Int      @default(0)
+  total            Int      @default(0)
+  created          Int      @default(0)
+  updated          Int      @default(0)
+  attempts         Int      @default(0)
+  availableAt      DateTime @default(now())
+  leaseUntil       DateTime?
+  leaseToken       String?
+  error            String?
+  result           Json?
+  startedAt        DateTime?
+  completedAt      DateTime?
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@unique([tenantId, idempotencyKey])
+  @@index([status, availableAt, leaseUntil])
+  @@index([tenantId, createdAt])
+  @@index([tenantId, sourceId, status])
+}

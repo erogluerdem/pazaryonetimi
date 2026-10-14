@@ -396,7 +396,7 @@ export class MarketplaceService {
       const apiKey = this.encryption.decrypt(integration.apiKey);
       const apiSecret = this.encryption.decrypt(integration.apiSecret);
       const spApiReady =
-        platform === Platform.AMAZON
+        String(platform).startsWith('AMAZON')
           ? hasAmazonSpApiCredentials({
               apiKey,
               apiSecret,
@@ -515,9 +515,9 @@ export class MarketplaceService {
         try {
           const extra = this.encryption.openExtra(targetIntegration.apiExtra);
           extra.lastSyncAttemptAt = lastSyncAttemptAt;
-          extra.lastSuccessfulSyncAt = completedAt.toISOString();
-          extra.lastSyncStatus = 'success';
-          extra.lastSyncError = null;
+          if (!failed) extra.lastSuccessfulSyncAt = completedAt.toISOString();
+          extra.lastSyncStatus = failed ? 'failed' : 'success';
+          extra.lastSyncError = failed ? String(failed) + ' ürün aktarılamadı' : null;
           extra.productsAdded = created;
           extra.productsUpdated = updated;
           extra.productsFailed = failed;
@@ -623,19 +623,23 @@ export class MarketplaceService {
       throw new NotFoundException('Aktif mağaza entegrasyonu bulunamadı');
     }
 
+    if (!['all', 'products', 'orders'].includes(syncType)) throw new BadRequestException('Senkronizasyon türü geçersiz');
+    const metadata = this.encryption.openExtra(integration.apiExtra);
+    if (metadata.connectionStatus !== 'verified') {
+      const verified = await this.connections.test(metadata.marketplaceId || integration.platform.toLowerCase(), { ...metadata, apiKey: this.encryption.decrypt(integration.apiKey), apiSecret: this.encryption.decrypt(integration.apiSecret) });
+      if (!verified.success) throw new UnprocessableEntityException(verified.message);
+      metadata.connectionStatus = 'verified'; metadata.lastVerifiedAt = verified.verifiedAt;
+      await this.prisma.integration.update({ where: { id: integration.id }, data: { apiExtra: this.encryption.sealExtra(metadata) } });
+    }
     const platform = integration.platform as unknown as Platform;
-    const productResult = await this.syncProductsForTenant(
-      tenantId,
-      platform,
-      integration.id,
-    );
+    const productResult = syncType === 'orders' ? null : await this.syncProductsForTenant(tenantId, platform, integration.id);
 
     let orderResult: Record<string, unknown> | null = null;
     if (syncType === 'all' || syncType === 'orders') {
       const apiKey = this.encryption.decrypt(integration.apiKey);
       const apiSecret = this.encryption.decrypt(integration.apiSecret);
       const spApiReady =
-        platform === Platform.AMAZON
+        String(platform).startsWith('AMAZON')
           ? hasAmazonSpApiCredentials({
               apiKey,
               apiSecret,
@@ -669,12 +673,18 @@ export class MarketplaceService {
       }
     }
 
-    return {
-      integrationId: integration.id,
-      platform: integration.platform,
-      products: productResult,
-      orders: orderResult,
-    };
+    const succeeded = (!productResult || productResult.success && productResult.failed === 0) && (!orderResult || orderResult.success === true && !Number(orderResult.failed || 0));
+    {
+      // Product sync updates counters; reload to preserve those changes when recording overall completion.
+      const latest = await this.prisma.integration.findFirst({ where: { id: integration.id, tenantId }, select: { apiExtra: true } });
+      const state = this.encryption.openExtra(latest?.apiExtra || integration.apiExtra);
+      if (succeeded) state.lastSuccessfulSyncAt = new Date().toISOString();
+      state.lastSyncStatus = succeeded ? 'success' : 'failed';
+      state.lastSyncError = succeeded ? null : String(orderResult?.error || ((productResult?.failed || 0) + ' ürün aktarılamadı'));
+      state.lastSyncAttemptAt = new Date().toISOString();
+      await this.prisma.integration.update({ where: { id: integration.id }, data: { apiExtra: this.encryption.sealExtra(state) } });
+    }
+    return { success: Boolean(succeeded), integrationId: integration.id, platform: integration.platform, products: productResult, orders: orderResult };
   }
 
   async getIntegrationSyncStatus(tenantId: string, integrationId: string) {
@@ -924,7 +934,7 @@ export class MarketplaceService {
     const apiKey = this.encryption.decrypt(integration.apiKey);
     const apiSecret = this.encryption.decrypt(integration.apiSecret);
     const spApiReady =
-      platform === Platform.AMAZON
+      String(platform).startsWith('AMAZON')
         ? hasAmazonSpApiCredentials({
             apiKey,
             apiSecret,

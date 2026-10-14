@@ -1,7 +1,7 @@
 "use client";
 
-import React, { createContext, useContext, useEffect, useState, useCallback } from 'react';
-import { io, Socket } from 'socket.io-client';
+import React, { createContext, useContext, useEffect, useState, useCallback, useRef } from 'react';
+import { Socket } from 'socket.io-client';
 import { useSession } from 'next-auth/react';
 import { X, Info, AlertTriangle, CheckCircle, AlertCircle } from 'lucide-react';
 import { AnimatePresence, motion } from 'framer-motion';
@@ -39,6 +39,8 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     const [notifications, setNotifications] = useState<RealtimeNotification[]>([]);
     const [toasts, setToasts] = useState<RealtimeNotification[]>([]);
 
+    const seenNotifications = useRef(new Set<string>());
+    const loadedNotifications = useRef(false);
     const unreadCount = notifications.filter(n => !n.read).length;
 
     const showToast = useCallback((notification: RealtimeNotification) => {
@@ -49,43 +51,32 @@ export const NotificationProvider = ({ children }: { children: React.ReactNode }
     }, []);
 
     useEffect(() => {
-        if (!session?.user) return;
-        const user = session.user as SessionUser;
-
-        const socketUrl = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001';
-        const newSocket = io(`${socketUrl}/notifications`, {
-            query: {
-                tenantId: user.tenantId || 'default-tenant',
-                userId: user.id || 'anonymous'
-            },
-            transports: ['websocket']
-        });
-
-        newSocket.on('connect', () => {
-            console.log('Notification socket connected');
-        });
-
-        newSocket.on('notification', (notification: RealtimeNotification) => {
-            setNotifications(prev => [notification, ...prev].slice(0, 100)); // Keep last 100
-
-            // Critical or success notifications show a toast
-            if (notification.severity === 'error' || notification.severity === 'success' || notification.type === 'order') {
-                showToast(notification);
+        if (!session?.user) { setNotifications([]); seenNotifications.current.clear(); loadedNotifications.current = false; return; }
+        let mounted = true;
+        async function load() {
+            const response = await fetch('/api/operations/alerts', { cache: 'no-store' });
+            if (!response.ok || !mounted) return;
+            const rows = await response.json();
+            if (!Array.isArray(rows) || !mounted) return;
+            const fresh: RealtimeNotification[] = rows.map(row => ({ ...row, timestamp: row.createdAt, read: row.isRead }));
+            for (const item of fresh) {
+                if (loadedNotifications.current && !seenNotifications.current.has(item.id+'|'+item.message+'|'+item.severity) && !item.read && ['error','success'].includes(item.severity)) showToast(item);
+                seenNotifications.current.add(item.id+'|'+item.message+'|'+item.severity);
             }
-        });
-
-        setSocket(newSocket);
-
-        return () => {
-            newSocket.disconnect();
-        };
-    }, [session, showToast]);
+            loadedNotifications.current = true; setNotifications(fresh);
+        }
+        void load().catch(() => undefined);
+        const timer = setInterval(() => { void load().catch(() => undefined); }, 15000);
+        return () => { mounted = false; clearInterval(timer); };
+    }, [session?.user?.id, showToast]);
 
     const markAsRead = (id: string) => {
+        void fetch('/api/operations/alerts/'+encodeURIComponent(id)+'/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         setNotifications(prev => prev.map(n => n.id === id ? { ...n, read: true } : n));
     };
 
     const markAllAsRead = () => {
+        void fetch('/api/operations/alerts/all/read', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: '{}' });
         setNotifications(prev => prev.map(n => ({ ...n, read: true })));
     };
 

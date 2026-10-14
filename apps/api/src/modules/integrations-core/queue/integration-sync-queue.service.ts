@@ -95,6 +95,7 @@ export class IntegrationSyncQueueService {
         params.integrationId,
         params.syncType === IntegrationSyncType.ORDERS ? 'orders' : params.syncType === IntegrationSyncType.PRODUCTS ? 'products' : 'all',
       );
+      if (result.success === false) throw new Error('Senkronizasyon tamamlanamadı');
       return {
         queued: false,
         message: 'Senkronizasyon doğrudan çalıştırıldı',

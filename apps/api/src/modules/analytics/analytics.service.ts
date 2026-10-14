@@ -2013,26 +2013,34 @@ export class AnalyticsService {
 
   private parsePeriod(period: string): number {
     const match = period.match(/(\d+)([hdmwy])/);
-    if (!match) return 30 * 24 * 60 * 60 * 1000;
+    if (!match) return 30;
 
     const [, num, unit] = match;
-    const value = parseInt(num);
-    const hourMs = 60 * 60 * 1000;
-    const dayMs = 24 * hourMs;
+    const value = parseInt(num, 10);
+    if (isNaN(value) || value <= 0) return 30;
 
+    let days = 30;
     switch (unit) {
       case 'h':
-        return value * hourMs;
+        days = Math.max(1, Math.ceil(value / 24));
+        break;
       case 'd':
-        return value * dayMs;
+        days = value;
+        break;
       case 'w':
-        return value * 7 * dayMs;
+        days = value * 7;
+        break;
       case 'm':
-        return value * 30 * dayMs;
+        days = value * 30;
+        break;
       case 'y':
-        return value * 365 * dayMs;
+        days = value * 365;
+        break;
       default:
-        return 30 * dayMs;
+        days = 30;
+        break;
     }
+
+    return Math.min(days, 365); // Cap to 365 days max for safety
   }
 }

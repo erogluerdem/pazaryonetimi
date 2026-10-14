@@ -18,7 +18,7 @@ async function bootstrap() {
   });
 
   // Security Headers
-  app.useBodyParser('json', { limit: '12mb' });
+  app.useBodyParser('json', { limit: '22mb' });
   app.use(helmet());
 
   // API Versioning

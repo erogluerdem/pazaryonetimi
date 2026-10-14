@@ -36,15 +36,15 @@ describe('amazon-sp-api.config', () => {
     expect(parsed?.marketplace.region).toBe('eu');
   });
 
-  it('returns null when aws credentials are missing', () => {
+  it('accepts modern LWA credentials without AWS IAM keys', () => {
     expect(
       hasAmazonSpApiCredentials({
         ...completeCredentials,
         apiExtra: {
           ...completeCredentials.apiExtra,
-          roleArn: '',
+          roleArn: '', awsAccessKeyId: '', awsSecretAccessKey: '',
         },
       }),
-    ).toBe(false);
+    ).toBe(true);
   });
 });

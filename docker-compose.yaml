@@ -34,9 +34,23 @@ services:
       - GEMINI_MODEL=${GEMINI_MODEL:-gemini-1.5-flash}
       - WEB_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - ENCRYPTION_KEY=${ENCRYPTION_KEY}
+      - AMAZON_SP_API_APPLICATION_ID=${AMAZON_SP_API_APPLICATION_ID}
+      - AMAZON_CLIENT_ID=${AMAZON_CLIENT_ID}
+      - AMAZON_CLIENT_SECRET=${AMAZON_CLIENT_SECRET}
+      - AMAZON_REDIRECT_URI=${AMAZON_REDIRECT_URI}
+      - HEPSIBURADA_INTEGRATOR_NAME=${HEPSIBURADA_INTEGRATOR_NAME:-PazarYonetimi}
+      - TRENDYOL_INTEGRATOR_NAME=${TRENDYOL_INTEGRATOR_NAME:-PazarYonetimi}
+      - XML_AUTO_SYNC_ENABLED=${XML_AUTO_SYNC_ENABLED:-true}
+      - DATA_OPERATIONS_WORKER_ENABLED=${DATA_OPERATIONS_WORKER_ENABLED:-true}
+      - BACKUP_WORKER_ENABLED=${BACKUP_WORKER_ENABLED:-true}
+      - BACKUP_STORAGE_DIR=/app/var/backups
+      - BACKUP_ENCRYPTION_KEY=${BACKUP_ENCRYPTION_KEY:-${ENCRYPTION_KEY}}
+      - RESTORE_DRILL_ADMIN_URL=${RESTORE_DRILL_ADMIN_URL}
       - ALLOW_SIMULATED_PAYMENTS=${ALLOW_SIMULATED_PAYMENTS:-false}
       - ALLOW_SIMULATED_SHIPPING=${ALLOW_SIMULATED_SHIPPING:-false}
       - NODE_ENV=production
+    volumes:
+      - backup_data:/app/var/backups
     ports:
       - "3001:3001"
     depends_on:
@@ -68,7 +82,7 @@ services:
       - NEXTAUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
       - NEXTAUTH_SECRET=${NEXTAUTH_SECRET:-pazaryonetimi_secret_session_key_32_characters_long_2026}
       - AUTH_URL=${NEXTAUTH_URL:-http://localhost:3000}
-      - JWT_SECRET=${JWT_SECRET:-change-this-secret-in-production}
+      - JWT_SECRET=${JWT_SECRET}
       - AUTH_SECRET=${NEXTAUTH_SECRET:-${AUTH_SECRET:-pazaryonetimi_secret_session_key_32_characters_long_2026}}
       - GEMINI_API_KEY=${GEMINI_API_KEY}
       - GOOGLE_API_KEY=${GOOGLE_API_KEY:-${GEMINI_API_KEY}}
@@ -115,4 +129,5 @@ services:
     restart: always
 
 volumes:
+  backup_data:
   postgres_data:

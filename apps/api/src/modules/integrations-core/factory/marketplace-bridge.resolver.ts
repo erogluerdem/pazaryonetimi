@@ -49,7 +49,7 @@ export class MarketplaceBridgeResolver {
             apiSecret,
             String(extra.supplierId ?? ''),
             this.scrapingService,
-            extra.isTestMode === true,
+            extra.isTestMode === true || extra.isTestMode === 'true',
           );
         case 'AMAZON':
         case 'AMAZON_US':
@@ -62,11 +62,12 @@ export class MarketplaceBridgeResolver {
             apiKey,
             String(extra.merchantId ?? ''),
             this.scrapingService,
+            apiSecret, extra,
           );
         case 'N11':
           return new N11Bridge(apiKey, apiSecret, this.scrapingService);
         case 'CICEKSEPETI':
-          return new CicekSepetiBridge(apiKey, apiSecret, this.scrapingService);
+          return new CicekSepetiBridge(apiKey, apiSecret, this.scrapingService, extra.isTestMode === true || extra.isTestMode === 'true');
         case 'EBAY':
           return new EbayBridge(
             apiKey,
@@ -74,7 +75,7 @@ export class MarketplaceBridgeResolver {
             String(extra.devId ?? ''),
             String(extra.authToken ?? ''),
             this.scrapingService,
-            extra.isSandbox === true,
+            extra.isTestMode === true || extra.isTestMode === 'true',
           );
         case 'ETSY':
           return new EtsyBridge(
@@ -82,6 +83,7 @@ export class MarketplaceBridgeResolver {
             apiSecret,
             String(extra.accessToken ?? ''),
             this.scrapingService,
+            String(extra.shopId || ''),
           );
         case 'ZALANDO':
           return new ZalandoBridge(apiKey, String(extra.partnerId ?? ''), this.scrapingService);
@@ -103,7 +105,7 @@ export class MarketplaceBridgeResolver {
             this.scrapingService,
           );
         case 'WALMART':
-          return new WalmartBridge(apiKey, apiSecret, this.scrapingService, extra.isSandbox === true);
+          return new WalmartBridge(apiKey, apiSecret, this.scrapingService, extra.isTestMode === true || extra.isTestMode === 'true');
         case 'ALIEXPRESS':
           return new AliexpressBridge(
             apiKey,
@@ -125,7 +127,7 @@ export class MarketplaceBridgeResolver {
             String(extra.shopId ?? ''),
             String(extra.accessToken ?? ''),
             this.scrapingService,
-            extra.isSandbox === true,
+            extra.isTestMode === true || extra.isTestMode === 'true',
           );
         case 'LAZADA':
           return new LazadaBridge(

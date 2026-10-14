@@ -1,3 +1,5 @@
+import { XmlJobQueueService } from '../operations/xml-job-queue.service';
+import { Optional } from '@nestjs/common';
 import { Injectable, Logger, BadRequestException, ForbiddenException, NotFoundException, ConflictException } from '@nestjs/common';
 import { Interval } from '@nestjs/schedule';
 import { randomUUID } from 'node:crypto';
@@ -10,7 +12,7 @@ export type { ParsedXmlProduct } from './xml-product-parser';
 export class XmlFeedsService {
   private readonly logger = new Logger(XmlFeedsService.name);
   private schedulerRunning = false;
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(private readonly prisma: PrismaService, @Optional() private readonly jobs?: XmlJobQueueService) {}
   private tenant(tenantId: string) { if (!tenantId) throw new ForbiddenException('Oturuma bağlı mağaza bilgisi gerekli'); }
 
   async getFeeds(tenantId: string) {
@@ -37,9 +39,12 @@ export class XmlFeedsService {
 
   async deleteFeed(tenantId: string, id: string) {
     this.tenant(tenantId);
-    const result = await this.prisma.xmlSupplier.deleteMany({ where: { id, tenantId, status: { not: 'parsing' } } });
-    if (!result.count) throw new NotFoundException('Kaynak bulunamadı veya aktarım devam ediyor');
-    return { success: true };
+    return this.prisma.$transaction(async tx => {
+      const result = await tx.xmlSupplier.deleteMany({ where: { id, tenantId, status: { not: 'parsing' } } });
+      if (!result.count) throw new NotFoundException('Kaynak bulunamadı veya aktarım devam ediyor');
+      await tx.activityLog.deleteMany({ where: { tenantId, resource: 'xml_feed', resourceId: id, action: 'xml.feed.config' } });
+      return { success: true };
+    });
   }
 
   async preview(tenantId: string, body: { xml?: string; url?: string; mapping?: XmlFieldMapping }) {
@@ -55,6 +60,15 @@ export class XmlFeedsService {
     const markup = Number(options.markupPercent ?? 0); const fee = Number(options.fixedFee ?? 0);
     if (!Number.isFinite(markup) || markup < 0 || markup > 1000 || !Number.isFinite(fee) || fee < 0) throw new BadRequestException('Fiyat kuralı geçersiz');
     return this.prisma.$transaction(async tx => {
+      const result = await this.persistProductsInTransaction(tx, tenantId, products, options);
+      await tx.activityLog.create({ data: { tenantId, resource: 'xml_import', resourceId: options.supplierId || randomUUID(), action: 'xml.imported', details: result } });
+      return result;
+    }, { maxWait: 30_000, timeout: 120_000 });
+  }
+
+  async persistProductsInTransaction(tx: any, tenantId: string, products: ParsedXmlProduct[], options: { markupPercent?: number; fixedFee?: number; supplierId?: string } = {}) {
+    const markup = Number(options.markupPercent ?? 0); const fee = Number(options.fixedFee ?? 0);
+    if (!Number.isFinite(markup) || markup < 0 || markup > 1000 || !Number.isFinite(fee) || fee < 0) throw new BadRequestException('Fiyat kuralı geçersiz');
       await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', `xml-import:${tenantId}`);
       let created = 0; let updated = 0;
       const processedSkus = new Map<string, string>();
@@ -118,14 +132,12 @@ export class XmlFeedsService {
         }
       }
       return { created, updated, importedCount: products.length };
-    }, { maxWait: 30_000, timeout: 120_000 });
   }
 
   async importXml(tenantId: string, body: { xml?: string; url?: string; mapping?: XmlFieldMapping; markupPercent?: number; fixedFee?: number }) {
     this.tenant(tenantId);
     const parsed = parseXmlProducts(body.xml ?? (body.url ? await downloadXml(body.url) : ''), body.mapping);
     const result = await this.persistProducts(tenantId, parsed.products, body);
-    await this.prisma.activityLog.create({ data: { tenantId, resource: 'xml_import', resourceId: randomUUID(), action: 'xml.imported', details: result } });
     return { success: true, ...result, message: `${result.created} yeni ürün eklendi, ${result.updated} ürün güncellendi.` };
   }
 
@@ -174,7 +186,7 @@ export class XmlFeedsService {
         const interval = Number(source.rules[0]?.syncInterval ?? 240) * 60_000;
         const reference = source.status === 'error' ? source.updatedAt : source.lastSyncAt;
         if (reference && Date.now() - reference.getTime() < interval) continue;
-        try { await this.syncFeed(source.tenantId, source.id); } catch { this.logger.warn(`XML kaynağı senkronize edilemedi: ${source.id}`); }
+        try { if (this.jobs) await this.jobs.enqueueFeed(source.tenantId, source.id, 'scheduled:' + source.id + ':' + Math.floor(Date.now() / interval)); else await this.syncFeed(source.tenantId, source.id); } catch { this.logger.warn(`XML kaynağı senkronize edilemedi: ${source.id}`); }
       }
     } finally { this.schedulerRunning = false; }
   }

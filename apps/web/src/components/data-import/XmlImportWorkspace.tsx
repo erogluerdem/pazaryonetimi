@@ -1,18 +1,21 @@
 'use client';
-import { useEffect, useState } from 'react';
+import { useEffect, useState, useRef } from 'react';
 import { FileCode2, Upload, Download, RefreshCw, Trash2, Plus, Loader2 } from 'lucide-react';
 
 type Feed = { id: string; name: string; url: string; status: string; productCount: number; lastSync?: string; markup: number; fixedFee: number; autoSync: boolean; syncInterval: number };
 type Product = { id?: string; sku: string; title: string; price: number | string; stock: number };
+type XmlJob = { id: string; status: string; cursor: number; total: number; created: number; updated: number; error?: string; createdAt: string };
 type Preview = { total: number; fields: string[]; products: Product[] };
-const mappingFields = [{ key: 'sku', label: 'SKU / ürün kodu' }, { key: 'title', label: 'Ürün adı' }, { key: 'price', label: 'Satış fiyatı' }, { key: 'costPrice', label: 'Alış fiyatı' }, { key: 'stock', label: 'Stok' }, { key: 'barcode', label: 'Barkod' }];
-async function request<T>(path: string, method = 'GET', body?: unknown): Promise<T> {
-  const response = await fetch('/api/xml-feeds' + path, { method, headers: { 'Content-Type': 'application/json' }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
+const mappingFields = [{ key: 'sku', label: 'SKU / ürün kodu' }, { key: 'title', label: 'Ürün adı' }, { key: 'price', label: 'Satış fiyatı' }, { key: 'costPrice', label: 'Alış fiyatı' }, { key: 'stock', label: 'Stok' }, { key: 'barcode', label: 'Barkod' }, { key: 'category', label: 'Kategori' }, { key: 'brand', label: 'Marka' }, { key: 'description', label: 'Açıklama' }, { key: 'images', label: 'Görseller' }];
+async function request<T>(path: string, method = 'GET', body?: unknown, key?: string): Promise<T> {
+  const response = await fetch('/api/xml-feeds' + path, { method, headers: { 'Content-Type': 'application/json', ...(key ? { 'idempotency-key': key } : {}) }, ...(body !== undefined ? { body: JSON.stringify(body) } : {}) });
   const result = await response.json();
   if (!response.ok) throw new Error(Array.isArray(result.message) ? result.message.join(', ') : result.message || result.error || 'İşlem tamamlanamadı');
   return result;
 }
 export default function XmlImportWorkspace() {
+  const [jobs, setJobs] = useState<XmlJob[]>([]);
+  const requestKey = useRef<string | null>(null);
   const [feeds, setFeeds] = useState<Feed[]>([]);
   const [catalog, setCatalog] = useState<Product[]>([]);
   const [selected, setSelected] = useState<string[]>([]);
@@ -33,10 +36,24 @@ export default function XmlImportWorkspace() {
   const [interval, setInterval] = useState('240');
   const inputClass = 'w-full rounded-xl border border-border bg-background p-3 text-sm text-foreground';
   async function refresh() {
-    const [sources, products] = await Promise.all([request<Feed[]>(''), request<Product[]>('/products')]);
-    setFeeds(sources); setCatalog(products);
+    const [sources, products, operations] = await Promise.all([request<Feed[]>(''), request<Product[]>('/products'), request<XmlJob[]>('/jobs')]);
+    setFeeds(sources); setCatalog(products); setJobs(operations);
   }
   useEffect(() => { refresh().catch(e => setError(e.message)).finally(() => setLoading(false)); }, []);
+  useEffect(() => {
+    if (!jobs.some(job => ['queued','processing'].includes(job.status))) return;
+    const timer = window.setInterval(() => { void refresh().catch(e => setError(e.message)); }, 3000);
+    return () => window.clearInterval(timer);
+  }, [jobs]);
+  useEffect(() => { requestKey.current = null; }, [url, xml, mapping, markup, fixedFee]);
+  async function enqueue(path: string, body: unknown) {
+    requestKey.current ||= crypto.randomUUID();
+    const job = await request<XmlJob>(path, 'POST', body, requestKey.current);
+    requestKey.current = null;
+    setMessage('Aktarım işi kaydedildi. İlerlemesini aşağıdan takip edebilirsiniz.');
+    await refresh();
+    return job;
+  }
   async function run(id: string, action: () => Promise<void>) {
     setBusy(id); setError(''); setMessage('');
     try { await action(); } catch (e) { setError(e instanceof Error ? e.message : 'İşlem tamamlanamadı'); } finally { setBusy(''); }
@@ -51,7 +68,9 @@ export default function XmlImportWorkspace() {
       if (file.size > 10 * 1024 * 1024) throw new Error('XML dosyası en fazla 10 MB olabilir');
       const buffer = await file.arrayBuffer();
       const declaration = new TextDecoder('ascii').decode(buffer.slice(0,200)).match(/encoding=["']([^"']+)/i)?.[1];
-      setXml(new TextDecoder(declaration || 'utf-8', { fatal: true }).decode(buffer)); setFilename(file.name);
+      const bytes = new Uint8Array(buffer);
+      const encoding = bytes[0] === 0xff && bytes[1] === 0xfe ? 'utf-16le' : bytes[0] === 0xfe && bytes[1] === 0xff ? 'utf-16be' : declaration || 'utf-8';
+      setXml(new TextDecoder(encoding, { fatal: true }).decode(buffer)); setFilename(file.name);
     } catch (e) { setXml(''); setFilename(''); setError(e instanceof Error ? e.message : 'Dosya okunamadı'); }
   }
   async function exportProducts() {
@@ -78,12 +97,13 @@ export default function XmlImportWorkspace() {
       {source === 'url' && <div className="mt-5 flex flex-wrap items-center gap-4 text-sm"><label className="flex items-center gap-2"><input type="checkbox" checked={autoSync} onChange={e => setAutoSync(e.target.checked)} /> Otomatik senkronizasyon</label><label className="flex items-center gap-2">Aralık (dakika)<input type="number" min="15" value={interval} onChange={e => setInterval(e.target.value)} className="w-24 rounded-lg border border-border bg-background p-2" /></label></div>}
       <div className="mt-6 flex flex-wrap gap-3">
         <button disabled={!!busy || !(source === 'url' ? url.trim() : xml)} onClick={() => void run('preview', async () => setPreview(await request<Preview>('/preview','POST',payload())))} className="rounded-xl border border-border px-5 py-3 text-sm font-medium disabled:opacity-50">{busy === 'preview' ? 'Okunuyor…' : 'Önizle'}</button>
-        <button disabled={!!busy || !preview} onClick={() => void run('import', async () => { const result = await request<{ message: string }>('/import','POST',payload()); setMessage(result.message); await refresh(); })} className="rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white disabled:opacity-50">{busy === 'import' ? 'Aktarılıyor…' : 'Kataloğa aktar'}</button>
+        <button disabled={!!busy || !preview} onClick={() => void run('import', async () => { await enqueue('/import', payload()); })} className="rounded-xl bg-primary px-5 py-3 text-sm font-medium text-white disabled:opacity-50">{busy === 'import' ? 'Aktarılıyor…' : 'Kataloğa aktar'}</button>
         {source === 'url' && <button disabled={!!busy || !name.trim() || !url.trim()} onClick={() => void run('save', async () => { await request('','POST',{ name, url, mapping: payload().mapping, markupPercent: Number(markup), fixedFee: Number(fixedFee), autoSync, syncInterval: Number(interval) }); setMessage('XML kaynağı kaydedildi. Senkronizasyon düğmesiyle aktarımı başlatabilirsiniz.'); await refresh(); })} className="flex items-center gap-2 rounded-xl border border-border px-5 py-3 text-sm disabled:opacity-50"><Plus size={16} /> Kaynağı kaydet</button>}
       </div>
     </section>
-    {preview && <section><h2 className="mb-3 text-lg font-bold">Önizleme — {preview.total} ürün</h2><p className="mb-3 text-xs text-slate-500">İlk {preview.products.length} ürün gösteriliyor. Aktarım tüm ürünleri işler; aynı SKU mevcut ürünü günceller.</p><ProductTable products={preview.products} /></section>}
-    <section><h2 className="mb-4 text-lg font-bold">Kayıtlı tedarikçi kaynakları</h2>{loading ? <Loader2 className="animate-spin" /> : !feeds.length ? <p className="text-sm text-slate-500">Henüz kaynak eklenmedi.</p> : <div className="divide-y divide-border">{feeds.map(feed => <div key={feed.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div className="min-w-0"><p className="font-medium">{feed.name}</p><p className="max-w-xl truncate text-xs text-slate-500">{feed.url}</p><p className="mt-1 text-xs text-slate-500">{feed.productCount} ürün · {feed.status === 'parsing' ? 'Aktarılıyor' : feed.status === 'error' ? 'Son aktarım başarısız' : 'Aktif'} · {feed.lastSync ? new Date(feed.lastSync).toLocaleString('tr-TR') : 'Henüz senkronize edilmedi'}{feed.autoSync ? ` · Her ${feed.syncInterval} dakikada bir` : ''}</p></div><div className="flex gap-2"><button disabled={!!busy || feed.status === 'parsing'} onClick={() => void run(feed.id, async () => { const result = await request<{ message: string }>('/'+encodeURIComponent(feed.id)+'/sync','POST',{}); setMessage(result.message); await refresh(); })} className="flex items-center gap-2 rounded-xl border border-border p-3 text-sm disabled:opacity-50"><RefreshCw size={16} className={busy === feed.id ? 'animate-spin' : ''} /> Senkronize et</button><button aria-label={feed.name+' kaynağını sil'} disabled={!!busy || feed.status === 'parsing'} onClick={() => { if (window.confirm('XML kaynağı silinsin mi? Katalog ürünleri korunur.')) void run('delete', async () => { await request('/'+encodeURIComponent(feed.id),'DELETE'); await refresh(); }); }} className="rounded-xl border border-border p-3 text-red-500 disabled:opacity-50"><Trash2 size={16} /></button></div></div>)}</div>}</section>
+    {preview && <section><h2 className="mb-3 text-lg font-bold">Önizleme — {preview.total} ürün</h2><p className="mb-3 text-xs text-slate-500">İlk {preview.products.length} ürün gösteriliyor. Aktarım arka planda parça parça işler; aynı SKU mevcut ürünü günceller. Sayfayı kapatsanız da ilerleme korunur.</p><ProductTable products={preview.products} /></section>}
+    <section><h2 className="mb-4 text-lg font-bold">Aktarım işleri</h2>{!jobs.length ? <p className="text-sm text-slate-500">Henüz aktarım işi yok.</p> : <div className="space-y-3">{jobs.map(job => <div key={job.id} className="rounded-xl border border-border p-4"><div className="flex items-center justify-between gap-3"><p className="text-sm font-medium">{job.status === 'completed' ? 'Tamamlandı' : job.status === 'failed' ? 'Başarısız' : job.status === 'processing' ? 'Aktarılıyor' : 'Kuyrukta'} · {job.cursor}/{job.total || '?'} ürün</p>{job.status === 'failed' && <button disabled={!!busy} onClick={() => void run('retry', async () => { await request('/jobs/'+encodeURIComponent(job.id)+'/retry','POST',{}); await refresh(); })} className="rounded-lg border border-border px-3 py-2 text-sm">Kaldığı yerden tekrar dene</button>}</div><progress aria-label="Aktarım ilerlemesi" className="mt-3 h-2 w-full" value={job.cursor} max={job.total || 1} /><p className="mt-2 text-xs text-slate-500">{job.created} yeni · {job.updated} güncellenen · {new Date(job.createdAt).toLocaleString('tr-TR')}</p>{job.error && <p className="mt-2 text-sm text-red-600">{job.error}</p>}</div>)}</div>}</section>
+    <section><h2 className="mb-4 text-lg font-bold">Kayıtlı tedarikçi kaynakları</h2>{loading ? <Loader2 className="animate-spin" /> : !feeds.length ? <p className="text-sm text-slate-500">Henüz kaynak eklenmedi.</p> : <div className="divide-y divide-border">{feeds.map(feed => <div key={feed.id} className="flex flex-wrap items-center justify-between gap-3 py-4"><div className="min-w-0"><p className="font-medium">{feed.name}</p><p className="max-w-xl truncate text-xs text-slate-500">{feed.url}</p><p className="mt-1 text-xs text-slate-500">{feed.productCount} ürün · {feed.status === 'parsing' ? 'Aktarılıyor' : feed.status === 'error' ? 'Son aktarım başarısız' : 'Aktif'} · {feed.lastSync ? new Date(feed.lastSync).toLocaleString('tr-TR') : 'Henüz senkronize edilmedi'}{feed.autoSync ? ` · Her ${feed.syncInterval} dakikada bir` : ''}</p></div><div className="flex gap-2"><button disabled={!!busy || feed.status === 'parsing'} onClick={() => void run(feed.id, async () => { await enqueue('/'+encodeURIComponent(feed.id)+'/sync', {}); })} className="flex items-center gap-2 rounded-xl border border-border p-3 text-sm disabled:opacity-50"><RefreshCw size={16} className={busy === feed.id ? 'animate-spin' : ''} /> Senkronize et</button><button aria-label={feed.name+' kaynağını sil'} disabled={!!busy || feed.status === 'parsing'} onClick={() => { if (window.confirm('XML kaynağı silinsin mi? Katalog ürünleri korunur.')) void run('delete', async () => { await request('/'+encodeURIComponent(feed.id),'DELETE'); await refresh(); }); }} className="rounded-xl border border-border p-3 text-red-500 disabled:opacity-50"><Trash2 size={16} /></button></div></div>)}</div>}</section>
     <section><div className="mb-4 flex flex-wrap items-center justify-between gap-3"><div><h2 className="text-lg font-bold">Katalogdan XML dışa aktar</h2><p className="mt-1 text-xs text-slate-500">Son 2.000 ürün listelenir. Seçim yapmazsanız tüm katalog indirilir (en fazla 20.000 ürün). XML dosyasını destekleyen satış kanalınıza yükleyebilirsiniz.</p></div><button disabled={!!busy || !catalog.length} onClick={() => void run('export',exportProducts)} className="flex items-center gap-2 rounded-xl border border-border px-4 py-3 text-sm disabled:opacity-50"><Download size={16} /> {selected.length ? `${selected.length} ürünü indir` : 'Tümünü XML indir'}</button></div><ProductTable products={catalog} selected={selected} onSelect={id => setSelected(selected.includes(id) ? selected.filter(p => p !== id) : [...selected,id])} /></section>
   </div>;
 }

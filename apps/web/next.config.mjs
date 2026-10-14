@@ -82,6 +82,46 @@ const nextConfig = {
         destination: `${apiBase}/api/v1/:path*`,
       },
       {
+        source: '/api/analytics/:path*',
+        destination: `${apiBase}/api/v1/analytics/:path*`,
+      },
+      {
+        source: '/api/customers/:path*',
+        destination: `${apiBase}/api/v1/customers/:path*`,
+      },
+      {
+        source: '/api/orders/:path*',
+        destination: `${apiBase}/api/v1/orders/:path*`,
+      },
+      {
+        source: '/api/system/:path*',
+        destination: `${apiBase}/api/v1/system/:path*`,
+      },
+      {
+        source: '/api/finance/:path*',
+        destination: `${apiBase}/api/v1/finance/:path*`,
+      },
+      {
+        source: '/api/products/:path*',
+        destination: `${apiBase}/api/v1/products/:path*`,
+      },
+      {
+        source: '/api/inventory/:path*',
+        destination: `${apiBase}/api/v1/inventory/:path*`,
+      },
+      {
+        source: '/api/growth-ai/:path*',
+        destination: `${apiBase}/api/v1/growth-ai/:path*`,
+      },
+      {
+        source: '/api/growth/:path*',
+        destination: `${apiBase}/api/v1/growth/:path*`,
+      },
+      {
+        source: '/api/market-intelligence/:path*',
+        destination: `${apiBase}/api/v1/market-intelligence/:path*`,
+      },
+      {
         source: '/tenant-credentials/:path*',
         destination: `${apiBase}/api/v1/tenant-credentials/:path*`,
       },

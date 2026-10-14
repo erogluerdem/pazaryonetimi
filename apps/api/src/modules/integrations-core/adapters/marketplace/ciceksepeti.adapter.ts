@@ -1,3 +1,4 @@
+import { MarketplaceConnectionService } from '../../../marketplace/marketplace-connection.service';
 import { Injectable } from '@nestjs/common';
 import { IntegrationCategory } from '../../enums/integration-category.enum';
 import { IntegrationSyncType } from '../../enums/integration-category.enum';
@@ -42,17 +43,8 @@ export class CiceksepetiAdapter
     credentials: DecryptedCredentials,
   ) {
     this.assertContext(ctx);
-    try {
-      const bridge = this.buildBridge(credentials);
-      // Basic test
-      const products = await bridge.syncProducts();
-      if (products?.success === true) {
-        return this.ok('Çiçeksepeti bağlantısı doğrulandı');
-      }
-      return this.fail('Çiçeksepeti yanıt vermedi');
-    } catch (error) {
-      return this.fail('Çiçeksepeti bağlantı testi başarısız', error);
-    }
+    const result = await new MarketplaceConnectionService().test(this.providerId, { ...credentials.extra, apiKey: credentials.apiKey, apiSecret: credentials.apiSecret });
+    return result.success ? this.ok(result.message) : this.fail(result.message);
   }
 
   async syncProducts(

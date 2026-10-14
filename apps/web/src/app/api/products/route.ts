@@ -20,8 +20,7 @@ export async function GET(req: NextRequest) {
         }
 
         if (!tenantId) {
-            const firstTenant = await prisma.tenant.findFirst({ select: { id: true } });
-            tenantId = firstTenant?.id || 'demo-tenant';
+            return NextResponse.json({ error: 'Kullanıcı oturumu gerekli' }, { status: 401 });
         }
 
         const { searchParams } = new URL(req.url);

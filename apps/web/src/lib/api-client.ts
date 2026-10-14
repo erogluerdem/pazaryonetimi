@@ -108,10 +108,14 @@ class ApiClient {
     // In browser, same-origin relative endpoints prevent CORS preflight and network blockage
     if (typeof window !== 'undefined') {
       const candidates: string[] = [];
-      if (!normalizedEndpoint.startsWith('/api')) {
-        candidates.push(`/api${normalizedEndpoint}`, `/api/v1${normalizedEndpoint}`, normalizedEndpoint);
-      } else {
+      if (normalizedEndpoint.startsWith('/api/v1/')) {
         candidates.push(normalizedEndpoint);
+      } else if (normalizedEndpoint.startsWith('/api/')) {
+        const stripped = normalizedEndpoint.replace(/^\/api\//, '/');
+        // Prioritize /api/v1/ because NestJS backend uses URI versioning (v1) with global prefix 'api'
+        candidates.push(`/api/v1${stripped}`, normalizedEndpoint);
+      } else {
+        candidates.push(`/api/v1${normalizedEndpoint}`, `/api${normalizedEndpoint}`, normalizedEndpoint);
       }
       return [...new Set(candidates)];
     }
@@ -122,15 +126,16 @@ class ApiClient {
 
     const prefixes: string[] = [];
     if (base) {
-      prefixes.push(base);
       if (!hasApiPrefix) {
-        prefixes.push(`${base}/api`, `${base}/api/v1`);
+        prefixes.push(`${base}/api/v1`, `${base}/api`, base);
+      } else {
+        prefixes.push(base);
       }
       if (root && root !== base) {
-        prefixes.push(`${root}/api`, `${root}/api/v1`);
+        prefixes.push(`${root}/api/v1`, `${root}/api`);
       }
     } else {
-      prefixes.push('', '/api', '/api/v1');
+      prefixes.push('/api/v1', '/api', '');
     }
 
     return [...new Set(prefixes.map((candidate) => `${candidate}${normalizedEndpoint}`))];
@@ -142,15 +147,18 @@ class ApiClient {
   ): Promise<T> {
     let lastError: ApiError | Error | null = null;
     const urlCandidates = this.buildUrlCandidates(endpoint);
+    const readOnly = !options.method || ['GET', 'HEAD'].includes(options.method.toUpperCase());
+    const retries = readOnly ? this.retryConfig.maxRetries : 0;
 
-    for (let attempt = 0; attempt <= this.retryConfig.maxRetries; attempt++) {
+    for (let attempt = 0; attempt <= retries; attempt++) {
       for (let i = 0; i < urlCandidates.length; i++) {
         const url = urlCandidates[i];
         const isLastCandidate = i === urlCandidates.length - 1;
 
+        let timeoutId: ReturnType<typeof setTimeout> | undefined;
         try {
           const controller = new AbortController();
-          const timeoutId = setTimeout(() => controller.abort(), 30000); // 30s timeout
+          timeoutId = setTimeout(() => controller.abort(), /marketplace\/(connect|sync-store)/.test(endpoint) ? 125000 : 30000); // 30s timeout
 
           const response = await fetch(url, {
             ...options,
@@ -183,7 +191,7 @@ class ApiClient {
             }
 
             if (
-              attempt < this.retryConfig.maxRetries &&
+              attempt < retries &&
               this.retryConfig.retryableStatuses.includes(response.status)
             ) {
               lastError = apiError;
@@ -196,6 +204,7 @@ class ApiClient {
 
           return response.json();
         } catch (error: any) {
+          if (timeoutId) clearTimeout(timeoutId);
           if (error instanceof ApiError) throw error;
 
           if (error.name === 'AbortError') {
@@ -204,14 +213,15 @@ class ApiClient {
             lastError = new ApiError(0, error.message || 'Network error', `${endpoint} (${url})`);
           }
 
-          // On network-level errors, try the next URL candidate first.
+          if (!readOnly) throw lastError;
+          // On read failures, try the next URL candidate.
           if (!isLastCandidate) {
             continue;
           }
         }
       }
 
-      if (attempt < this.retryConfig.maxRetries && lastError) {
+      if (attempt < retries && lastError) {
         const delay = this.getRetryDelay(attempt);
         console.warn(`[API] Retry ${attempt + 1}/${this.retryConfig.maxRetries} for ${endpoint} after ${delay}ms`);
         await this.sleep(delay);
@@ -707,10 +717,11 @@ class ApiClient {
   }
 
   async syncStore(storeId: string, syncType: string = 'all') {
-    return this.request(`/marketplace/sync-store/${storeId}`, {
-      method: 'POST',
-      body: JSON.stringify({ tenantId: this.tenantId, syncType }),
+    const result = await this.request<{ success?: boolean; products?: { failed?: number }; orders?: { error?: string } }>( '/marketplace/sync-store/' + encodeURIComponent(storeId), {
+      method: 'POST', body: JSON.stringify({ tenantId: this.tenantId, syncType }),
     });
+    if (result.success === false) throw new Error(result.orders?.error || String(result.products?.failed || 0) + ' ürün aktarılamadı; aktarım kayıtlarını kontrol edin');
+    return result;
   }
 
   async getIntegrationSyncStatus(integrationId: string) {
@@ -1140,16 +1151,12 @@ class ApiClient {
   }
 
   // Notifications Endpoint
-  async getNotifications(params: Record<string, string> = {}) {
-    const query = this.addTenantParam(params);
-    return this.request(`/system/notifications?${query}`);
+  async getNotifications(_params: Record<string,string> = {}) {
+    const rows = await this.request<any[]>('/operations/alerts');
+    return rows.map(row => ({ ...row, read: row.isRead, timestamp: row.createdAt, priority: row.severity === 'error' ? 'critical' : row.severity, type: ['order','stock','system'].includes(row.type) ? row.type : 'alert' }));
   }
+  async markNotificationRead(id: string) { return this.request('/operations/alerts/'+encodeURIComponent(id)+'/read', { method: 'POST', body: '{}' }); }
 
-  async markNotificationRead(id: string) {
-    return this.request(`/system/notifications/${id}/read`, { method: 'POST' });
-  }
-
-  // Dashboard Layout
   async saveDashboardLayout(layout: any) {
     return this.request('/system/dashboard-layout', {
       method: 'POST',

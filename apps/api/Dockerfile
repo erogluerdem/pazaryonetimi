@@ -1,7 +1,11 @@
+FROM postgres:16-bookworm AS postgres_tools
 FROM node:22-slim AS base
 RUN apt-get update && \
     DEBIAN_FRONTEND=noninteractive apt-get install -y --no-install-recommends \
     ca-certificates \
+    libpq5 \
+    liblz4-1 \
+    libzstd1 \
     libnss3 \
     libatk1.0-0 \
     libatk-bridge2.0-0 \
@@ -15,6 +19,8 @@ RUN apt-get update && \
     libgbm1 \
     libasound2 \
     && rm -rf /var/lib/apt/lists/*
+COPY --from=postgres_tools /usr/lib/postgresql/16/bin/pg_dump /usr/local/bin/pg_dump
+COPY --from=postgres_tools /usr/lib/postgresql/16/bin/pg_restore /usr/local/bin/pg_restore
 RUN npm install -g turbo
 
 FROM base AS pruner
@@ -79,6 +85,6 @@ ENV NODE_PATH=/app/node_modules:/app/apps/api/node_modules
 EXPOSE 3001
 
 # Start the application with an automatic database sync and seeding
-CMD ["sh", "-c", "cd packages/database && ../../node_modules/.bin/prisma db push --skip-generate --accept-data-loss && mkdir -p ../../node_modules/.prisma/client && cp -r ./generated/client/. ../../node_modules/.prisma/client/ && npm run db:seed && cd ../../apps/api && node dist/apps/api/src/main.js"]
+CMD ["sh", "-c", "cd packages/database && ../../node_modules/.bin/prisma db push --skip-generate && mkdir -p ../../node_modules/.prisma/client && cp -r ./generated/client/. ../../node_modules/.prisma/client/ && npm run db:seed && cd ../../apps/api && node dist/apps/api/src/main.js"]
 
 

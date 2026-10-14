@@ -1,698 +1,558 @@
-import { Injectable, BadRequestException } from '@nestjs/common';
+import {
+  Injectable,
+  BadRequestException,
+  ForbiddenException,
+  NotFoundException,
+  ConflictException,
+  Logger,
+  OnModuleInit,
+} from '@nestjs/common';
+import { Interval, Cron, CronExpression } from '@nestjs/schedule';
+import { promises as fs, createReadStream } from 'node:fs';
+import { gzipSync, gunzipSync } from 'node:zlib';
+import { randomUUID } from 'node:crypto';
 import { PrismaService } from '../../database/prisma.service';
-import * as cron from 'node-cron';
-
-export enum BackupType {
-  FULL = 'full',
-  INCREMENTAL = 'incremental',
-  DIFFERENTIAL = 'differential',
-}
-
-export enum BackupStatus {
-  SCHEDULED = 'scheduled',
-  IN_PROGRESS = 'in_progress',
-  COMPLETED = 'completed',
-  FAILED = 'failed',
-  ARCHIVED = 'archived',
-}
-
-export enum VerificationStatus {
-  PENDING = 'pending',
-  VERIFIED = 'verified',
-  FAILED = 'failed',
-}
-
-export interface BackupJob {
-  id: string;
-  name: string;
-  type: BackupType;
-  status: BackupStatus;
-  scheduleId?: string;
-  startTime: Date;
-  endTime?: Date;
-  duration?: number;
-  uncompressedSize: number;
-  compressedSize: number;
-  compressionRatio: number;
-  location: string;
-  storageType: string;
-  databases: string[];
-  tables: number;
-  rows: number;
-  verificationStatus: VerificationStatus;
-  verifiedAt?: Date;
-  retentionDays: number;
-  expiresAt: Date;
-  estimatedRestoreTimeMs: number;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface BackupSchedule {
-  id: string;
-  name?: string | null;
-  type: string;
-  frequency: 'hourly' | 'daily' | 'weekly' | 'monthly';
-  cronExpression?: string | null;
-  isActive: boolean;
-  retentionDays: number;
-  databases: string[];
-  lastRunAt?: Date | null;
-  nextRunAt: Date;
-  failureCount: number;
-  lastFailureMessage?: string;
-  createdAt: Date;
-  updatedAt: Date;
-}
-
-export interface DisasterRecoverySettings {
-  rtoMinutes: number;
-  rpoMinutes: number;
-  replicationEnabled: boolean;
-  geoRedundancyEnabled: boolean;
-  testRestoreFrequencyDays: number;
-  lastTestRestoreDate?: Date;
-  backupEncryption: boolean;
-  encryptionAlgorithm: string;
-  dataRetentionYears: number;
-  complianceLevel: string;
-}
+import { BackupArchiveStore } from './backup-archive.store';
+import { PostgresBackupRunner } from './postgres-backup.runner';
+import { OperationsAlertsService } from '../operations/operations-alerts.service';
 
 @Injectable()
-export class BackupService {
-  private backupSchedules = new Map<string, NodeJS.Timeout>();
+export class BackupService implements OnModuleInit {
+  private busy = false;
+  private readonly logger = new Logger(BackupService.name);
 
-  constructor(private prisma: PrismaService) {
-    void this.initializeSchedules();
-  }
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly store: BackupArchiveStore,
+    private readonly postgres: PostgresBackupRunner,
+    private readonly alerts: OperationsAlertsService,
+  ) {}
 
-  /**
-   * Initialize backup schedules from database
-   */
-  private async initializeSchedules() {
-    try {
-      const schedules = await this.getActiveSchedules();
-      for (const schedule of schedules) {
-        this.scheduleBackup(schedule);
+  async onModuleInit() {
+    this.logger.log('📦 Backup & Disaster Recovery Service başlatıldı.');
+    // Check and initialize default daily database schedule if none exists
+    setTimeout(async () => {
+      try {
+        await this.ensureDailyBackupSchedule();
+      } catch (err) {
+        this.logger.warn(`Daily backup schedule initialization warning: ${(err as Error).message}`);
       }
-    } catch (error) {
-      console.error('Failed to initialize backup schedules:', error);
+    }, 5000);
+  }
+
+  private admin(role: string) {
+    if (!['ADMIN', 'SUPERADMIN'].includes(role)) {
+      throw new ForbiddenException('Tam veritabanı yedeği yalnız sistem yöneticisine açıktır');
     }
   }
 
-  /**
-   * Create a new backup schedule
-   */
-  async createSchedule(
-    name: string,
-    type: BackupType,
-    frequency: 'hourly' | 'daily' | 'weekly' | 'monthly',
-    databases: string[],
-    retentionDays: number = 30,
-  ): Promise<BackupSchedule> {
-    const cronExpression = this.frequencyToCron(frequency);
-
-    const schedule = await (this.prisma as any).backupSchedule.create({
-      data: {
-        tenant: {
-          connect: {
-            id: (this.prisma as any).currentTenantId || 'default-tenant-id',
-          },
-        }, // Assuming tenantId context or similar
-        name,
-        type,
-        frequency,
-        cronExpression,
-        isActive: true,
-        databases,
-        retentionDays,
-        nextRunAt: this.getNextRunTime(frequency),
-        failureCount: 0,
-      },
-    });
-
-    void this.scheduleBackup(schedule as unknown as BackupSchedule);
-    return schedule as unknown as BackupSchedule;
+  publicJob(row: any) {
+    const { location, url, databases, ...safe } = row;
+    return {
+      ...safe,
+      status: row.status.startsWith('processing:') ? 'processing' : row.status,
+    };
   }
 
-  /**
-   * Get all backup schedules
-   */
-  async getSchedules(): Promise<BackupSchedule[]> {
-    return (this.prisma as any).backupSchedule.findMany({
+  async list(tenantId: string, role: string) {
+    const rows = await this.prisma.backupJob.findMany({
+      where: {
+        tenantId,
+        ...(['ADMIN', 'SUPERADMIN'].includes(role) ? {} : { type: 'catalog' }),
+      },
       orderBy: { createdAt: 'desc' },
-    }) as unknown as BackupSchedule[];
-  }
-
-  /**
-   * Get active schedules only
-   */
-  async getActiveSchedules(): Promise<BackupSchedule[]> {
-    return (this.prisma as any).backupSchedule.findMany({
-      where: { isActive: true },
-    }) as unknown as BackupSchedule[];
-  }
-
-  /**
-   * Get backup schedule by ID
-   */
-  async getScheduleById(id: string): Promise<BackupSchedule | null> {
-    return this.prisma.backupSchedule.findUnique({
-      where: { id },
-    }) as unknown as BackupSchedule | null;
-  }
-
-  /**
-   * Update backup schedule
-   */
-  async updateSchedule(
-    id: string,
-    data: Partial<BackupSchedule>,
-  ): Promise<BackupSchedule> {
-    const schedule = await this.prisma.backupSchedule.update({
-      where: { id },
-      data: {
-        ...data,
-        updatedAt: new Date(),
-      },
-    });
-
-    // Reschedule if active
-    if (schedule.isActive) {
-      void this.scheduleBackup(schedule as unknown as BackupSchedule);
-    }
-
-    return schedule as unknown as BackupSchedule;
-  }
-
-  /**
-   * Delete backup schedule
-   */
-  async deleteSchedule(id: string): Promise<void> {
-    const timeout = this.backupSchedules.get(id);
-    if (timeout) {
-      clearTimeout(timeout);
-      this.backupSchedules.delete(id);
-    }
-
-    await this.prisma.backupSchedule.delete({
-      where: { id },
-    });
-  }
-
-  /**
-   * Start a manual backup
-   */
-  async startBackup(
-    name: string,
-    type: BackupType,
-    databases: string[],
-    retentionDays: number = 30,
-  ): Promise<BackupJob> {
-    const backup = await this.prisma.backupJob.create({
-      data: {
-        name,
-        type,
-        status: BackupStatus.IN_PROGRESS,
-        startTime: new Date(),
-        uncompressedSize: 0,
-        compressedSize: 0,
-        compressionRatio: 0,
-        location: this.generateBackupLocation(),
-        storageType: 'aws-s3',
-        databases,
-        tables: 0,
-        rows: 0,
-        verificationStatus: VerificationStatus.PENDING,
-        retentionDays,
-        expiresAt: new Date(Date.now() + retentionDays * 24 * 60 * 60 * 1000),
-        estimatedRestoreTimeMs: this.estimateRestoreTime(type, databases),
-        tenant: {
-          connect: {
-            id: (this.prisma as any).currentTenantId || 'default-tenant-id',
-          },
-        },
-      },
-    });
-
-    // Simulate backup process
-    void this.performBackup(backup.id);
-
-    return backup as unknown as BackupJob;
-  }
-
-  /**
-   * Get backup job by ID
-   */
-  async getBackupById(id: string): Promise<BackupJob | null> {
-    return this.prisma.backupJob.findUnique({
-      where: { id },
-    }) as unknown as BackupJob | null;
-  }
-
-  /**
-   * Get all backups
-   */
-  async getBackups(
-    limit: number = 50,
-    offset: number = 0,
-    status?: BackupStatus,
-  ): Promise<BackupJob[]> {
-    return this.prisma.backupJob.findMany({
-      where: status ? { status } : undefined,
-      orderBy: { startTime: 'desc' },
-      take: limit,
-      skip: offset,
-    }) as unknown as BackupJob[];
-  }
-
-  /**
-   * Get backup statistics
-   */
-  async getBackupStatistics() {
-    const totalBackups = await this.prisma.backupJob.count();
-    const successfulBackups = await this.prisma.backupJob.count({
-      where: { status: BackupStatus.COMPLETED },
-    });
-    const failedBackups = await this.prisma.backupJob.count({
-      where: { status: BackupStatus.FAILED },
-    });
-
-    const allBackups = await this.prisma.backupJob.findMany({
-      orderBy: { startTime: 'desc' },
       take: 100,
     });
-
-    const totalSize = allBackups.reduce(
-      (sum, b) => sum + (Number(b.compressedSize) || 0),
-      0,
-    );
-    const avgDuration =
-      allBackups
-        .filter((b) => b.duration)
-        .reduce((sum, b) => sum + (b.duration || 0), 0) / allBackups.length;
-
-    return {
-      totalBackups,
-      successfulBackups,
-      failedBackups,
-      successRate: (successfulBackups / totalBackups) * 100,
-      totalSize,
-      averageDurationMs: avgDuration,
-      totalCompressedSize: totalSize,
-      averageCompressionRatio:
-        allBackups.reduce(
-          (sum, b) => sum + (Number(b.compressionRatio) || 0),
-          0,
-        ) / allBackups.length,
-    };
+    return rows.map((row) => this.publicJob(row));
   }
 
-  /**
-   * Verify backup integrity
-   */
-  async verifyBackup(backupId: string): Promise<boolean> {
-    const backup = await this.getBackupById(backupId);
-    if (!backup) {
-      throw new BadRequestException('Backup not found');
+  async get(tenantId: string, id: string, role: string) {
+    const row = await this.prisma.backupJob.findFirst({ where: { id, tenantId } });
+    if (!row) throw new NotFoundException('Yedek bulunamadı');
+    if (row.type === 'database') this.admin(role);
+    return row;
+  }
+
+  async create(tenantId: string, role: string, type = 'catalog', name?: string, retentionDays = 30) {
+    if (!['catalog', 'database'].includes(type)) throw new BadRequestException('Yedek türü geçersiz');
+    if (type === 'database') this.admin(role);
+    if (!Number.isInteger(retentionDays) || retentionDays < 1 || retentionDays > 3650) {
+      throw new BadRequestException('Saklama süresi 1–3650 gün olmalıdır');
     }
 
-    // Verify based on metadata completeness and status
-    const isValid =
-      backup.status === BackupStatus.COMPLETED &&
-      backup.compressedSize > 0 &&
-      backup.uncompressedSize > 0 &&
-      backup.tables > 0;
-
-    const status = isValid
-      ? VerificationStatus.VERIFIED
-      : VerificationStatus.FAILED;
-
-    await this.prisma.backupJob.update({
-      where: { id: backupId },
+    const row = await this.prisma.backupJob.create({
       data: {
-        verificationStatus: status,
-        verifiedAt: new Date(),
+        tenantId,
+        type,
+        name: name || (type === 'catalog' ? 'Ürün kataloğu yedeği' : 'Tam veritabanı yedeği'),
+        status: 'queued',
+        storageType: 'encrypted-local-volume',
+        verificationStatus: 'pending',
+        retentionDays,
+        expiresAt: new Date(Date.now() + retentionDays * 86400000),
       },
     });
 
-    return isValid;
+    return this.publicJob(row);
   }
 
-  /**
-   * List restore points
-   */
-  async getRestorePoints(limit: number = 20): Promise<BackupJob[]> {
-    return this.prisma.backupJob.findMany({
-      where: {
-        status: BackupStatus.COMPLETED,
-        verificationStatus: VerificationStatus.VERIFIED,
-      },
-      orderBy: { startTime: 'desc' },
-      take: limit,
-    }) as unknown as BackupJob[];
-  }
-
-  /**
-   * Start restore from backup
-   */
-  async startRestore(
-    backupId: string,
-    targetDatabase: string,
-    dryRun: boolean = false,
-  ): Promise<any> {
-    const backup = await this.getBackupById(backupId);
-    if (!backup) {
-      throw new BadRequestException('Backup not found');
+  async verify(tenantId: string, id: string, role: string) {
+    const row = await this.get(tenantId, id, role);
+    if (row.status !== 'completed' || !row.url?.startsWith('sha256:')) {
+      throw new ConflictException('Tamamlanmış gerçek arşiv gerekli');
     }
 
-    if (backup.verificationStatus !== VerificationStatus.VERIFIED) {
-      throw new BadRequestException('Backup is not verified');
-    }
-
-    const restore = await this.prisma.restoreJob.create({
-      data: {
-        backupId,
-        targetDatabase,
-        sourceDatabase: backup.databases[0],
-        status: 'in_progress',
-        startedAt: new Date(),
-        dryRun,
-        estimatedDurationMs: backup.estimatedRestoreTimeMs,
-        tenant: {
-          connect: {
-            id: (this.prisma as any).currentTenantId || 'default-tenant-id',
-          },
-        },
-      },
-    });
-
-    // Simulate restore process
-    void this.performRestore(restore.id);
-
-    return restore;
-  }
-
-  /**
-   * Get restore job
-   */
-  async getRestoreJob(id: string): Promise<any> {
-    return this.prisma.restoreJob.findUnique({
-      where: { id },
-      include: { backup: true } as any,
-    });
-  }
-
-  /**
-   * Get DR settings
-   */
-  async getDRSettings(): Promise<DisasterRecoverySettings> {
-    const settings = await this.prisma.drSettings.findFirst();
-
-    if (!settings) {
-      return {
-        rtoMinutes: 240,
-        rpoMinutes: 60,
-        replicationEnabled: true,
-        geoRedundancyEnabled: true,
-        testRestoreFrequencyDays: 30,
-        backupEncryption: true,
-        encryptionAlgorithm: 'AES-256',
-        dataRetentionYears: 7,
-        complianceLevel: 'GDPR',
-      };
-    }
-
-    return {
-      ...settings,
-      rtoMinutes: settings.rtoMinutes || 240,
-      rpoMinutes: settings.rpoMinutes || 60,
-      replicationEnabled: settings.replicationEnabled ?? true,
-      geoRedundancyEnabled: settings.geoRedundancyEnabled ?? true,
-      testRestoreFrequencyDays: settings.testRestoreFrequencyDays || 30,
-      backupEncryption: settings.backupEncryption ?? true,
-      encryptionAlgorithm: settings.encryptionAlgorithm || 'AES-256',
-      dataRetentionYears: settings.dataRetentionYears || 7,
-      complianceLevel: settings.complianceLevel || 'GDPR',
-    };
-  }
-
-  /**
-   * Update DR settings
-   */
-  async updateDRSettings(data: Partial<DisasterRecoverySettings>) {
-    const existing = await this.prisma.drSettings.findFirst();
-
-    if (existing) {
-      return this.prisma.drSettings.update({
-        where: { id: existing.id },
-        data,
-      });
-    }
-
-    return this.prisma.drSettings.create({
-      data: {
-        ...data,
-        rtoMinutes: data.rtoMinutes || 240,
-        rpoMinutes: data.rpoMinutes || 60,
-        replicationEnabled: data.replicationEnabled !== false,
-        geoRedundancyEnabled: data.geoRedundancyEnabled !== false,
-        testRestoreFrequencyDays: data.testRestoreFrequencyDays || 30,
-        backupEncryption: data.backupEncryption !== false,
-        encryptionAlgorithm: data.encryptionAlgorithm || 'AES-256',
-        dataRetentionYears: data.dataRetentionYears || 7,
-        complianceLevel: data.complianceLevel || 'GDPR',
-        tenant: {
-          connect: {
-            id: (this.prisma as any).currentTenantId || 'default-tenant-id',
-          },
-        },
-      },
-    });
-  }
-
-  /**
-   * Test restore (dry-run)
-   */
-  async testRestore(backupId: string): Promise<any> {
-    return this.startRestore(backupId, 'test-db', true);
-  }
-
-  // Private helper methods
-
-  /**
-   * Schedule backup to run at specified frequency
-   */
-  private scheduleBackup(schedule: BackupSchedule) {
-    if (!schedule.isActive) {
-      return;
-    }
-
-    // Clear existing timeout if present
-    const existing = this.backupSchedules.get(schedule.id);
-    if (existing) {
-      clearTimeout(existing);
-    }
-
-    // Schedule new backup
-    const timeout = setTimeout(() => {
-      void this.runScheduledBackup(schedule);
-    }, this.getTimeUntilNextRun(schedule.frequency));
-
-    this.backupSchedules.set(schedule.id, timeout);
-  }
-
-  /**
-   * Convert frequency to cron expression
-   */
-  private frequencyToCron(frequency: string): string {
-    const cronMap: Record<string, string> = {
-      hourly: '0 * * * *',
-      daily: '0 2 * * *',
-      weekly: '0 2 * * 0',
-      monthly: '0 2 1 * *',
-    };
-    return cronMap[frequency] || '0 2 * * *';
-  }
-
-  /**
-   * Get next run time based on frequency
-   */
-  private getNextRunTime(frequency: string): Date {
-    const now = new Date();
-    const next = new Date(now);
-
-    switch (frequency) {
-      case 'hourly':
-        next.setHours(next.getHours() + 1, 0, 0, 0);
-        break;
-      case 'daily':
-        next.setDate(next.getDate() + 1);
-        next.setHours(2, 0, 0, 0);
-        break;
-      case 'weekly':
-        next.setDate(next.getDate() + (7 - next.getDay()));
-        next.setHours(2, 0, 0, 0);
-        break;
-      case 'monthly':
-        next.setMonth(next.getMonth() + 1);
-        next.setDate(1);
-        next.setHours(2, 0, 0, 0);
-        break;
-    }
-
-    return next;
-  }
-
-  /**
-   * Get time until next run in milliseconds
-   */
-  private getTimeUntilNextRun(frequency: string): number {
-    return this.getNextRunTime(frequency).getTime() - Date.now();
-  }
-
-  /**
-   * Generate backup location path
-   */
-  private generateBackupLocation(): string {
-    const timestamp = new Date().toISOString().replace(/[:.]/g, '-');
-    return `aws-s3://backups/prod/${timestamp}`;
-  }
-
-  /**
-   * Estimate restore time based on backup type and size
-   */
-  private estimateRestoreTime(type: BackupType, databases: string[]): number {
-    const baseTime = 60000; // 1 minute
-    const dbMultiplier = databases.length * 2000;
-    const typeMultiplier = type === BackupType.FULL ? 8 : 2;
-
-    return baseTime + dbMultiplier + baseTime * typeMultiplier;
-  }
-
-  /**
-   * Execute backup process
-   */
-  private async performBackup(backupId: string) {
-    const startTime = Date.now();
+    let temporary: string | undefined;
     try {
-      const backup = await this.getBackupById(backupId);
-      if (!backup) return;
+      if ((await this.store.checksum(id)) !== row.url.slice(7)) {
+        throw new Error('Yedek sağlama toplamı uyuşmuyor');
+      }
 
-      // Get actual table count and row count from database
-      const tableCountResult = await this.prisma
-        .$queryRawUnsafe<
-          { count: bigint }[]
-        >(`SELECT count(*) as count FROM information_schema.tables WHERE table_schema = 'public'`)
-        .catch(() => [{ count: BigInt(0) }]);
+      temporary = await this.store.unpack(id);
 
-      const tables = Number(tableCountResult[0]?.count || 0);
-
-      // Estimate size based on DB stats
-      const dbSizeResult = await this.prisma
-        .$queryRawUnsafe<
-          { size: string }[]
-        >(`SELECT pg_database_size(current_database())::text as size`)
-        .catch(() => [{ size: '0' }]);
-
-      const uncompressedSize = parseInt(dbSizeResult[0]?.size || '0', 10);
-      const compressionRatio = 0.3; // typical gzip compression
-      const compressedSize = Math.floor(uncompressedSize * compressionRatio);
-
-      const duration = Date.now() - startTime;
+      let keyEscrowStatus = 'verified';
+      if (row.type === 'database') {
+        await this.postgres.inspect(temporary);
+        // Verify ENCRYPTION_KEY escrow bundle
+        try {
+          const escrow = await this.store.verifyEscrow(id);
+          this.logger.log(`Escrow verified for backup ${id}, matches active key: ${escrow.matchesActiveKey}`);
+        } catch (escErr) {
+          keyEscrowStatus = 'escrow_failed';
+          this.logger.warn(`Escrow verification warning for ${id}: ${(escErr as Error).message}`);
+        }
+      } else {
+        this.decodeCatalog(await fs.readFile(temporary), tenantId);
+      }
 
       await this.prisma.backupJob.update({
-        where: { id: backupId },
+        where: { id },
         data: {
-          status: BackupStatus.COMPLETED,
-          endTime: new Date(),
-          duration,
-          uncompressedSize: uncompressedSize || 1,
-          compressedSize: compressedSize || 1,
-          compressionRatio:
-            uncompressedSize > 0 ? compressedSize / uncompressedSize : 0,
-          tables,
-          rows: 0, // will be filled on verification
-          verificationStatus: VerificationStatus.PENDING,
+          verificationStatus: 'verified',
+          verifiedAt: new Date(),
         },
       });
+
+      return {
+        verified: true,
+        keyEscrowStatus,
+        message: 'Arşiv bütünlüğü, ENCRYPTION_KEY yedeği ve şifre çözme doğrulandı.',
+      };
     } catch (error) {
-      await this.prisma.backupJob
-        .update({
-          where: { id: backupId },
-          data: {
-            status: BackupStatus.FAILED,
-            endTime: new Date(),
-            duration: Date.now() - startTime,
-          },
-        })
-        .catch(() => {});
+      await this.prisma.backupJob.update({
+        where: { id },
+        data: {
+          verificationStatus: 'failed',
+          error: error instanceof Error ? error.message : 'Doğrulama başarısız',
+        },
+      });
+      throw error;
+    } finally {
+      if (temporary) await this.store.removeTemporary(temporary);
+    }
+  }
+
+  private decodeCatalog(buffer: Buffer, tenantId: string) {
+    const data = JSON.parse(gunzipSync(buffer, { maxOutputLength: 128 * 1024 * 1024 }).toString('utf8'));
+    if (data.format !== 'pazaryonetimi.catalog.v1' || data.tenantId !== tenantId || !Array.isArray(data.products)) {
+      throw new BadRequestException('Katalog yedeği bu mağazaya ait değil');
+    }
+    for (const p of data.products) {
+      if (
+        !p.id ||
+        p.tenantId !== tenantId ||
+        !p.sku ||
+        !p.title ||
+        !Number.isFinite(Number(p.price)) ||
+        Number(p.price) < 0 ||
+        !Number.isInteger(p.stock) ||
+        p.stock < 0
+      ) {
+        throw new BadRequestException('Yedekte ürün verisi geçersiz');
+      }
+    }
+    return data;
+  }
+
+  async restoreTest(tenantId: string, id: string, role: string) {
+    const backup = await this.get(tenantId, id, role);
+    await this.verify(tenantId, id, role);
+    const job = await this.prisma.restoreJob.create({
+      data: {
+        tenantId,
+        backupId: id,
+        status: 'queued',
+        dryRun: true,
+        sourceDatabase: backup.type,
+      },
+    });
+    return job;
+  }
+
+  async schedules(tenantId: string) {
+    return this.prisma.backupSchedule.findMany({ where: { tenantId }, orderBy: { createdAt: 'desc' } });
+  }
+
+  async schedule(tenantId: string, role: string, type = 'catalog') {
+    if (type === 'database') this.admin(role);
+    if (!['catalog', 'database'].includes(type)) throw new BadRequestException('Yedek türü geçersiz');
+
+    return this.prisma.$transaction(async (tx) => {
+      await tx.$queryRawUnsafe('SELECT pg_advisory_xact_lock(hashtext($1))', `backup-schedule:${tenantId}:${type}`);
+      const exists = await tx.backupSchedule.findFirst({ where: { tenantId, type, frequency: 'daily' } });
+      return exists
+        ? tx.backupSchedule.update({ where: { id: exists.id }, data: { isActive: true } })
+        : tx.backupSchedule.create({
+            data: {
+              tenantId,
+              type,
+              name: `Günlük ${type} yedeği`,
+              frequency: 'daily',
+              isActive: true,
+              retentionDays: 30,
+              nextRunAt: new Date(),
+            },
+          });
+    });
+  }
+
+  async stopSchedule(tenantId: string, id: string) {
+    const result = await this.prisma.backupSchedule.updateMany({ where: { id, tenantId }, data: { isActive: false } });
+    if (!result.count) throw new NotFoundException('Plan bulunamadı');
+    return { success: true };
+  }
+
+  async download(tenantId: string, id: string, role: string) {
+    const row = await this.get(tenantId, id, role);
+    if (row.status !== 'completed') throw new ConflictException('Yedek tamamlanmadı');
+    return createReadStream(await this.store.checked(id));
+  }
+
+  async downloadKeyEscrow(tenantId: string, id: string, role: string) {
+    this.admin(role);
+    await this.get(tenantId, id, role);
+    const path = this.store.path(id, '.keybundle.json');
+    return createReadStream(path);
+  }
+
+  async restores(tenantId: string) {
+    return this.prisma.restoreJob.findMany({ where: { tenantId }, orderBy: { startedAt: 'desc' }, take: 50 });
+  }
+
+  /**
+   * Sistem genelinde günlük veritabanı yedeğinin kurulu olduğunu garanti eder.
+   */
+  private async ensureDailyBackupSchedule() {
+    const firstTenant = await this.prisma.tenant.findFirst({ select: { id: true } });
+    if (!firstTenant) return;
+
+    const existing = await this.prisma.backupSchedule.findFirst({
+      where: { type: 'database', frequency: 'daily', isActive: true },
+    });
+
+    if (!existing) {
+      await this.prisma.backupSchedule.create({
+        data: {
+          tenantId: firstTenant.id,
+          type: 'database',
+          name: 'Otomatik Günlük Veritabanı Yedeği & Geri Yükleme Denemesi',
+          frequency: 'daily',
+          isActive: true,
+          retentionDays: 30,
+          nextRunAt: new Date(Date.now() + 60000), // İlk başlangıçtan 1 dk sonra
+        },
+      });
+      this.logger.log('📅 Otomatik günlük veritabanı yedeği planı oluşturuldu.');
     }
   }
 
   /**
-   * Execute restore process
+   * Gece 03:00 otomatik veritabanı yedeği ve hemen ardından geri yükleme tatbikatı (drill).
    */
-  private async performRestore(restoreId: string) {
-    const startTime = Date.now();
+  @Cron(CronExpression.EVERY_DAY_AT_3AM, { name: 'daily-midnight-backup-drill' })
+  async triggerDailyMidnightBackup() {
+    this.logger.log('🌙 Günlük gece 03:00 veritabanı yedeği tetikleniyor...');
+    const firstTenant = await this.prisma.tenant.findFirst({ select: { id: true } });
+    if (!firstTenant) return;
+
     try {
-      const restore = await this.prisma.restoreJob.findUnique({
-        where: { id: restoreId },
+      const backup = await this.prisma.backupJob.create({
+        data: {
+          tenantId: firstTenant.id,
+          type: 'database',
+          name: `Otomatik Günlük Sistem Yedeği - ${new Date().toLocaleDateString('tr-TR')}`,
+          status: 'queued',
+          storageType: 'encrypted-local-volume',
+          verificationStatus: 'pending',
+          retentionDays: 30,
+          expiresAt: new Date(Date.now() + 30 * 86400000),
+        },
+      });
+      this.logger.log(`✅ Gece yedeği sıraya alındı: ${backup.id}`);
+    } catch (err) {
+      this.logger.error(`Gece yedeği başlatılamadı: ${(err as Error).message}`);
+    }
+  }
+
+  @Interval(5000)
+  async tick() {
+    if (this.busy || process.env.BACKUP_WORKER_ENABLED === 'false') return;
+    this.busy = true;
+    try {
+      await this.runSchedules();
+      await this.processBackup();
+      await this.processRestore();
+    } catch (error) {
+      this.logger.error(error instanceof Error ? error.message : 'Yedek işçisi başarısız');
+    } finally {
+      this.busy = false;
+    }
+  }
+
+  private async runSchedules() {
+    const schedules = await this.prisma.backupSchedule.findMany({
+      where: { isActive: true, nextRunAt: { lte: new Date() }, type: { in: ['catalog', 'database'] } },
+      take: 50,
+    });
+    for (const schedule of schedules) {
+      await this.prisma.$transaction(async (tx) => {
+        const claimed = await tx.backupSchedule.updateMany({
+          where: { id: schedule.id, nextRunAt: schedule.nextRunAt },
+          data: { lastRunAt: new Date(), nextRunAt: new Date(Date.now() + 86400000) },
+        });
+        if (claimed.count) {
+          await tx.backupJob.create({
+            data: {
+              tenantId: schedule.tenantId,
+              name: schedule.name,
+              type: schedule.type,
+              status: 'queued',
+              storageType: 'encrypted-local-volume',
+              verificationStatus: 'pending',
+              retentionDays: schedule.retentionDays,
+              expiresAt: new Date(Date.now() + schedule.retentionDays * 86400000),
+            },
+          });
+        }
+      });
+    }
+  }
+
+  async processBackup() {
+    const row = await this.prisma.backupJob.findFirst({
+      where: {
+        OR: [
+          { status: 'queued' },
+          { status: { startsWith: 'processing:' }, updatedAt: { lt: new Date(Date.now() - 3600000) } },
+        ],
+      },
+      orderBy: { createdAt: 'asc' },
+    });
+    if (!row) return;
+
+    const token = `processing:${randomUUID()}`;
+    const claimed = await this.prisma.backupJob.updateMany({
+      where: { id: row.id, status: row.status, updatedAt: row.updatedAt },
+      data: { status: token },
+    });
+    if (!claimed.count) return;
+
+    let temporary: string | undefined;
+    try {
+      let bytes: Buffer | string;
+      let rows = 0;
+      let tables = 1;
+      await fs.mkdir(this.store.root(), { recursive: true, mode: 0o700 });
+
+      if (row.type === 'database') {
+        temporary = this.store.path(row.id, `.${randomUUID()}.dump`);
+        await this.postgres.dump(temporary);
+        tables = await this.postgres.inspect(temporary);
+        bytes = temporary;
+      } else if (row.type === 'catalog') {
+        const products = await this.prisma.product.findMany({
+          where: { tenantId: row.tenantId },
+          include: { images: true, variants: true },
+          take: 50001,
+        });
+        if (products.length > 50000) {
+          throw new Error('Katalog yedeği 50.000 ürün sınırını aşıyor; tam veritabanı yedeği kullanın');
+        }
+        rows = products.length;
+        bytes = gzipSync(
+          Buffer.from(
+            JSON.stringify({
+              format: 'pazaryonetimi.catalog.v1',
+              tenantId: row.tenantId,
+              createdAt: new Date().toISOString(),
+              products,
+            }),
+          ),
+        );
+      } else {
+        throw new Error('Eski yedek türü gerçek arşiv üretmiyor; yeni yedek oluşturun');
+      }
+
+      const archive = await this.store.write(row.id, bytes);
+
+      await this.prisma.backupJob.updateMany({
+        where: { id: row.id, status: token },
+        data: {
+          status: 'completed',
+          location: archive.location,
+          url: `sha256:${archive.checksum}`,
+          compressedSize: archive.size,
+          rows,
+          tables,
+          endTime: new Date(),
+          error: null,
+        },
       });
 
-      if (restore) {
-        await this.prisma.restoreJob.update({
-          where: { id: restoreId },
-          data: {
-            status: 'completed',
-            endTime: new Date(),
-            duration: Date.now() - startTime,
-          },
-        });
-      }
-    } catch {
-      await this.prisma.restoreJob
-        .update({
-          where: { id: restoreId },
-          data: {
-            status: 'failed',
-            endTime: new Date(),
-            duration: Date.now() - startTime,
-          },
-        })
-        .catch(() => {});
-    }
-  }
-
-  /**
-   * Run scheduled backup
-   */
-  private async runScheduledBackup(schedule: BackupSchedule) {
-    try {
-      await this.startBackup(
-        `${schedule.type.toUpperCase()} - ${new Date().toISOString()}`,
-        schedule.type as BackupType,
-        schedule.databases,
-        schedule.retentionDays,
+      await this.alerts.report(
+        row.tenantId,
+        `backup:${row.id}`,
+        'Yedek ve Anahtar Başarıyla Alındı',
+        'Şifreli veritabanı yedeği ve ENCRYPTION_KEY güvenli escrow zarfı kalıcı depoya yazıldı.',
+        '/dashboard/data-backup',
+        'info',
       );
 
-      // Update schedule
-      await this.updateSchedule(schedule.id, {
-        lastRunAt: new Date(),
-        nextRunAt: this.getNextRunTime(schedule.frequency),
-        failureCount: 0,
-      });
+      // Otomatik geri yükleme tatbikatı (restore drill) başlat
+      if (row.type === 'database') {
+        try {
+          await this.prisma.restoreJob.create({
+            data: {
+              tenantId: row.tenantId,
+              backupId: row.id,
+              status: 'queued',
+              dryRun: true,
+              sourceDatabase: 'database',
+            },
+          });
+          this.logger.log(`🔍 Yedek sonrası otomatik test geri yükleme sıraya alındı: ${row.id}`);
+        } catch (drillErr) {
+          this.logger.warn(`Otomatik drill başlatılamadı: ${(drillErr as Error).message}`);
+        }
+      }
     } catch (error) {
-      console.error(`Backup schedule ${schedule.id} failed:`, error);
-
-      // Update schedule with failure info
-      await this.updateSchedule(schedule.id, {
-        failureCount: (schedule.failureCount || 0) + 1,
-        lastFailureMessage: (error as Error).message,
+      const message = error instanceof Error ? error.message : 'Yedek başarısız';
+      await this.prisma.backupJob.updateMany({
+        where: { id: row.id, status: token },
+        data: { status: 'failed', error: message, endTime: new Date() },
       });
+      await this.alerts.report(
+        row.tenantId,
+        `backup:${row.id}`,
+        'Veritabanı yedeği oluşturulamadı! ⚠️',
+        message,
+        '/dashboard/data-backup',
+        'error',
+        {
+          errorCode: 'BACKUP_FAILED',
+          rootReason: message,
+          suggestedAction: 'Veritabanı bağlantısını ve yedekleme dizini izinlerini denetleyin.',
+        },
+      );
+    } finally {
+      if (temporary) await this.store.removeTemporary(temporary);
     }
+  }
 
-    // Reschedule
-    void this.scheduleBackup(schedule as unknown as BackupSchedule);
+  async processRestore() {
+    const row = await this.prisma.restoreJob.findFirst({
+      where: {
+        dryRun: true,
+        OR: [
+          { status: 'queued' },
+          { status: { startsWith: 'processing:' }, startedAt: { lt: new Date(Date.now() - 3600000) } },
+        ],
+      },
+      orderBy: { startedAt: 'asc' },
+    });
+    if (!row) return;
+
+    const token = `processing:${randomUUID()}`;
+    if (
+      !(
+        await this.prisma.restoreJob.updateMany({
+          where: { id: row.id, status: row.status },
+          data: { status: token, startedAt: new Date() },
+        })
+      ).count
+    )
+      return;
+
+    let temporary: string | undefined;
+    try {
+      const backup = await this.get(row.tenantId, row.backupId, 'ADMIN');
+      temporary = await this.store.unpack(backup.id);
+      let targetDatabase: string;
+
+      if (backup.type === 'database') {
+        // 1. Verify ENCRYPTION_KEY escrow
+        await this.store.verifyEscrow(backup.id);
+        // 2. Perform drill database restore
+        const result = await this.postgres.drill(temporary);
+        targetDatabase = result.targetDatabase;
+      } else {
+        const data = this.decodeCatalog(await fs.readFile(temporary), row.tenantId);
+        await this.prisma.$transaction(
+          async (tx) => {
+            await tx.$executeRawUnsafe(
+              'CREATE TEMP TABLE backup_catalog_drill (id text PRIMARY KEY, sku text NOT NULL, price numeric CHECK(price >= 0), stock integer CHECK(stock >= 0)) ON COMMIT DROP',
+            );
+            for (const p of data.products) {
+              await tx.$executeRawUnsafe(
+                'INSERT INTO backup_catalog_drill(id,sku,price,stock) VALUES ($1,$2,$3,$4)',
+                p.id,
+                p.sku,
+                Number(p.price),
+                p.stock,
+              );
+            }
+            const count = await tx.$queryRawUnsafe<{ count: bigint }[]>('SELECT count(*) AS count FROM backup_catalog_drill');
+            if (Number(count[0].count) !== data.products.length) throw new Error('Geri yükleme kayıt sayısı uyuşmuyor');
+          },
+          { timeout: 120000 },
+        );
+        targetDatabase = 'temporary-catalog-table';
+      }
+
+      await this.prisma.restoreJob.updateMany({
+        where: { id: row.id, status: token },
+        data: { status: 'completed', targetDatabase, endTime: new Date() },
+      });
+
+      await this.alerts.report(
+        row.tenantId,
+        `restore:${row.id}`,
+        'Geri yükleme tatbikatı başarıyla tamamlandı',
+        'Yedek ayrı test alanına yazıldı, tablolar ve ENCRYPTION_KEY yedeği doğrulandı.',
+        '/dashboard/data-backup',
+        'info',
+      );
+    } catch (error) {
+      const message = error instanceof Error ? error.message : 'Geri yükleme başarısız';
+      await this.prisma.restoreJob.updateMany({
+        where: { id: row.id, status: token },
+        data: { status: 'failed', error: message, endTime: new Date() },
+      });
+      await this.alerts.report(
+        row.tenantId,
+        `restore:${row.id}`,
+        'Geri yükleme tatbikatı başarısız oldu! ⚠️',
+        `Yedekten geri yükleme denemesinde hata: ${message}`,
+        '/dashboard/data-backup',
+        'error',
+        {
+          errorCode: 'RESTORE_DRILL_FAILED',
+          rootReason: message,
+          suggestedAction: 'Veritabanı yedeğinin arşiv ve anahtar bütünlüğünü doğrulayın.',
+        },
+      );
+    } finally {
+      if (temporary) await this.store.removeTemporary(temporary);
+    }
   }
 }

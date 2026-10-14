@@ -93,18 +93,17 @@ export class AmazonSpApiClient {
 
   async getOrders(): Promise<Record<string, unknown>[]> {
     const client = await this.getClient();
-    const response = (await client.callAPI({
-      operation: 'getOrders',
-      endpoint: 'orders',
-      query: {
-        MarketplaceIds: [this.credentials.marketplace.spMarketplaceId],
-        CreatedAfter: this.createdAfterIso(30),
-        MaxResultsPerPage: 50,
-      },
-    })) as { Orders?: Record<string, unknown>[]; Payload?: { Orders?: Record<string, unknown>[] } };
-
-    const orders = response?.Orders || response?.Payload?.Orders || [];
-    return Array.isArray(orders) ? orders : [];
+    const orders: Record<string, unknown>[] = []; let next = ''; const seen = new Set<string>();
+    for (let page = 0; page < 2000; page++) {
+      const response: any = await client.callAPI({ operation: 'getOrders', endpoint: 'orders', query: next ? { NextToken: next } : { MarketplaceIds: [this.credentials.marketplace.spMarketplaceId], CreatedAfter: this.createdAfterIso(30), MaxResultsPerPage: 100 } });
+      const payload = response?.payload || response?.Payload || response;
+      if (!Array.isArray(payload?.Orders)) throw new Error('Amazon sipariş yanıtı beklenen biçimde değil');
+      orders.push(...payload.Orders); next = payload.NextToken || '';
+      if (!next) return orders;
+      if (seen.has(next)) throw new Error('Amazon sipariş devam tokenı tekrar etti');
+      seen.add(next);
+    }
+    throw new Error('Amazon sipariş sayfalaması tamamlanamadı');
   }
 
   async syncOrders(): Promise<{
@@ -134,20 +133,23 @@ export class AmazonSpApiClient {
 
   async searchListingProducts(limit = 20): Promise<Record<string, unknown>[]> {
     const client = await this.getClient();
-    const response = (await client.callAPI({
-      operation: 'searchListingsItems',
-      endpoint: 'listingsItems',
-      path: {
-        sellerId: this.credentials.sellerId,
-      },
-      query: {
-        marketplaceIds: [this.credentials.marketplace.spMarketplaceId],
-        pageSize: Math.min(Math.max(limit, 1), 20),
-      },
-    })) as { items?: Record<string, unknown>[] };
-
-    const items = Array.isArray(response?.items) ? response.items : [];
-    return items.map((item, index) => mapAmazonListingProduct(item, index));
+    const products: Record<string, unknown>[] = []; let next = ''; const seen = new Set<string>();
+    const size = limit <= 0 ? 20 : Math.min(Math.max(limit, 1), 20);
+    for (let page = 0; page < 2000; page++) {
+      const response: any = await client.callAPI({ operation: 'searchListingsItems', endpoint: 'listingsItems', path: { sellerId: this.credentials.sellerId }, query: { marketplaceIds: [this.credentials.marketplace.spMarketplaceId], pageSize: size, includedData: ['summaries','attributes','offers','fulfillmentAvailability'], ...(next ? { pageToken: next } : {}) } });
+      const payload = response?.payload || response;
+      if (!Array.isArray(payload?.items)) throw new Error('Amazon ürün yanıtı beklenen biçimde değil');
+      products.push(...payload.items.map((item: any, index: number) => mapAmazonListingProduct(item, products.length + index)));
+      if (limit > 0 && products.length >= limit) return products.slice(0, limit);
+      next = payload.pagination?.nextToken || '';
+      if (!next) {
+        if (limit <= 0 && products.length >= 1000) throw new Error('Amazon liste araması 1.000 ürün sınırına ulaştı; tam katalog için Listings Report aktarımı gerekli');
+        return products;
+      }
+      if (seen.has(next)) throw new Error('Amazon ürün devam tokenı tekrar etti');
+      seen.add(next);
+    }
+    throw new Error('Amazon ürün sayfalaması tamamlanamadı');
   }
 
   async updateStock(sku: string, stock: number): Promise<Record<string, unknown>> {

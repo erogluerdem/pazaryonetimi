@@ -65,7 +65,7 @@ export async function downloadXml(raw: string, maxBytes = 10 * 1024 * 1024): Pro
     } finally { response.destroy(); }
     const buffer = Buffer.concat(chunks);
     const declaration = buffer.subarray(0, 200).toString('ascii').match(/encoding=["']([^"']+)/i)?.[1];
-    try { return new TextDecoder(declaration || 'utf-8', { fatal: true }).decode(buffer); } catch { throw new BadRequestException('XML karakter kodlaması okunamadı'); }
+    try { return new TextDecoder(buffer[0] === 0xff && buffer[1] === 0xfe ? 'utf-16le' : buffer[0] === 0xfe && buffer[1] === 0xff ? 'utf-16be' : declaration || 'utf-8', { fatal: true }).decode(buffer); } catch { throw new BadRequestException('XML karakter kodlaması okunamadı'); }
   }
   throw new BadRequestException('XML kaynağı çok fazla yönlendirme döndürdü');
 }

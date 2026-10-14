@@ -1,7 +1,8 @@
 "use client";
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'framer-motion';
+import { apiClient } from '@/lib/api-client';
 import { useBulkActions, useProducts } from '@/lib/hooks';
 import { ExportButton } from '@/lib/export-utils';
 import ImportModal from '@/components/products/ImportModal';
@@ -107,28 +108,38 @@ export default function BulkActionsPage() {
         p.sku.toLowerCase().includes(searchQuery.toLowerCase())
     );
 
+    const [preview, setPreview] = useState<{ previewId: string; changes: { productId: string; title: string; before: { price?: number; stock?: number }; after: { price?: number; stock?: number } }[]; total: number } | null>(null);
+    const [previewing, setPreviewing] = useState(false);
+    const [operationError, setOperationError] = useState('');
+    useEffect(() => { setPreview(null); setOperationError(''); }, [selectedAction, actionValue, actionType, selectedProducts]);
     const executeAction = async () => {
         if (!selectedAction) return;
         try {
+            if (['price-update','stock-update','discount'].includes(selectedAction) && !actionValue.trim()) throw new Error('İşlem değeri gerekli');
             const productIds = selectedProducts.map(id => String(id));
             const actionData: Record<string, any> = {};
 
             if (selectedAction === 'price-update' || selectedAction === 'discount') {
                 actionData.type = actionType;
-                actionData.value = parseFloat(actionValue) || 0;
+                actionData.value = Number(actionValue);
             } else if (selectedAction === 'stock-update') {
-                actionData.quantity = parseInt(actionValue, 10) || 0;
+                actionData.quantity = Number(actionValue);
             }
 
+            if (['price-update','stock-update','discount'].includes(selectedAction)) {
+                if (!preview) {
+                    setPreviewing(true);
+                    const result = await apiClient.request<{ previewId: string; changes: any[]; total: number }>('/products/bulk-action/preview', { method: 'POST', body: JSON.stringify({ action: selectedAction, productIds, ...actionData }) });
+                    setPreview(result); return;
+                }
+                actionData.previewId = preview.previewId;
+            }
             await executeBulkAction(selectedAction, productIds, actionData);
+            setShowActionModal(false); setSelectedAction(null); setSelectedProducts([]); setActionValue('');
         } catch (err) {
-            console.error('Toplu işlem hatası:', err);
-        } finally {
-            setShowActionModal(false);
-            setSelectedAction(null);
-            setSelectedProducts([]);
-            setActionValue('');
-        }
+            setOperationError(err instanceof Error ? err.message : 'Toplu işlem başarısız');
+        } finally { setPreviewing(false); }
+
     };
 
     return (
@@ -619,6 +630,8 @@ export default function BulkActionsPage() {
                             </div>
                         )}
 
+                        {operationError && <p role="alert" className="mt-4 text-sm text-red-600">{operationError}</p>}
+                        {preview && <div className="mt-4 max-h-60 overflow-auto rounded-lg border border-border p-3"><p className="mb-2 text-sm font-medium">{preview.total} ürünün önizlemesi · Fiyat/stok kataloğa uygulanır.</p>{preview.changes.map(change => <div key={change.productId} className="flex justify-between gap-3 border-t border-border py-2 text-sm"><span>{change.title}</span><span>{change.before.price ?? change.before.stock} → {change.after.price ?? change.after.stock}</span></div>)}</div>}
                         <div className="flex items-center gap-3 mt-6">
                             <button
                                 onClick={() => setShowActionModal(false)}
@@ -628,14 +641,14 @@ export default function BulkActionsPage() {
                             </button>
                             <button
                                 onClick={executeAction}
-                                disabled={bulkLoading}
+                                disabled={bulkLoading || previewing}
                                 className={`flex-1 py-2 rounded-lg text-white transition-colors ${
                                     selectedAction === 'delete'
                                         ? 'bg-red-600 hover:bg-red-700'
                                         : 'bg-indigo-600 hover:bg-indigo-700'
                                 } ${bulkLoading ? 'opacity-50 cursor-not-allowed' : ''}`}
                             >
-                                {bulkLoading ? 'İşleniyor...' : 'Uygula'}
+                                {bulkLoading || previewing ? 'İşleniyor…' : ['price-update','stock-update','discount'].includes(selectedAction || '') ? preview ? 'Önizlemeyi uygula' : 'Değişiklikleri önizle' : 'Uygula'}
                             </button>
                         </div>
                     </motion.div>

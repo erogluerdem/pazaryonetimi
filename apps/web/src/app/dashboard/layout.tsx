@@ -1,4 +1,5 @@
 "use client";
+import { NotificationProvider } from '@/providers/notification-provider';
 
 import React, { useState, useEffect, useMemo } from 'react';
 import Link from 'next/link';
@@ -365,7 +366,7 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
                     <QuickActionsProvider>
                         <ErrorBoundary>
                             <OnboardingProvider>
-                                <DashboardLayoutContent>{children}</DashboardLayoutContent>
+                                <NotificationProvider><DashboardLayoutContent>{children}</DashboardLayoutContent></NotificationProvider>
                             </OnboardingProvider>
                         </ErrorBoundary>
                     </QuickActionsProvider>
