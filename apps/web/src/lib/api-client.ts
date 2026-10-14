@@ -76,11 +76,11 @@ const API_BASE_URL = typeof window !== 'undefined'
   ? ''
   : (normalizeApiBaseUrl(process.env.API_INTERNAL_URL || process.env.API_URL || process.env.NEXT_PUBLIC_API_URL) || (process.env.NODE_ENV === 'production' ? 'https://api.pazaryonetimi.com' : 'http://localhost:3001'));
 
-// Track if direct API is preferred (e.g. when Next.js proxy returns 500)
+// Direct API tracking (only for localhost development)
 let globalDirectPreferred = false;
 if (typeof window !== 'undefined') {
   try {
-    globalDirectPreferred = sessionStorage.getItem('pazar_direct_api_preferred') === 'true';
+    sessionStorage.removeItem('pazar_direct_api_preferred');
   } catch {}
 }
 
@@ -173,7 +173,7 @@ class ApiClient {
 
     // In browser:
     if (typeof window !== 'undefined') {
-      const directBase = getDirectApiBaseUrl();
+      const isProdBrowser = window.location.hostname === 'pazaryonetimi.com' || window.location.hostname.endsWith('.pazaryonetimi.com');
 
       let relativeUrl: string;
       if (normalizedEndpoint.startsWith('/api/v1/')) {
@@ -184,15 +184,20 @@ class ApiClient {
         relativeUrl = `/api/v1${normalizedEndpoint}`;
       }
 
+      // In real production domain (pazaryonetimi.com), NEVER call direct cross-origin backend
+      // because browser CORS policy blocks cross-origin fetch to api.pazaryonetimi.com.
+      // Next.js rewrites handle all routing server-side seamlessly without CORS.
+      if (isProdBrowser) {
+        return [relativeUrl];
+      }
+
+      const directBase = getDirectApiBaseUrl();
       const directUrl = combineUrl(directBase, normalizedEndpoint);
 
-      // If direct API is preferred (because same-origin Next.js proxy previously failed or 500'd),
-      // prioritize direct backend URL so queries succeed immediately with zero delay.
       if (globalDirectPreferred) {
         return [...new Set([directUrl, relativeUrl])];
       }
 
-      // Default: relative proxy first (avoids CORS preflight if rewrite works), direct API as fallback candidate
       return [...new Set([relativeUrl, directUrl])];
     }
 
@@ -271,13 +276,15 @@ class ApiClient {
             throw apiError;
           }
 
-          // If request succeeded using a direct URL (starts with http/https) in browser,
-          // mark globalDirectPreferred = true so all future requests use direct API directly.
+          // If request succeeded using a direct URL in non-production browser, record preference
           if (typeof window !== 'undefined' && (url.startsWith('http://') || url.startsWith('https://'))) {
-            globalDirectPreferred = true;
-            try {
-              sessionStorage.setItem('pazar_direct_api_preferred', 'true');
-            } catch {}
+            const isProdBrowser = window.location.hostname === 'pazaryonetimi.com' || window.location.hostname.endsWith('.pazaryonetimi.com');
+            if (!isProdBrowser) {
+              globalDirectPreferred = true;
+              try {
+                sessionStorage.setItem('pazar_direct_api_preferred', 'true');
+              } catch {}
+            }
           }
 
           return response.json();

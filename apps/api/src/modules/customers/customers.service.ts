@@ -100,6 +100,7 @@ export class CustomersService {
         avgOrderValue: Math.round(avgOrderValue * 100) / 100,
         totalSpent: Math.round(c.totalSpent * 100) / 100,
         status: segment,
+        segment,
         platforms: Array.from(c.platforms),
         loyaltyScore: Math.round(
           ((this.calculateRecencyScore(recency) +
@@ -223,15 +224,24 @@ export class CustomersService {
     if (orders.length === 0) {
       return {
         total: 0,
+        totalCustomers: 0,
         vip: 0,
+        vipCustomers: 0,
         regular: 0,
+        regularCustomers: 0,
         new: 0,
+        newCustomersThisMonth: 0,
         atRisk: 0,
+        atRiskCustomers: 0,
         inactive: 0,
+        inactiveCustomers: 0,
         totalRevenue: 0,
+        avgLifetimeValue: 0,
         averageLifetimeValue: 0,
         averageOrderValue: 0,
         retentionRate: 0,
+        churnRate: 0,
+        customerGrowth: 0,
         growth: { thisMonth: 0, lastMonth: 0 },
         topCities: [],
       };
