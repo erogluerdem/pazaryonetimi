@@ -147,7 +147,7 @@ const Footer = () => {
                     <div className="flex flex-col lg:flex-row items-center justify-between gap-8 lg:gap-12">
                         {/* Legal & Copyright */}
                         <div className="flex flex-col items-center lg:items-start gap-4 text-center lg:text-left">
-                            <p className="text-[11px] lg:text-xs text-slate-400 font-medium">© {currentYear} Pazaryonetimi Inc. Tüm hakları saklıdır.</p>
+                            <p className="text-[11px] lg:text-xs text-slate-400 font-medium" suppressHydrationWarning>© {currentYear} Pazaryonetimi Inc. Tüm hakları saklıdır.</p>
                             <div className="flex flex-wrap items-center justify-center lg:justify-start gap-4 text-[10px] lg:text-[11px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest">
                                 <Link href="/security" className="hover:text-orange-500 transition-colors">Güvenlik</Link>
                                 <span className="w-1 h-1 rounded-full bg-slate-200 dark:bg-white/10" />

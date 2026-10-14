@@ -845,18 +845,18 @@ export default function Navbar() {
                             >
                                 <AnimatePresence mode="wait" initial={false}>
                                     <motion.div
-                                        key={resolvedMode}
+                                        key={mounted ? resolvedMode : 'init'}
                                         initial={{ rotate: -90, opacity: 0, scale: 0.5 }}
                                         animate={{ rotate: 0, opacity: 1, scale: 1 }}
                                         exit={{ rotate: 90, opacity: 0, scale: 0.5 }}
                                         transition={{ duration: 0.2 }}
                                     >
-                                        {resolvedMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+                                        {mounted && resolvedMode === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
                                     </motion.div>
                                 </AnimatePresence>
                             </button>
 
-                            {status === 'authenticated' && session ? (
+                            {mounted && status === 'authenticated' && session ? (
                                 <>
                                     <Link
                                         href="/dashboard/support"
@@ -1131,7 +1131,7 @@ export default function Navbar() {
                                 className="mt-8 pt-6 border-t border-slate-200 dark:border-white/10 space-y-4"
                             >
                                 <div className="grid grid-cols-2 gap-3">
-                                    {status === 'authenticated' ? (
+                                    {mounted && status === 'authenticated' ? (
                                         <>
                                             <Link
                                                 href="/dashboard"

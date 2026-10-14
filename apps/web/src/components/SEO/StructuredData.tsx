@@ -1,4 +1,3 @@
-import Script from 'next/script';
 import { headers } from 'next/headers';
 import { getPricingCatalog } from '@/lib/pricing';
 import { DEFAULT_PRICING_CATALOG, formatTryAmount } from '@/config/pricing-catalog';
@@ -262,27 +261,27 @@ export default async function StructuredData() {
 
     return (
         <>
-            <Script
+            <script
                 id="structured-data-organization"
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(organizationData) }}
             />
-            <Script
+            <script
                 id="structured-data-website"
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(websiteData) }}
             />
-            <Script
+            <script
                 id="structured-data-software"
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(softwareData) }}
             />
-            <Script
+            <script
                 id="structured-data-faq"
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(faqData) }}
             />
-            <Script
+            <script
                 id="structured-data-breadcrumb"
                 type="application/ld+json"
                 dangerouslySetInnerHTML={{ __html: JSON.stringify(breadcrumbData) }}

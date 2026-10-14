@@ -11,15 +11,16 @@ interface ExitIntentPopupProps {
 
 export default function ExitIntentPopup({ delay = 5000 }: ExitIntentPopupProps) {
     const [isVisible, setIsVisible] = useState(false);
-    const [hasShown, setHasShown] = useState(() => {
-        if (typeof window !== 'undefined') {
-            return sessionStorage.getItem('exitIntent_shown') === 'true';
-        }
-        return false;
-    });
+    const [hasShown, setHasShown] = useState(false);
     const [timeOnPage, setTimeOnPage] = useState(0);
     const [email, setEmail] = useState('');
     const [submitted, setSubmitted] = useState(false);
+
+    useEffect(() => {
+        if (typeof window !== 'undefined' && sessionStorage.getItem('exitIntent_shown') === 'true') {
+            setHasShown(true);
+        }
+    }, []);
 
     // Track time on page
     useEffect(() => {

@@ -33,12 +33,15 @@ interface VoiceCommand {
 
 export const VoiceSearch = ({ features }: VoiceSearchProps) => {
     const [isListening, setIsListening] = useState(false);
-    const [isSupported] = useState(() => {
-        if (typeof window === 'undefined') return false;
-        const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
-        return Boolean(SpeechRecognition);
-    });
+    const [isSupported, setIsSupported] = useState(false);
     const [transcript, setTranscript] = useState('');
+
+    useEffect(() => {
+        if (typeof window !== 'undefined') {
+            const SpeechRecognition = (window as any).SpeechRecognition || (window as any).webkitSpeechRecognition;
+            setIsSupported(Boolean(SpeechRecognition));
+        }
+    }, []);
     const [recognizedCommand, setRecognizedCommand] = useState<VoiceCommand | null>(null);
     const [showCommands, setShowCommands] = useState(false);
     const [volume, setVolume] = useState(0);

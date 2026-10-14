@@ -79,45 +79,40 @@ const STORAGE_KEY = 'pazar-theme-settings';
 
 // ─── Provider ─────────────────────────────────────────
 export function ThemeProvider({ children }: { children: React.ReactNode }) {
-    const [theme, setTheme] = useState<ThemeSettings>(() => {
-        if (typeof window === 'undefined') {
-            return defaultThemeSettings;
-        }
+    const [theme, setTheme] = useState<ThemeSettings>(defaultThemeSettings);
+    const [systemPrefersDark, setSystemPrefersDark] = useState(false);
+    const [mounted, setMounted] = useState(false);
 
+    // Initial mount to read localStorage and system color scheme safely
+    useEffect(() => {
+        setMounted(true);
         try {
             const saved = localStorage.getItem(STORAGE_KEY);
-            if (!saved) {
-                return defaultThemeSettings;
+            if (saved) {
+                const parsed = JSON.parse(saved) as Partial<ThemeSettings>;
+                setTheme({ ...defaultThemeSettings, ...parsed });
             }
-
-            const parsed = JSON.parse(saved) as Partial<ThemeSettings>;
-            return { ...defaultThemeSettings, ...parsed };
         } catch {
-            return defaultThemeSettings;
+            // ignore
         }
-    });
-    const [systemPrefersDark, setSystemPrefersDark] = useState(() => {
-        if (typeof window === 'undefined') {
-            return true;
-        }
-        return window.matchMedia('(prefers-color-scheme: dark)').matches;
-    });
 
-    // Listen for system color scheme changes
-    useEffect(() => {
         const mq = window.matchMedia('(prefers-color-scheme: dark)');
+        setSystemPrefersDark(mq.matches);
         const handler = (e: MediaQueryListEvent) => setSystemPrefersDark(e.matches);
         mq.addEventListener('change', handler);
         return () => mq.removeEventListener('change', handler);
     }, []);
 
-    // Resolve actual mode
-    const resolvedMode: 'dark' | 'light' = theme.mode === 'system'
-        ? (systemPrefersDark ? 'dark' : 'light')
-        : theme.mode;
+    // Resolve actual mode (always default 'light' during SSR & initial hydration)
+    const resolvedMode: 'dark' | 'light' = !mounted
+        ? 'light'
+        : theme.mode === 'system'
+            ? (systemPrefersDark ? 'dark' : 'light')
+            : theme.mode;
 
     // Apply theme to DOM
     useEffect(() => {
+        if (!mounted) return;
         const root = document.documentElement;
 
         // Mode

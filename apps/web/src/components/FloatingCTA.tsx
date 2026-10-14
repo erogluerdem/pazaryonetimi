@@ -7,21 +7,15 @@ import Link from 'next/link';
 
 export default function FloatingCTA() {
     const [isVisible, setIsVisible] = useState(false);
-    const [isDismissed, setIsDismissed] = useState(() => {
-        // Check initial state from sessionStorage
-        if (typeof window !== 'undefined') {
-            return sessionStorage.getItem('floatingCTA_dismissed') === 'true';
-        }
-        return false;
-    });
+    const [isDismissed, setIsDismissed] = useState(false);
 
     useEffect(() => {
-        // Skip if already dismissed
-        if (isDismissed) {
+        if (typeof window !== 'undefined' && sessionStorage.getItem('floatingCTA_dismissed') === 'true') {
+            setIsDismissed(true);
             return;
         }
 
-        // Show after scrolling 30% of the page
+        // Show after scrolling 60% of the page
         const handleScroll = () => {
             const scrollPercent = (window.scrollY / (document.body.scrollHeight - window.innerHeight)) * 100;
             setIsVisible(scrollPercent > 60);
@@ -29,7 +23,7 @@ export default function FloatingCTA() {
 
         window.addEventListener('scroll', handleScroll);
         return () => window.removeEventListener('scroll', handleScroll);
-    }, [isDismissed]);
+    }, []);
 
     const handleDismiss = () => {
         setIsDismissed(true);
